@@ -494,10 +494,10 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
           <span class="x-nav-card-label">プロフィール</span>
           <span class="x-nav-card-sub">自分のページ</span>
         </a>
-        <a class="x-nav-card" id="x-nav-timeline" href="https://twitter.com/home" target="_blank" rel="noopener">
-          <span class="x-nav-card-icon">🏠</span>
-          <span class="x-nav-card-label">タイムライン</span>
-          <span class="x-nav-card-sub">ログイン済みで開く</span>
+        <a class="x-nav-card" id="x-nav-mypost" href="#" onclick="xOpenMyPosts(event)">
+          <span class="x-nav-card-icon">📜</span>
+          <span class="x-nav-card-label">最新投稿</span>
+          <span class="x-nav-card-sub">自分の投稿一覧</span>
         </a>
       </div>
       <div class="x-search-row" id="x-search-row" style="display:none;">
@@ -1262,6 +1262,28 @@ function xOpenProfile(e){
     localStorage.setItem('oshi-vault-x-handle', handle);
   }
   window.open('https://twitter.com/' + encodeURIComponent(handle), '_blank', 'noopener');
+}
+
+// 自分の最新投稿一覧（twitter://カスタムスキーム → fallback web）
+function xOpenMyPosts(e){
+  e.preventDefault();
+  let handle = localStorage.getItem('oshi-vault-x-handle') || '';
+  if(!handle){
+    handle = (prompt('あなたの X @handle を入力（@不要）') || '').trim();
+    if(!handle) return;
+    localStorage.setItem('oshi-vault-x-handle', handle);
+  }
+  // Xアプリがあればカスタムスキームで、なければwebへ
+  const appUrl = 'twitter://user?screen_name=' + encodeURIComponent(handle);
+  const webUrl = 'https://twitter.com/' + encodeURIComponent(handle);
+  const a = document.createElement('a');
+  a.href = appUrl;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // 500ms後にアプリが開かなかったらwebへ
+  setTimeout(()=>{ window.open(webUrl, '_blank', 'noopener'); }, 500);
 }
 
 // data-* イベントデリゲーター（XSS回避のためinline onclickを使わない）
