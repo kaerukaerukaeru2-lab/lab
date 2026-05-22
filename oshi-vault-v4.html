@@ -486,7 +486,7 @@ async function startCam(){
   }
 }
 function flipCam(){ facingMode=facingMode==='environment'?'user':'environment'; startCam(); }
-function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
+function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} const v=document.getElementById('vid'); if(v){v.srcObject=null;v.load();} }
 
 // ─── SCAN / SNAP MODE ────────────────────────────────────────
 let scanMode='scan'; // 'scan' | 'snap'
