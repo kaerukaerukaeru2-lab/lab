@@ -461,7 +461,7 @@ function setMode(m){
     document.getElementById(`btn-mode-${x}`).classList.toggle('active', x===m);
   });
   if(m==='a') startCam();
-  else { renderOshiStrip(); renderHist(); }
+  else { stopCam(); renderOshiStrip(); renderHist(); }
 }
 
 // ─── CAMERA ──────────────────────────────────────────────────
