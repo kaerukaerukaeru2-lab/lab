@@ -279,6 +279,11 @@ body::before{content:'';position:fixed;inset:0;
 .post-char{font-family:var(--mono);font-size:.58rem;color:var(--muted);text-align:right;margin-top:4px;}
 .post-char.warn{color:#fc8;}
 .post-char.over{color:#f06;}
+.post-alt-toggle{display:flex;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:100px;padding:3px;gap:2px;margin-bottom:2px;align-self:flex-start;}
+.post-alt-btn{font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;padding:3px 12px;border-radius:100px;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;}
+.post-alt-btn.active.normal{background:rgba(200,128,255,.2);border:1px solid rgba(200,128,255,.4);color:var(--accent);}
+.post-alt-btn.active.alt{background:rgba(128,220,255,.2);border:1px solid rgba(128,220,255,.4);color:var(--accent2);}
+.draft-alt-badge{font-family:var(--mono);font-size:.5rem;letter-spacing:.08em;padding:2px 7px;border-radius:100px;background:rgba(128,220,255,.15);border:1px solid rgba(128,220,255,.4);color:var(--accent2);margin-left:6px;vertical-align:middle;}
 
 /* textarea / input */
 .post-inp{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;
@@ -530,8 +535,12 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
         <div class="post-type-pill" data-type="reply" onclick="postSetType(this,'reply')">返信</div>
         <div class="post-type-pill" data-type="thread" onclick="postSetType(this,'thread')">スレッド</div>
       </div>
-      <textarea class="post-inp" id="post-draft-input" placeholder="下書きを入力..." rows="4" oninput="postUpdateChar()"></textarea>
-      <div class="post-char" id="post-char-count">0 / 280</div>
+      <div class="post-alt-toggle">
+        <button class="post-alt-btn normal active" id="btn-alt-normal" onclick="postSetAltMode(false)">📝 通常</button>
+        <button class="post-alt-btn alt" id="btn-alt-alt" onclick="postSetAltMode(true)">🖼 ALT</button>
+      </div>
+      <textarea class="post-inp" id="post-draft-input" placeholder="下書きを入力（140文字）..." rows="4" oninput="postUpdateChar()"></textarea>
+      <div class="post-char" id="post-char-count">0 / 140</div>
       <div class="post-btn-row">
         <button class="post-btn-ghost" onclick="postClearDraft()">クリア</button>
         <button class="post-btn" onclick="postSaveDraft()">保存</button>
@@ -1247,6 +1256,7 @@ let postSnips    = PS.get('snips')    || [
 let postLogs     = [];  // IDBから起動時にロード
 let postScheds   = PS.get('scheds')   || [];
 let postCurType  = 'post';
+let postAltMode  = false; // false=通常140字 / true=ALT1000字
 
 // drafts IDB操作
 async function postDeleteDraftIDB(id){ await idbDelete('drafts',id); }
@@ -1367,17 +1377,37 @@ function postSetType(el, type){
 function postUpdateChar(){
   const v = document.getElementById('post-draft-input').value.length;
   const el = document.getElementById('post-char-count');
-  el.textContent = v + ' / 280';
-  el.className = 'post-char' + (v > 280 ? ' over' : v > 260 ? ' warn' : '');
+  const limit = postAltMode ? 1000 : 140;
+  const warnLine = postAltMode ? 950 : 120;
+  el.textContent = v + ' / ' + limit;
+  el.className = 'post-char' + (v > limit ? ' over' : v > warnLine ? ' warn' : '');
+}
+
+function postSetAltMode(isAlt){
+  postAltMode = isAlt;
+  const inp = document.getElementById('post-draft-input');
+  const btnN = document.getElementById('btn-alt-normal');
+  const btnA = document.getElementById('btn-alt-alt');
+  if(isAlt){
+    inp.placeholder = 'ALTテキストを入力（1000文字）...';
+    inp.rows = 6;
+    btnA.classList.add('active'); btnN.classList.remove('active');
+  } else {
+    inp.placeholder = '下書きを入力（140文字）...';
+    inp.rows = 4;
+    btnN.classList.add('active'); btnA.classList.remove('active');
+  }
+  postUpdateChar();
 }
 function postClearDraft(){
   document.getElementById('post-draft-input').value = '';
+  postSetAltMode(false);
   postUpdateChar();
 }
 function postSaveDraft(){
   const text = document.getElementById('post-draft-input').value.trim();
   if(!text) return;
-  const entry = {id:Date.now(), text, type:postCurType, time:Date.now(), createdAt:Date.now()};
+  const entry = {id:Date.now(), text, type:postAltMode ? 'alt' : postCurType, isAlt:postAltMode, time:Date.now(), createdAt:Date.now()};
   postDrafts.unshift(entry);
   idbPut('drafts', entry).catch(e=>addLog('err','下書き保存失敗: '+e.message));
   postRenderDrafts();
@@ -1391,9 +1421,11 @@ function postDeleteDraft(id){
 function postLoadDraft(id){
   const d = postDrafts.find(x=>x.id===id);
   if(!d) return;
+  // ALTモードを先に復元してからテキストセット
+  postSetAltMode(d.isAlt || false);
   document.getElementById('post-draft-input').value = d.text;
   postUpdateChar();
-  const type = d.type || 'post';
+  const type = d.isAlt ? 'post' : (d.type || 'post');
   postCurType = type;
   document.querySelectorAll('#page-c .post-type-pill').forEach(p=>{
     p.classList.toggle('active', p.dataset.type===type);
@@ -1403,13 +1435,14 @@ function postLoadDraft(id){
 function postRenderDrafts(){
   const el = document.getElementById('post-draft-list');
   if(!postDrafts.length){ el.innerHTML='<div class="post-empty">下書きはまだありません</div>'; return; }
-  const typeLabel = {post:'投稿', reply:'返信', thread:'スレ'};
+  const typeLabel = {post:'投稿', reply:'返信', thread:'スレ', alt:'ALT'};
   el.innerHTML = postDrafts.map(d=>{
     const t = d.type || 'post';
+    const altBadge = d.isAlt ? '<span class="draft-alt-badge">ALT</span>' : '';
     return `<div class="post-card">
       <div class="post-card-text">${escHtml(d.text)}</div>
       <div class="post-card-meta">
-        <span class="post-type-badge badge-${t}">${typeLabel[t]||t}</span>
+        <span class="post-type-badge badge-${t}">${typeLabel[t]||t}</span>${altBadge}
         <span class="post-card-time">${postFmtTime(d.time)}</span>
       </div>
       <div class="post-card-btns">
