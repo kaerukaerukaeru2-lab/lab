@@ -208,23 +208,29 @@ textarea.inp{resize:none;line-height:1.5}
     <!-- アクティブハンドル表示 -->
     <div id="saved-handle-list" style="margin-bottom:16px"></div>
 
-    <div class="section-title">固定ユーザー</div>
-    <div class="user-list" id="user-list"></div>
+    <!-- 固定ユーザー -->
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+      固定ユーザー
+      <button class="btn-ghost" style="font-size:12px;padding:3px 10px;letter-spacing:.04em" onclick="toggleUserVault()">⚙️ 管理</button>
+    </div>
 
-    <div class="form-card">
+    <!-- ⚙️ 固定ユーザー管理アコーディオン -->
+    <div id="user-vault" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
       <div class="form-label">ユーザーを追加</div>
-      <div class="inp-row">
+      <div class="inp-row" style="margin-bottom:12px;">
         <input class="inp" id="add-name" placeholder="名前" style="max-width:100px">
         <input class="inp" id="add-handle" placeholder="@handle">
         <button class="btn" onclick="addUser()" style="flex-shrink:0">追加</button>
       </div>
-      <div class="divider"></div>
+      <div class="divider" style="margin:10px 0"></div>
       <div class="form-label">自分の@ID</div>
-      <div class="inp-row">
+      <div class="inp-row" style="margin-bottom:0">
         <input class="inp" id="my-handle" placeholder="@自分のhandle">
         <button class="btn" onclick="saveMyHandle()" style="flex-shrink:0">保存</button>
       </div>
     </div>
+
+    <div class="user-list" id="user-list"></div>
   </div>
 
   <!-- ===== 下書きタブ ===== -->
@@ -344,7 +350,7 @@ textarea.inp{resize:none;line-height:1.5}
       <div class="help-item"><div class="help-op">ユーザー検索</div><div class="help-desc">タップすると下の検索欄にフォーカス。@handleやキーワードを入力して検索</div></div>
       <div class="help-item"><div class="help-op">プロフィール</div><div class="help-desc">自分の@IDを保存するとここから自分のページに飛べる</div></div>
       <div class="help-item"><div class="help-op">登録ハンドル</div><div class="help-desc">⚙️管理ボタンで一覧を開き、handleを登録。チェックONのものだけ表示エリアに出る。件数制限なし</div></div>
-      <div class="help-item"><div class="help-op">固定ユーザー</div><div class="help-desc">よく見るアカウントを登録。タップでそのユーザーページを開く</div></div>
+      <div class="help-item"><div class="help-op">固定ユーザー</div><div class="help-desc">⚙️管理ボタンで追加フォームを開く。名前と@handleを登録。タップでそのユーザーページを開く。自分の@ID設定もここで行う</div></div>
     </div>
   </div>
 
@@ -946,7 +952,13 @@ function saveMyHandle(){
   showToast('保存しました');
 }
 
-/* ── Handle Vault ── */
+/* ── User Vault ── */
+function toggleUserVault(){
+  const el=document.getElementById('user-vault');
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+
 function toggleHandleVault(){
   const el=document.getElementById('handle-vault');
   el.style.display=el.style.display==='none'?'block':'none';
