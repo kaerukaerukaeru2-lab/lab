@@ -362,6 +362,26 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
 .nm-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
 .nm-save{font-family:var(--mono);font-size:.65rem;padding:7px 18px;border-radius:7px;background:rgba(200,128,255,.15);border:1px solid rgba(200,128,255,.4);color:var(--accent);cursor:pointer;}
 .nm-cancel{font-family:var(--mono);font-size:.65rem;padding:7px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;}
+
+/* ⚙️ ハンドル管理モーダル */
+.gear-btn{background:none;border:none;font-size:1rem;cursor:pointer;padding:4px 6px;opacity:.6;transition:opacity .15s;}
+.gear-btn:active{opacity:1;}
+.handle-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:60;align-items:flex-end;}
+.handle-modal-overlay.on{display:flex;}
+.handle-modal{background:var(--surface);border:1px solid var(--border2);border-top-left-radius:20px;border-top-right-radius:20px;
+  width:100%;max-height:80dvh;display:flex;flex-direction:column;padding:20px;}
+.handle-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.handle-modal-title{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;color:var(--accent);font-weight:700;}
+.handle-modal-close{background:none;border:1px solid var(--border);color:var(--muted);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:.8rem;}
+.handle-modal-add{display:flex;gap:8px;margin-bottom:12px;}
+.handle-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+.handle-list::-webkit-scrollbar{width:3px;}
+.handle-list::-webkit-scrollbar-thumb{background:var(--border);}
+.handle-row{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;}
+.handle-row-check{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+.handle-row-name{font-family:var(--mono);font-size:.68rem;color:var(--text);flex:1;}
+.handle-row-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:2px 6px;}
+.handle-empty-msg{font-family:var(--mono);font-size:.62rem;color:var(--muted);text-align:center;padding:20px 0;}
 </style>
 </head>
 <body>
@@ -378,6 +398,7 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
       <button class="mode-btn" id="btn-mode-c" onclick="setMode('c')">✏️ POST</button>
     </div>
     <div class="status-pill"><span class="status-dot"></span>LIVE</div>
+    <button class="gear-btn" onclick="openHandleModal()" title="ハンドル管理">⚙️</button>
   </div>
 
   <!-- PAGE A -->
@@ -511,14 +532,13 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
         <input class="post-inp" id="x-search-inp" placeholder="@handle またはキーワード" style="flex:1;" onkeydown="if(event.key==='Enter')xDoSearch()">
         <button class="post-btn" onclick="xDoSearch()">開く</button>
       </div>
-      <!-- 登録ハンドル -->
+      <!-- 登録ハンドル（チェック済みのみ表示） -->
       <div id="x-handle-section">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="margin-bottom:6px;">
           <span style="font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;">登録ハンドル</span>
-          <button class="post-btn-ghost" style="font-size:.58rem;padding:3px 10px;" onclick="xAddHandle()">＋ 追加</button>
         </div>
         <div class="x-handle-grid" id="x-handle-grid">
-          <span class="x-handle-empty">未登録（＋で追加）</span>
+          <span class="x-handle-empty">⚙️ でハンドルを登録・選択</span>
         </div>
       </div>
     </div>
@@ -633,6 +653,21 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
       <button class="nm-cancel" onclick="closeNameModal()">キャンセル</button>
       <button class="nm-save" onclick="saveNames()">保存</button>
     </div>
+  </div>
+</div>
+
+<!-- ⚙️ ハンドル管理モーダル -->
+<div class="handle-modal-overlay" id="handle-modal-overlay" onclick="if(event.target===this)closeHandleModal()">
+  <div class="handle-modal">
+    <div class="handle-modal-head">
+      <span class="handle-modal-title">⚙️ ハンドル管理</span>
+      <button class="handle-modal-close" onclick="closeHandleModal()">✕</button>
+    </div>
+    <div class="handle-modal-add">
+      <input class="post-inp" id="handle-modal-inp" placeholder="@handle（@不要）" style="flex:1;" onkeydown="if(event.key==='Enter')handleModalAdd()">
+      <button class="post-btn" onclick="handleModalAdd()">追加</button>
+    </div>
+    <div class="handle-list" id="handle-list"></div>
   </div>
 </div>
 
@@ -1311,47 +1346,87 @@ function xOpenMyPosts(e){
   window.open('https://twitter.com/' + encodeURIComponent(handle), '_blank', 'noopener');
 }
 
-// ─── 登録ハンドル ────────────────────────────────────────────
-function xLoadHandles(){ return PS.get('x-handles') || []; }
+// ─── 登録ハンドル（⚙️モーダル管理） ──────────────────────────
+// データ構造: [{handle:'xxx', checked:true}, ...]
+function xLoadHandles(){
+  const raw = PS.get('x-handles') || [];
+  // 旧形式（文字列配列）を新形式（オブジェクト配列）に自動変換
+  return raw.map(item => typeof item === 'string' ? {handle:item, checked:true} : item);
+}
 function xSaveHandles(arr){ PS.set('x-handles', arr); }
 
-function xAddHandle(){
-  let h = (prompt('登録する @handle を入力（@不要）') || '').trim().replace(/^@/,'');
-  if(!h) return;
-  const arr = xLoadHandles();
-  if(arr.includes(h)){ alert('すでに登録済みです'); return; }
-  arr.push(h);
-  xSaveHandles(arr);
-  xRenderHandles();
-}
-function xDeleteHandle(h){
-  const arr = xLoadHandles().filter(x=>x!==h);
-  xSaveHandles(arr);
-  xRenderHandles();
-}
+// POSTページのチップ表示（チェック済みのみ）
 function xRenderHandles(){
   const grid = document.getElementById('x-handle-grid');
   if(!grid) return;
-  const arr = xLoadHandles();
-  if(!arr.length){
-    grid.innerHTML = '<span class="x-handle-empty">未登録（＋で追加）</span>';
+  const checked = xLoadHandles().filter(h=>h.checked);
+  if(!checked.length){
+    grid.innerHTML = '<span class="x-handle-empty">⚙️ でハンドルを登録・選択</span>';
     return;
   }
   grid.innerHTML = '';
-  arr.forEach(h=>{
+  checked.forEach(({handle})=>{
     const chip = document.createElement('div');
     chip.className = 'x-handle-chip';
-    chip.textContent = '@' + h;
-    // タップで検索
+    chip.textContent = '@' + handle;
     chip.addEventListener('click', ()=>{
-      window.open('https://twitter.com/' + encodeURIComponent(h), '_blank', 'noopener');
+      const a=document.createElement('a'); a.href='https://twitter.com/'+encodeURIComponent(handle);
+      a.target='_blank'; a.rel='noopener'; a.style.display='none';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
     });
-    // 長押しで削除
-    let timer;
-    chip.addEventListener('touchstart', ()=>{ timer=setTimeout(()=>{ if(confirm('@'+h+' を削除しますか？')) xDeleteHandle(h); }, 600); },{passive:true});
-    chip.addEventListener('touchend', ()=>clearTimeout(timer),{passive:true});
     grid.appendChild(chip);
   });
+}
+
+// モーダル開閉
+function openHandleModal(){
+  renderHandleList();
+  document.getElementById('handle-modal-overlay').classList.add('on');
+}
+function closeHandleModal(){
+  document.getElementById('handle-modal-overlay').classList.remove('on');
+  document.getElementById('handle-modal-inp').value = '';
+  xRenderHandles(); // チップ表示を更新
+}
+
+// モーダル内リスト描画
+function renderHandleList(){
+  const list = document.getElementById('handle-list');
+  const arr = xLoadHandles();
+  if(!arr.length){
+    list.innerHTML = '<div class="handle-empty-msg">まだ登録がありません</div>';
+    return;
+  }
+  list.innerHTML = '';
+  arr.forEach((item,i)=>{
+    const row = document.createElement('div');
+    row.className = 'handle-row';
+    row.innerHTML =
+      `<input type="checkbox" class="handle-row-check" ${item.checked?'checked':''} data-i="${i}">`
+      +`<span class="handle-row-name">@${escHtml(item.handle)}</span>`
+      +`<button class="handle-row-del" data-i="${i}">🗑</button>`;
+    // チェック変更
+    row.querySelector('.handle-row-check').addEventListener('change', e=>{
+      const a=xLoadHandles(); a[i].checked=e.target.checked; xSaveHandles(a);
+    });
+    // 削除
+    row.querySelector('.handle-row-del').addEventListener('click', ()=>{
+      const a=xLoadHandles(); a.splice(i,1); xSaveHandles(a); renderHandleList();
+    });
+    list.appendChild(row);
+  });
+}
+
+// 追加
+function handleModalAdd(){
+  let h = (document.getElementById('handle-modal-inp').value||'').trim().replace(/^@/,'');
+  if(!h) return;
+  const arr = xLoadHandles();
+  if(arr.some(x=>x.handle===h)){ document.getElementById('handle-modal-inp').value=''; return; }
+  arr.push({handle:h, checked:true});
+  xSaveHandles(arr);
+  document.getElementById('handle-modal-inp').value='';
+  renderHandleList();
 }
 
 // data-* イベントデリゲーター（XSS回避のためinline onclickを使わない）
