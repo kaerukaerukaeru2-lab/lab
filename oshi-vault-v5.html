@@ -52,7 +52,7 @@ body::before{content:'';position:fixed;inset:0;
 
 /* ─── PAGES ─── */
 .page{display:none;flex:1;flex-direction:column;}
-.page.on{display:flex;}
+.page.on{display:flex;flex-direction:column;}
 
 /* ══ MODE A : CAMERA ══ */
 #page-a{background:#000;}
@@ -249,12 +249,20 @@ body::before{content:'';position:fixed;inset:0;
 .x-nav-card-label{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;color:var(--text);text-align:center;}
 .x-nav-card-sub{font-family:var(--mono);font-size:.52rem;color:var(--muted);text-align:center;}
 .x-search-row{display:flex;gap:8px;margin-top:4px;}
+/* 登録ハンドルチップ */
+.x-handle-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+.x-handle-chip{font-family:var(--mono);font-size:.62rem;padding:5px 12px;border-radius:100px;
+  border:1px solid rgba(29,155,240,.35);background:rgba(29,155,240,.08);color:#1d9bf0;
+  cursor:pointer;transition:all .15s;user-select:none;}
+.x-handle-chip:active{background:rgba(29,155,240,.2);}
+.x-handle-empty{font-family:var(--mono);font-size:.6rem;color:var(--muted);}
+
 /* Xで投稿ボタン */
 .post-btn-x{font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;
   padding:5px 12px;border-radius:100px;border:1px solid rgba(29,155,240,.4);
   background:rgba(29,155,240,.1);color:#1d9bf0;cursor:pointer;transition:all .15s;}
 .post-btn-x:active{background:rgba(29,155,240,.2);}
-#page-c{padding:16px;gap:14px;overflow-y:auto;}
+#page-c{padding:16px;gap:14px;overflow-y:auto;flex-direction:column;}
 #page-c::-webkit-scrollbar{width:4px;}
 #page-c::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 
@@ -462,10 +470,9 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
     </div>
 
   </div>
-</div>
 
-<!-- PAGE C : POST -->
-<div class="page" id="page-c">
+  <!-- PAGE C : POST -->
+  <div class="page" id="page-c">
 
   <!-- X ナビ -->
   <div class="panel">
@@ -489,11 +496,6 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
           <span class="x-nav-card-label">ユーザー検索</span>
           <span class="x-nav-card-sub">@handle / キーワード</span>
         </a>
-        <a class="x-nav-card" id="x-nav-profile" href="#" onclick="xOpenProfile(event)">
-          <span class="x-nav-card-icon">👤</span>
-          <span class="x-nav-card-label">プロフィール</span>
-          <span class="x-nav-card-sub">自分のページ</span>
-        </a>
         <a class="x-nav-card" id="x-nav-mypost" href="#" onclick="xOpenMyPosts(event)">
           <span class="x-nav-card-icon">📜</span>
           <span class="x-nav-card-label">最新投稿</span>
@@ -503,6 +505,16 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
       <div class="x-search-row" id="x-search-row" style="display:none;">
         <input class="post-inp" id="x-search-inp" placeholder="@handle またはキーワード" style="flex:1;" onkeydown="if(event.key==='Enter')xDoSearch()">
         <button class="post-btn" onclick="xDoSearch()">開く</button>
+      </div>
+      <!-- 登録ハンドル -->
+      <div id="x-handle-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;">登録ハンドル</span>
+          <button class="post-btn-ghost" style="font-size:.58rem;padding:3px 10px;" onclick="xAddHandle()">＋ 追加</button>
+        </div>
+        <div class="x-handle-grid" id="x-handle-grid">
+          <span class="x-handle-empty">未登録（＋で追加）</span>
+        </div>
       </div>
     </div>
   </div>
@@ -585,11 +597,14 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
       <div style="text-align:right;">
         <button class="post-btn" onclick="postAddLog()">記録</button>
       </div>
+      <div id="post-log-list"></div>
     </div>
   </div>
   <div id="post-log-list" style="margin-bottom:20px;"></div>
 
-</div><!-- /page-c -->
+  </div><!-- /page-c -->
+
+</div><!-- /#app -->
 
 <!-- toast -->
 <div class="post-toast" id="post-toast"></div>
@@ -633,11 +648,11 @@ input[type="datetime-local"].post-inp{-webkit-appearance:auto;color-scheme:dark;
 'use strict';
 
 // ─── 状態管理 ─────────────────────────────────────────────────
-// v3: oshiNames/oshiCounts/stats/activeOshi → localStorage永続化
+// v5: oshiNames/oshiCounts/stats/activeOshi → localStorage永続化
 //     logs のみ sessionStorage（起動ごとにリセットでOK）
-const SK      = 'oshi-vault-v4';       // localStorage key（永続）
-const SK_LOG  = 'oshi-vault-v4-log';  // sessionStorage key（ログ）
-const OCR_KEY = 'oshi-vault-v4-ocr';  // localStorage key（通算OCR）
+const SK      = 'oshi-vault-v5';       // localStorage key（永続）
+const SK_LOG  = 'oshi-vault-v5-log';  // sessionStorage key（ログ）
+const OCR_KEY = 'oshi-vault-v5-ocr';  // localStorage key（通算OCR）
 
 function loadLS(){ try{ return JSON.parse(localStorage.getItem(SK)||'null'); }catch{ return null; } }
 function saveLS(p){ try{ localStorage.setItem(SK,JSON.stringify(Object.assign({},loadLS(),p))); }catch{} }
@@ -761,8 +776,20 @@ function setMode(m){
     document.getElementById(`btn-mode-${x}`).classList.toggle('active', x===m);
   });
   if(m==='a') startCam();
-  else if(m==='b'){ stopCam(); renderOshiStrip(); renderHist(); }
-  else { stopCam(); postRenderAll(); }
+  else if(m==='b'){
+    stopCam();
+    renderOshiStrip();
+    renderHist(); // async: IDB非同期、awaitなしで実行
+  } else {
+    stopCam();
+    // 検索バーをリセット
+    const sr = document.getElementById('x-search-row');
+    if(sr) sr.style.display = 'none';
+    // スクロール位置リセット
+    const pc = document.getElementById('page-c');
+    if(pc) pc.scrollTop = 0;
+    postRenderAll();
+  }
 }
 
 // ─── CAMERA ──────────────────────────────────────────────────
@@ -778,6 +805,8 @@ async function startCam(){
       video:{facingMode,width:{ideal:1920},height:{ideal:1080}},audio:false
     });
     document.getElementById('vid').srcObject=stream;
+    const dot=document.querySelector('.status-dot');
+    if(dot) dot.style.background='';
   }catch(e){
     stream=null;
     // カメラUI上にエラーを表示（CLEANSEに強制遷移しない）
@@ -787,7 +816,12 @@ async function startCam(){
   }
 }
 function flipCam(){ facingMode=facingMode==='environment'?'user':'environment'; startCam(); }
-function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} const v=document.getElementById('vid'); if(v){v.srcObject=null;v.load();} }
+function stopCam(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  const v=document.getElementById('vid'); if(v){v.srcObject=null;v.load();}
+  const dot=document.querySelector('.status-dot');
+  if(dot) dot.style.background='var(--muted)';
+}
 
 // ─── SCAN / SNAP MODE ────────────────────────────────────────
 let scanMode='scan'; // 'scan' | 'snap'
@@ -1249,41 +1283,66 @@ function xDoSearch(){
   const url = q.startsWith('@')
     ? 'https://twitter.com/' + encodeURIComponent(q.slice(1))
     : 'https://twitter.com/search?q=' + encodeURIComponent(q);
-  window.open(url, '_blank', 'noopener');
+  const a = document.createElement('a');
+  a.href=url; a.target='_blank'; a.rel='noopener';
+  a.style.display='none';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-// プロフィール：localStorage に保存したhandle で開く
-function xOpenProfile(e){
+
+// 自分の最新投稿一覧
+function xOpenMyPosts(e){
   e.preventDefault();
   let handle = localStorage.getItem('oshi-vault-x-handle') || '';
   if(!handle){
-    handle = (prompt('あなたの X @handle を入力（@不要）') || '').trim();
+    handle = (prompt('あなたの X @handle を入力（@不要）') || '').trim().replace(/^@/,'');
     if(!handle) return;
     localStorage.setItem('oshi-vault-x-handle', handle);
   }
   window.open('https://twitter.com/' + encodeURIComponent(handle), '_blank', 'noopener');
 }
 
-// 自分の最新投稿一覧（twitter://カスタムスキーム → fallback web）
-function xOpenMyPosts(e){
-  e.preventDefault();
-  let handle = localStorage.getItem('oshi-vault-x-handle') || '';
-  if(!handle){
-    handle = (prompt('あなたの X @handle を入力（@不要）') || '').trim();
-    if(!handle) return;
-    localStorage.setItem('oshi-vault-x-handle', handle);
+// ─── 登録ハンドル ────────────────────────────────────────────
+function xLoadHandles(){ return PS.get('x-handles') || []; }
+function xSaveHandles(arr){ PS.set('x-handles', arr); }
+
+function xAddHandle(){
+  let h = (prompt('登録する @handle を入力（@不要）') || '').trim().replace(/^@/,'');
+  if(!h) return;
+  const arr = xLoadHandles();
+  if(arr.includes(h)){ alert('すでに登録済みです'); return; }
+  arr.push(h);
+  xSaveHandles(arr);
+  xRenderHandles();
+}
+function xDeleteHandle(h){
+  const arr = xLoadHandles().filter(x=>x!==h);
+  xSaveHandles(arr);
+  xRenderHandles();
+}
+function xRenderHandles(){
+  const grid = document.getElementById('x-handle-grid');
+  if(!grid) return;
+  const arr = xLoadHandles();
+  if(!arr.length){
+    grid.innerHTML = '<span class="x-handle-empty">未登録（＋で追加）</span>';
+    return;
   }
-  // Xアプリがあればカスタムスキームで、なければwebへ
-  const appUrl = 'twitter://user?screen_name=' + encodeURIComponent(handle);
-  const webUrl = 'https://twitter.com/' + encodeURIComponent(handle);
-  const a = document.createElement('a');
-  a.href = appUrl;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  // 500ms後にアプリが開かなかったらwebへ
-  setTimeout(()=>{ window.open(webUrl, '_blank', 'noopener'); }, 500);
+  grid.innerHTML = '';
+  arr.forEach(h=>{
+    const chip = document.createElement('div');
+    chip.className = 'x-handle-chip';
+    chip.textContent = '@' + h;
+    // タップで検索
+    chip.addEventListener('click', ()=>{
+      window.open('https://twitter.com/' + encodeURIComponent(h), '_blank', 'noopener');
+    });
+    // 長押しで削除
+    let timer;
+    chip.addEventListener('touchstart', ()=>{ timer=setTimeout(()=>{ if(confirm('@'+h+' を削除しますか？')) xDeleteHandle(h); }, 600); },{passive:true});
+    chip.addEventListener('touchend', ()=>clearTimeout(timer),{passive:true});
+    grid.appendChild(chip);
+  });
 }
 
 // data-* イベントデリゲーター（XSS回避のためinline onclickを使わない）
@@ -1297,7 +1356,7 @@ document.addEventListener('click', e => {
 });
 
 function postRenderAll(){
-  postRenderDrafts(); postRenderTags(); postRenderSnips(); postRenderLogs(); postRenderScheds();
+  postRenderDrafts(); postRenderTags(); postRenderSnips(); postRenderLogs(); postRenderScheds(); xRenderHandles();
 }
 
 /* --- Draft --- */
