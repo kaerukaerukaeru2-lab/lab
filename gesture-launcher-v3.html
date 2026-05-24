@@ -546,7 +546,13 @@ document.addEventListener('touchstart',  onTouchStart,  {passive:false});
 document.addEventListener('touchmove',   onTouchMove,   {passive:false});
 document.addEventListener('touchend',    onTouchEnd,    {passive:false});
 document.addEventListener('touchcancel', onTouchCancel, {passive:false});
-document.addEventListener('contextmenu', e=>e.preventDefault());
+/* Android Brave の長押しコンテキストメニューをゲーム画面のみ抑止
+   設定・ヘルプパネルが開いている間はcontextmenuを通してペーストを有効にする */
+document.addEventListener('contextmenu', e=>{
+  if (settingsOv.classList.contains('open')) return;
+  if (helpOverlay.classList.contains('open')) return;
+  e.preventDefault();
+});
 
 function onTouchStart(e) {
   if (settingsOv.classList.contains('open')) return;
@@ -777,9 +783,17 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
 
-settingsOv.addEventListener('touchstart', e=>e.stopPropagation());
-settingsOv.addEventListener('touchmove',  e=>{ e.stopPropagation(); /* スクロールはブラウザに任せるのでpreventDefaultしない */ });
-settingsOv.addEventListener('touchend',   e=>e.stopPropagation());
+settingsOv.addEventListener('touchstart', e=>{
+  const tag=e.target.tagName;
+  if (tag==='INPUT'||tag==='TEXTAREA') return; /* 入力欄は素通し */
+  e.stopPropagation();
+});
+settingsOv.addEventListener('touchmove',  e=>e.stopPropagation());
+settingsOv.addEventListener('touchend',   e=>{
+  const tag=e.target.tagName;
+  if (tag==='INPUT'||tag==='TEXTAREA') return;
+  e.stopPropagation();
+});
 
 /* ═══════ タブレンダラー ═══════ */
 function renderTab(tab) {
