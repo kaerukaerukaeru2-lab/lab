@@ -3,777 +3,1082 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <title>GLYPH LAUNCH v3</title>
 <style>
   :root {
-    --blue:   #00f3ff;
-    --orange: #ff9500;
-    --bg:     #000000;
-    --item:   88px;
-    --arc-r:  148px; /* 弧の半径 */
+    --neon-blue:   #00f3ff;
+    --neon-green:  #39ff14;
+    --neon-pink:   #ff006e;
+    --neon-orange: #ff9500;
+    --neon-purple: #bf5fff;
+    --neon-yellow: #ffe600;
+    --bg: #000000;
+    --radius: 108px;
+    --item-size: 64px;
+    --accent:  #00f3ff;
+    --accent2: #ff9500;
+    --grid-color: rgba(0,243,255,0.04);
   }
+  body.theme-green { --neon-blue:#39ff14;--neon-orange:#ffdd00;--accent:#39ff14;--accent2:#ffdd00;--grid-color:rgba(57,255,20,0.04);background:#000800; }
+  body.theme-pink  { --neon-blue:#ff006e;--neon-orange:#bf5fff;--accent:#ff006e;--accent2:#bf5fff;--grid-color:rgba(255,0,110,0.04);background:#080008; }
+  body.theme-amber { --neon-blue:#ff9500;--neon-orange:#ffe600;--accent:#ff9500;--accent2:#ffe600;--grid-color:rgba(255,149,0,0.04);background:#080400; }
 
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
-  html, body {
-    width:100%; height:100%;
-    background: var(--bg);
-    overflow: hidden;
-    font-family: 'Courier New', monospace;
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;font-family:'Courier New',monospace;touch-action:none;user-select:none;-webkit-user-select:none;}
 
   /* ── 背景グリッド ── */
-  #bg-grid {
-    position: fixed; inset: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(0,243,255,.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,243,255,.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-  #bg-grid::after {
-    content:'';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 40%, #000 100%);
-  }
+  #bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);
+    background-size:40px 40px;}
+  #bg-grid::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 50%,transparent 40%,#000 100%);}
 
   /* ── アイドル ── */
-  #idle {
-    position: fixed; inset: 0; z-index: 1;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    pointer-events: none;
-    transition: opacity .3s;
-  }
-  #idle.hidden { opacity: 0; }
+  #idle{position:fixed;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:1;transition:opacity .3s;}
+  #idle.hidden{opacity:0;}
+  .idle-glyph{width:90px;height:90px;border:1.5px solid rgba(0,243,255,.3);border-radius:50%;position:relative;animation:idle-pulse 3s ease-in-out infinite;}
+  .idle-glyph::before,.idle-glyph::after{content:'';position:absolute;border-radius:50%;border:1px solid rgba(0,243,255,.15);}
+  .idle-glyph::before{inset:8px;animation:idle-pulse 3s ease-in-out infinite .5s;}
+  .idle-glyph::after{inset:22px;animation:idle-pulse 3s ease-in-out infinite 1s;}
+  .idle-cross{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .idle-cross::before,.idle-cross::after{content:'';position:absolute;background:rgba(0,243,255,.4);}
+  .idle-cross::before{width:1px;height:60%;}
+  .idle-cross::after{width:60%;height:1px;}
+  .idle-dot{width:6px;height:6px;border-radius:50%;background:var(--neon-blue);box-shadow:0 0 10px var(--neon-blue),0 0 24px var(--neon-blue);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+  @keyframes idle-pulse{0%,100%{opacity:.3;transform:scale(1);}50%{opacity:.8;transform:scale(1.04);}}
+  .idle-hint{margin-top:22px;font-size:10px;letter-spacing:.25em;color:rgba(0,243,255,.35);text-transform:uppercase;}
+  .idle-title{font-size:11px;letter-spacing:.5em;color:rgba(0,243,255,.2);text-transform:uppercase;margin-top:8px;}
 
-  .idle-ring {
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    border: 1px solid rgba(0,243,255,.25);
-    position: relative;
-    animation: pulse 3s ease-in-out infinite;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .idle-ring::before {
-    content:'';
-    position: absolute; inset: 12px;
-    border-radius: 50%;
-    border: 1px solid rgba(0,243,255,.12);
-    animation: pulse 3s ease-in-out infinite .6s;
-  }
-  .idle-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--blue);
-    box-shadow: 0 0 12px var(--blue), 0 0 28px var(--blue);
-  }
-  @keyframes pulse {
-    0%,100% { opacity:.25; transform:scale(1); }
-    50%      { opacity:.7;  transform:scale(1.05); }
-  }
-  .idle-label {
-    margin-top: 20px;
-    font-size: 9px; letter-spacing:.4em;
-    color: rgba(0,243,255,.25);
-    text-transform: uppercase;
-  }
-  .idle-sub {
-    margin-top: 6px;
-    font-size: 8px; letter-spacing:.3em;
-    color: rgba(0,243,255,.12);
-    text-transform: uppercase;
-  }
-  .idle-hint {
-    position: fixed; top:16px; right:16px;
-    font-size: 8px; letter-spacing:.2em;
-    color: rgba(0,243,255,.15);
-    pointer-events: none;
-  }
-
-  /* ── ラジアルメニュー（画面中央固定） ── */
-  #arc-menu {
-    position: fixed;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-    pointer-events: none;
-    /* メニュー自体はサイズ0、子要素が絶対配置で広がる */
-    width: 0; height: 0;
-    display: none;
-  }
-  #arc-menu.active { display: block; }
-
-  /* 中心ハブ */
-  .hub {
-    position: absolute;
-    width: 52px; height: 52px;
-    border-radius: 50%;
-    border: 1.5px solid var(--blue);
-    background: rgba(0,0,0,.95);
-    box-shadow: 0 0 16px var(--blue), inset 0 0 10px rgba(0,243,255,.1);
-    transform: translate(-50%,-50%) scale(0);
-    transition: transform .2s cubic-bezier(.34,1.56,.64,1);
-    display: flex; align-items: center; justify-content: center;
-    pointer-events: auto;
-  }
-  #arc-menu.active .hub { transform: translate(-50%,-50%) scale(1); }
-  .hub-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--blue);
-    box-shadow: 0 0 10px var(--blue);
-    transition: background .2s, box-shadow .2s, transform .15s;
-  }
-  .hub.long-mode {
-    border-color: var(--orange);
-    box-shadow: 0 0 16px var(--orange), inset 0 0 10px rgba(255,149,0,.1);
-  }
-  .hub.long-mode .hub-dot {
-    background: var(--orange);
-    box-shadow: 0 0 10px var(--orange);
-    transform: scale(1.3);
-  }
-
-  /* 弧ライン（装飾） */
-  .arc-svg {
-    position: absolute;
-    transform: translate(-50%,-50%);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity .25s;
-  }
-  #arc-menu.active .arc-svg { opacity: 1; }
-
-  /* メニューアイテム */
-  .arc-item {
-    position: absolute;
-    width: var(--item); height: var(--item);
-    border-radius: 50%;
-    background: rgba(0,4,8,.94);
-    border: 1.5px solid rgba(0,243,255,.2);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 5px;
-    transform: translate(-50%,-50%) scale(0);
-    transition:
-      transform .24s cubic-bezier(.34,1.56,.64,1),
-      border-color .15s,
-      box-shadow .15s,
-      background .15s;
-    pointer-events: auto;
-    overflow: hidden;
-  }
-  #arc-menu.active .arc-item { transform: translate(-50%,-50%) scale(1); }
-
-  /* ディレイ */
-  #arc-menu.active .arc-item:nth-child(1) { transition-delay:.03s; }
-  #arc-menu.active .arc-item:nth-child(2) { transition-delay:.06s; }
-  #arc-menu.active .arc-item:nth-child(3) { transition-delay:.09s; }
-  #arc-menu.active .arc-item:nth-child(4) { transition-delay:.06s; }
-  #arc-menu.active .arc-item:nth-child(5) { transition-delay:.03s; }
-  /* 下段2つ（末尾） */
-  #arc-menu.active .arc-item:nth-last-child(1) { transition-delay:.09s; }
-  #arc-menu.active .arc-item:nth-last-child(2) { transition-delay:.06s; }
-
-  .arc-item.highlighted {
-    border-color: var(--blue);
-    background: rgba(0,18,28,.98);
-    box-shadow: 0 0 22px var(--blue), 0 0 44px rgba(0,243,255,.25), inset 0 0 18px rgba(0,243,255,.08);
-    transform: translate(-50%,-50%) scale(1.22) !important;
-  }
-  .arc-item.highlighted.long-fire {
-    border-color: var(--orange);
-    box-shadow: 0 0 22px var(--orange), 0 0 44px rgba(255,149,0,.25), inset 0 0 18px rgba(255,149,0,.08);
-  }
-  .arc-item.highlighted .ai { filter: drop-shadow(0 0 7px var(--blue)); }
-  .arc-item.highlighted.long-fire .ai { filter: drop-shadow(0 0 7px var(--orange)); }
-  .arc-item.highlighted .al { color: var(--blue); }
-  .arc-item.highlighted.long-fire .al { color: var(--orange); }
-
-  .ai { /* arc-icon */
-    font-size: 26px; line-height:1;
-    transition: filter .15s;
-  }
-  .al { /* arc-label */
-    font-size: 8px; letter-spacing:.08em;
-    color: rgba(0,243,255,.55);
-    text-transform: uppercase;
-    max-width: 72px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    text-align: center;
-    transition: color .15s;
-  }
+  /* ── ラジアルメニュー ── */
+  #menu{position:fixed;z-index:10;pointer-events:none;display:none;will-change:transform;}
+  #menu.active{display:block;}
+  .menu-center{position:absolute;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--neon-blue);box-shadow:0 0 12px var(--neon-blue),inset 0 0 8px rgba(0,243,255,.15);transform:translate(-50%,-50%) scale(0);transition:transform .18s cubic-bezier(.34,1.56,.64,1);background:rgba(0,0,0,.9);will-change:transform;display:flex;align-items:center;justify-content:center;}
+  #menu.active .menu-center{transform:translate(-50%,-50%) scale(1);}
+  .menu-center.long-mode{border-color:var(--neon-orange);box-shadow:0 0 12px var(--neon-orange),inset 0 0 8px rgba(255,149,0,.15);}
+  .menu-center.long-mode .menu-center-dot{background:var(--neon-orange);box-shadow:0 0 8px var(--neon-orange);}
+  .menu-center-dot{width:8px;height:8px;border-radius:50%;background:var(--neon-blue);box-shadow:0 0 8px var(--neon-blue);transition:background .2s,box-shadow .2s;}
+  .menu-rays{position:absolute;left:0;top:0;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;}
+  .ray-line{position:absolute;height:1px;background:linear-gradient(90deg,transparent,rgba(0,243,255,.25));transform-origin:left center;opacity:0;transition:opacity .18s;}
+  #menu.active .ray-line{opacity:1;}
+  .menu-item{position:absolute;width:var(--item-size);height:var(--item-size);border-radius:50%;background:rgba(0,4,8,.92);border:1.5px solid rgba(0,243,255,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:translate(-50%,-50%) scale(0);transition:transform .22s cubic-bezier(.34,1.56,.64,1),border-color .15s,box-shadow .15s,background .15s;will-change:transform;gap:4px;cursor:pointer;pointer-events:auto;overflow:hidden;}
+  #menu.active .menu-item{transform:translate(-50%,-50%) scale(1);}
+  #menu.active .menu-item[data-di="0"]{transition-delay:.02s;}
+  #menu.active .menu-item[data-di="1"]{transition-delay:.04s;}
+  #menu.active .menu-item[data-di="2"]{transition-delay:.06s;}
+  #menu.active .menu-item[data-di="3"]{transition-delay:.08s;}
+  #menu.active .menu-item[data-di="4"]{transition-delay:.10s;}
+  #menu.active .menu-item[data-di="5"]{transition-delay:.08s;}
+  #menu.active .menu-item[data-di="6"]{transition-delay:.06s;}
+  #menu.active .menu-item[data-di="7"]{transition-delay:.04s;}
+  .menu-item.highlighted{border-color:var(--neon-blue);box-shadow:0 0 18px var(--neon-blue),0 0 40px rgba(0,243,255,.3),inset 0 0 16px rgba(0,243,255,.08);background:rgba(0,20,30,.97);transform:translate(-50%,-50%) scale(1.18) !important;}
+  .menu-item.highlighted.long-fire{border-color:var(--neon-orange);box-shadow:0 0 18px var(--neon-orange),0 0 40px rgba(255,149,0,.3),inset 0 0 16px rgba(255,149,0,.08);}
+  .menu-item.highlighted .item-icon{filter:drop-shadow(0 0 6px var(--neon-blue));}
+  .menu-item.highlighted.long-fire .item-icon{filter:drop-shadow(0 0 6px var(--neon-orange));}
+  .menu-item.highlighted .item-label{color:var(--neon-blue);}
+  .menu-item.highlighted.long-fire .item-label{color:var(--neon-orange);}
+  .item-icon{font-size:22px;line-height:1;transition:filter .15s;}
+  .item-label{font-size:8px;letter-spacing:.1em;color:rgba(0,243,255,.6);text-transform:uppercase;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;transition:color .15s;}
 
   /* ── 方向インジケーター ── */
-  #dir-ind {
-    position: fixed; bottom: 52px; left:50%;
-    transform: translateX(-50%);
-    z-index: 20;
-    font-size: 10px; letter-spacing:.25em;
-    color: var(--blue);
-    text-transform: uppercase;
-    opacity: 0; transition: opacity .2s, color .2s;
-    pointer-events: none;
-    text-shadow: 0 0 12px var(--blue);
-    white-space: nowrap;
-  }
-  #dir-ind.visible { opacity: 1; }
-  #dir-ind.long-mode { color: var(--orange); text-shadow: 0 0 12px var(--orange); }
-
-  /* ── モードバッジ（長スワイプ時） ── */
-  #mode-badge {
-    position: fixed; top: 50%; left: 50%;
-    transform: translate(-50%, calc(-50% - 110px));
-    z-index: 20;
-    font-size: 8px; letter-spacing:.25em;
-    padding: 4px 12px;
-    border: 1px solid rgba(255,149,0,.4);
-    color: var(--orange);
-    background: rgba(0,0,0,.8);
-    text-transform: uppercase;
-    opacity: 0; transition: opacity .2s;
-    pointer-events: none;
-    border-radius: 2px;
-  }
-  #mode-badge.visible { opacity: 1; }
-
-  /* ── トレイル ── */
-  #trail {
-    position: fixed; inset:0; z-index:4;
-    pointer-events: none;
-    opacity: 0; transition: opacity .3s;
-  }
-  #trail.active { opacity: 1; }
+  #direction-indicator{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);z-index:20;font-size:10px;letter-spacing:.25em;color:var(--neon-blue);text-transform:uppercase;opacity:0;transition:opacity .2s,color .2s;pointer-events:none;text-shadow:0 0 12px var(--neon-blue);white-space:nowrap;}
+  #direction-indicator.visible{opacity:1;}
+  #direction-indicator.long-mode{color:var(--neon-orange);text-shadow:0 0 12px var(--neon-orange);}
 
   /* ── リップル ── */
-  .ripple {
-    position: fixed; pointer-events: none; z-index:5;
-    border-radius: 50%;
-    border: 1px solid rgba(0,243,255,.45);
-    transform: translate(-50%,-50%) scale(0);
-    animation: rout .5s ease-out forwards;
-  }
-  @keyframes rout { to { transform:translate(-50%,-50%) scale(3); opacity:0; } }
+  .ripple{position:fixed;pointer-events:none;z-index:5;border-radius:50%;border:1px solid rgba(0,243,255,.5);transform:translate(-50%,-50%) scale(0);animation:ripple-out .5s ease-out forwards;will-change:transform,opacity;}
+  @keyframes ripple-out{to{transform:translate(-50%,-50%) scale(3);opacity:0;}}
+
+  /* ── スワイプトレイル ── */
+  #trail-canvas{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .3s;}
+  #trail-canvas.active{opacity:1;}
+
+  /* ── プレビューポップアップ ── */
+  #preview-popup{position:fixed;z-index:50;background:rgba(0,6,10,.97);border:1px solid rgba(0,243,255,.35);border-radius:6px;padding:10px 14px;max-width:260px;pointer-events:none;opacity:0;transform:scale(.88);transition:opacity .18s,transform .18s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 24px rgba(0,243,255,.15);}
+  #preview-popup.visible{opacity:1;transform:scale(1);}
+  .preview-icon{font-size:26px;text-align:center;margin-bottom:6px;}
+  .preview-label{font-size:11px;letter-spacing:.2em;color:var(--neon-blue);text-transform:uppercase;margin-bottom:4px;}
+  .preview-url{font-size:9px;letter-spacing:.05em;color:rgba(0,243,255,.4);word-break:break-all;line-height:1.5;}
+  .preview-hint{margin-top:6px;font-size:8px;letter-spacing:.15em;color:rgba(0,243,255,.25);text-transform:uppercase;}
+
+  /* ── 設定ボタン（右下） ── */
+  #settings-btn{position:fixed;bottom:24px;right:20px;z-index:30;width:44px;height:44px;border-radius:50%;border:1px solid rgba(0,243,255,.3);background:rgba(0,4,8,.85);color:var(--neon-blue);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,box-shadow .15s,opacity .2s;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+  #settings-btn:active{border-color:var(--neon-blue);box-shadow:0 0 14px var(--neon-blue);}
+  #settings-btn.hidden{opacity:0;pointer-events:none;}
+
+  /* ── ？ボタン（右下、設定の左隣） ── */
+  #help-btn{position:fixed;bottom:24px;right:74px;z-index:30;width:44px;height:44px;border-radius:50%;border:1px solid rgba(0,243,255,.2);background:rgba(0,4,8,.85);color:rgba(0,243,255,.6);font-size:16px;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,box-shadow .15s,color .15s,opacity .2s;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+  #help-btn:active{border-color:var(--neon-blue);box-shadow:0 0 14px var(--neon-blue);color:var(--neon-blue);}
+  #help-btn.hidden{opacity:0;pointer-events:none;}
+
+  /* ── ヘルプパネル ── */
+  #help-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.97);display:none;flex-direction:column;overflow:hidden;}
+  #help-overlay.open{display:flex;}
+  .help-header{padding:24px 20px 14px;border-bottom:1px solid rgba(0,243,255,.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .help-title{font-size:11px;letter-spacing:.5em;color:var(--neon-blue);text-transform:uppercase;}
+  .help-close{width:36px;height:36px;border:1px solid rgba(0,243,255,.3);border-radius:50%;background:transparent;color:var(--neon-blue);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+  .help-close:active{border-color:var(--neon-blue);box-shadow:0 0 12px var(--neon-blue);}
+  .help-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 48px;}
+  .help-scroll::-webkit-scrollbar{width:2px;}
+  .help-scroll::-webkit-scrollbar-thumb{background:rgba(0,243,255,.2);border-radius:2px;}
+
+  /* ヘルプセクション */
+  .h-section{margin-bottom:24px;}
+  .h-sec-title{font-size:8px;letter-spacing:.4em;color:rgba(0,243,255,.35);text-transform:uppercase;border-bottom:1px solid rgba(0,243,255,.08);padding-bottom:6px;margin-bottom:12px;}
+  .h-item{display:flex;gap:14px;align-items:flex-start;margin-bottom:12px;}
+  .h-icon{flex-shrink:0;width:40px;height:40px;border-radius:50%;border:1px solid rgba(0,243,255,.25);background:rgba(0,4,8,.9);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .h-icon.dir-icon{width:36px;height:36px;font-size:13px;border-color:rgba(0,243,255,.15);}
+  .h-text{}
+  .h-label{font-size:11px;letter-spacing:.1em;color:var(--neon-blue);margin-bottom:3px;}
+  .h-desc{font-size:10px;letter-spacing:.05em;color:rgba(0,243,255,.45);line-height:1.7;}
+  .h-badge{display:inline-block;padding:2px 8px;border-radius:2px;font-size:8px;letter-spacing:.15em;text-transform:uppercase;margin-right:4px;}
+  .h-badge.blue{border:1px solid rgba(0,243,255,.4);color:var(--neon-blue);}
+  .h-badge.orange{border:1px solid rgba(255,149,0,.4);color:var(--neon-orange);}
+  .h-tip{padding:10px 14px;border:1px solid rgba(0,243,255,.1);border-radius:4px;background:rgba(0,8,12,.8);font-size:9px;letter-spacing:.1em;color:rgba(0,243,255,.4);line-height:1.8;margin-bottom:10px;}
+  .h-tip strong{color:rgba(0,243,255,.8);}
+
+  /* 8方向グリッド図 */
+  .dir-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:200px;margin:0 auto 4px;}
+  .dir-cell{height:48px;border:1px solid rgba(0,243,255,.1);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:rgba(0,4,8,.8);}
+  .dir-cell.center-cell{border-color:rgba(0,243,255,.3);background:rgba(0,20,30,.9);}
+  .dir-cell-arrow{font-size:14px;color:rgba(0,243,255,.7);}
+  .dir-cell-id{font-size:7px;letter-spacing:.15em;color:rgba(0,243,255,.35);text-transform:uppercase;}
 
   /* ── トースト ── */
-  #toast {
-    position: fixed; bottom:28px; left:50%;
-    transform: translateX(-50%) translateY(16px);
-    background: rgba(0,243,255,.08);
-    border: 1px solid rgba(0,243,255,.35);
-    color: var(--blue);
-    font-size: 9px; letter-spacing:.2em;
-    padding: 7px 18px; border-radius:2px;
-    z-index: 200; opacity:0;
-    transition: opacity .2s, transform .2s;
-    pointer-events: none; text-transform: uppercase; white-space: nowrap;
-  }
-  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-  #toast.orange { border-color:rgba(255,149,0,.4); color:var(--orange); background:rgba(255,149,0,.06); }
+  #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,243,255,.1);border:1px solid rgba(0,243,255,.4);color:var(--neon-blue);font-size:10px;letter-spacing:.2em;padding:8px 20px;border-radius:2px;z-index:200;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-transform:uppercase;white-space:nowrap;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #toast.orange{border-color:rgba(255,149,0,.5);color:var(--neon-orange);background:rgba(255,149,0,.08);}
 
-  /* ── 設定パネル ── */
-  #settings-overlay {
-    position: fixed; inset:0; z-index:100;
-    background: rgba(0,0,0,.96);
-    display: none; flex-direction: column;
-    overflow-y: auto; -webkit-overflow-scrolling: touch;
-  }
-  #settings-overlay.open { display: flex; }
+  /* ════════════════════════════════════════
+     設定パネル
+  ════════════════════════════════════════ */
+  #settings-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.97);display:none;flex-direction:column;overflow:hidden;}
+  #settings-overlay.open{display:flex;}
 
-  .s-header {
-    padding: 26px 22px 14px;
-    border-bottom: 1px solid rgba(0,243,255,.12);
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top:0; background: rgba(0,0,0,.98); z-index:1;
-  }
-  .s-title { font-size:10px; letter-spacing:.5em; color:var(--blue); text-transform:uppercase; }
-  .s-close {
-    width:34px; height:34px; border-radius:50%;
-    border:1px solid rgba(0,243,255,.3); background:transparent;
-    color:var(--blue); font-size:17px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-  }
-  .s-body { padding:14px 22px 40px; }
+  /* ヘッダー */
+  .settings-header{padding:24px 20px 14px;border-bottom:1px solid rgba(0,243,255,.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .settings-title{font-size:11px;letter-spacing:.5em;color:var(--neon-blue);text-transform:uppercase;}
+  .settings-close{width:36px;height:36px;border:1px solid rgba(0,243,255,.3);border-radius:50%;background:transparent;color:var(--neon-blue);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+  .settings-close:active{border-color:var(--neon-blue);box-shadow:0 0 12px var(--neon-blue);}
 
-  .slot-card {
-    margin-bottom:12px; padding:14px;
-    border:1px solid rgba(0,243,255,.1); border-radius:4px;
-    background: rgba(0,6,10,.8);
-  }
-  .slot-card:focus-within { border-color:rgba(0,243,255,.35); }
-  .slot-head {
-    display:flex; align-items:center; gap:10px; margin-bottom:10px;
-  }
-  .slot-arrow { font-size:18px; color:rgba(0,243,255,.5); }
-  .slot-name { font-size:8px; letter-spacing:.3em; color:rgba(0,243,255,.4); text-transform:uppercase; }
+  /* タブバー */
+  .settings-tabs{display:flex;border-bottom:1px solid rgba(0,243,255,.1);flex-shrink:0;}
+  .tab-btn{flex:1;padding:12px 4px;background:transparent;border:none;border-bottom:2px solid transparent;color:rgba(0,243,255,.35);font-family:'Courier New',monospace;font-size:9px;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:color .15s,border-color .15s;}
+  .tab-btn.active{color:var(--neon-blue);border-bottom-color:var(--neon-blue);}
 
-  .f-label {
-    display:block; font-size:7px; letter-spacing:.2em;
-    color:rgba(0,243,255,.35); text-transform:uppercase; margin-bottom:4px;
-  }
-  .f-row { display:flex; gap:7px; margin-bottom:9px; }
-  .f-input {
-    flex:1; background:rgba(0,0,0,.7);
-    border:1px solid rgba(0,243,255,.18); border-radius:3px;
-    padding:7px 9px; color:var(--blue);
-    font-family:'Courier New',monospace; font-size:12px;
-    outline:none; -webkit-appearance:none;
-    transition: border-color .15s;
-  }
-  .f-input:focus { border-color:rgba(0,243,255,.6); }
-  .f-input::placeholder { color:rgba(0,243,255,.18); }
-  .f-icon { width:48px; flex:none; text-align:center; font-size:20px; }
+  /* スクロールエリア */
+  .settings-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 20px 40px;}
+  .settings-scroll::-webkit-scrollbar{width:2px;}
+  .settings-scroll::-webkit-scrollbar-thumb{background:rgba(0,243,255,.2);border-radius:2px;}
 
-  .save-btn {
-    display:block; width:100%; margin-top:20px; padding:13px;
-    background:transparent; border:1px solid var(--blue); border-radius:3px;
-    color:var(--blue); font-family:'Courier New',monospace;
-    font-size:10px; letter-spacing:.4em; text-transform:uppercase; cursor:pointer;
-  }
-  .save-btn:active { background:rgba(0,243,255,.07); }
-  .s-hint {
-    text-align:center; font-size:8px; letter-spacing:.2em;
-    color:rgba(0,243,255,.18); margin-top:14px;
-  }
+  /* セクション見出し */
+  .sec-title{font-size:8px;letter-spacing:.35em;color:rgba(0,243,255,.3);text-transform:uppercase;margin:16px 0 10px;border-bottom:1px solid rgba(0,243,255,.08);padding-bottom:6px;}
+  .sec-title:first-child{margin-top:4px;}
+
+  /* カード */
+  .s-card{margin-bottom:12px;padding:14px;border:1px solid rgba(0,243,255,.12);border-radius:4px;background:rgba(0,8,12,.8);transition:border-color .15s;}
+  .s-card:focus-within{border-color:rgba(0,243,255,.4);}
+
+  /* スロットヘッダー */
+  .slot-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .slot-arrow{font-size:18px;width:28px;text-align:center;filter:drop-shadow(0 0 4px rgba(0,243,255,.5));}
+  .slot-dir{font-size:9px;letter-spacing:.3em;color:rgba(0,243,255,.5);text-transform:uppercase;flex:1;}
+
+  /* クリアボタン（スロット用） */
+  .slot-clear-btn{padding:4px 10px;background:transparent;border:1px solid rgba(255,0,110,.25);border-radius:3px;color:rgba(255,0,110,.5);font-family:'Courier New',monospace;font-size:8px;letter-spacing:.15em;cursor:pointer;transition:border-color .15s,color .15s;}
+  .slot-clear-btn:active{border-color:var(--neon-pink);color:var(--neon-pink);}
+
+  /* フィールド */
+  .f-label{display:block;font-size:8px;letter-spacing:.2em;color:rgba(0,243,255,.4);text-transform:uppercase;margin-bottom:5px;}
+  .f-row{display:flex;gap:8px;margin-bottom:10px;}
+  .f-input{flex:1;background:rgba(0,0,0,.7);border:1px solid rgba(0,243,255,.2);border-radius:3px;padding:8px 10px;color:var(--neon-blue);font-family:'Courier New',monospace;font-size:12px;outline:none;transition:border-color .15s;-webkit-appearance:none;}
+  .f-input:focus{border-color:rgba(0,243,255,.7);}
+  .f-input::placeholder{color:rgba(0,243,255,.2);}
+  .icon-input{width:54px;flex:none;text-align:center;font-size:20px;}
+
+  /* URL textarea（ペーストしやすい） */
+  .url-textarea{width:100%;background:rgba(0,0,0,.7);border:1px solid rgba(0,243,255,.2);border-radius:3px;padding:8px 10px;color:var(--neon-blue);font-family:'Courier New',monospace;font-size:11px;outline:none;transition:border-color .15s;-webkit-appearance:none;resize:none;height:54px;line-height:1.4;word-break:break-all;}
+  .url-textarea:focus{border-color:rgba(0,243,255,.7);}
+  .url-textarea::placeholder{color:rgba(0,243,255,.2);}
+
+  /* テーマボタン */
+  .theme-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+  .theme-btn{flex:1;min-width:60px;padding:10px 6px;border-radius:4px;border:1.5px solid transparent;background:rgba(0,0,0,.6);font-family:'Courier New',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-align:center;}
+  .theme-btn.active{border-width:2px;}
+  .theme-btn[data-theme="cyan"] {color:#00f3ff;border-color:rgba(0,243,255,.3);}
+  .theme-btn[data-theme="green"]{color:#39ff14;border-color:rgba(57,255,20,.3);}
+  .theme-btn[data-theme="pink"] {color:#ff006e;border-color:rgba(255,0,110,.3);}
+  .theme-btn[data-theme="amber"]{color:#ff9500;border-color:rgba(255,149,0,.3);}
+  .theme-btn[data-theme="cyan"].active {border-color:#00f3ff;box-shadow:0 0 10px rgba(0,243,255,.4);}
+  .theme-btn[data-theme="green"].active{border-color:#39ff14;box-shadow:0 0 10px rgba(57,255,20,.4);}
+  .theme-btn[data-theme="pink"].active {border-color:#ff006e;box-shadow:0 0 10px rgba(255,0,110,.4);}
+  .theme-btn[data-theme="amber"].active{border-color:#ff9500;box-shadow:0 0 10px rgba(255,149,0,.4);}
+
+  /* スライダー */
+  .threshold-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .threshold-slider{flex:1;-webkit-appearance:none;height:2px;background:rgba(0,243,255,.2);border-radius:2px;outline:none;}
+  .threshold-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--neon-blue);box-shadow:0 0 8px var(--neon-blue);cursor:pointer;}
+  .threshold-val{font-size:10px;color:var(--neon-blue);min-width:36px;text-align:right;}
+  .threshold-hint{font-size:8px;letter-spacing:.1em;color:rgba(0,243,255,.25);}
+
+  /* バックアップ テキストエリア */
+  .backup-textarea{width:100%;background:rgba(0,0,0,.8);border:1px solid rgba(0,243,255,.2);border-radius:3px;padding:10px;color:rgba(0,243,255,.7);font-family:'Courier New',monospace;font-size:10px;outline:none;resize:vertical;min-height:100px;line-height:1.5;transition:border-color .15s;}
+  .backup-textarea:focus{border-color:rgba(0,243,255,.5);}
+
+  /* ボタン共通 */
+  .s-btn{display:block;width:100%;padding:12px;background:transparent;border-radius:3px;font-family:'Courier New',monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s;}
+  .s-btn-blue{border:1px solid var(--neon-blue);color:var(--neon-blue);}
+  .s-btn-blue:active{background:rgba(0,243,255,.08);box-shadow:0 0 16px rgba(0,243,255,.3);}
+  .s-btn-red{border:1px solid rgba(255,0,110,.3);color:rgba(255,0,110,.6);}
+  .s-btn-red:active{background:rgba(255,0,110,.08);border-color:var(--neon-pink);color:var(--neon-pink);}
+  .s-btn-sm{width:auto;display:inline-block;padding:8px 14px;font-size:9px;}
+
+  /* 履歴リスト */
+  .hist-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,243,255,.06);}
+  .hist-row:last-child{border-bottom:none;}
+  .hist-icon{font-size:16px;flex-shrink:0;}
+  .hist-label{font-size:10px;letter-spacing:.05em;color:rgba(0,243,255,.6);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hist-launch{padding:4px 10px;background:transparent;border:1px solid rgba(0,243,255,.2);border-radius:3px;color:rgba(0,243,255,.4);font-family:'Courier New',monospace;font-size:8px;letter-spacing:.1em;cursor:pointer;transition:border-color .15s,color .15s;flex-shrink:0;}
+  .hist-launch:active{border-color:var(--neon-blue);color:var(--neon-blue);}
+
+  .settings-hint{text-align:center;font-size:9px;letter-spacing:.2em;color:rgba(0,243,255,.2);margin-top:16px;}
 </style>
 </head>
 <body>
 
 <div id="bg-grid"></div>
-<canvas id="trail"></canvas>
+<canvas id="trail-canvas"></canvas>
 
 <div id="idle">
-  <div class="idle-ring"><div class="idle-dot"></div></div>
-  <p class="idle-label">Touch to launch</p>
-  <p class="idle-sub">Glyph Launch v3</p>
-</div>
-<div class="idle-hint">Triple tap top ↑ settings</div>
-
-<!-- 弧メニュー（画面中央固定） -->
-<div id="arc-menu">
-  <!-- SVG弧ライン（JS生成） -->
-  <svg class="arc-svg" id="arc-svg"></svg>
-  <!-- ハブ（中心） -->
-  <div class="hub" id="hub"><div class="hub-dot" id="hub-dot"></div></div>
-  <!-- アイテムはJS生成 -->
+  <div class="idle-glyph">
+    <div class="idle-cross"></div>
+    <div class="idle-dot"></div>
+  </div>
+  <p class="idle-hint">Touch anywhere to launch</p>
+  <p class="idle-title">Glyph Launch v3</p>
 </div>
 
-<div id="dir-ind"></div>
-<div id="mode-badge">Current Tab</div>
+<button id="settings-btn" aria-label="Settings">⚙</button>
+<button id="help-btn" aria-label="Help">?</button>
+<div id="direction-indicator"></div>
+
+<!-- ヘルプパネル -->
+<div id="help-overlay">
+  <div class="help-header">
+    <span class="help-title">// How to Use</span>
+    <button class="help-close" id="help-close">✕</button>
+  </div>
+  <div class="help-scroll" id="help-scroll"></div>
+</div>
+<div id="preview-popup"></div>
 <div id="toast"></div>
 
-<!-- 設定 -->
+<div id="menu">
+  <div class="menu-rays" id="menu-rays"></div>
+  <div class="menu-center" id="menu-center"><div class="menu-center-dot" id="menu-center-dot"></div></div>
+</div>
+
+<!-- 設定パネル -->
 <div id="settings-overlay">
-  <div class="s-header">
-    <span class="s-title">// Config</span>
-    <button class="s-close" id="s-close">✕</button>
+  <div class="settings-header">
+    <span class="settings-title">// Config</span>
+    <button class="settings-close" id="settings-close">✕</button>
   </div>
-  <div class="s-body" id="s-body"></div>
+  <div class="settings-tabs">
+    <button class="tab-btn active" data-tab="slots">Slots</button>
+    <button class="tab-btn" data-tab="behavior">Settings</button>
+    <button class="tab-btn" data-tab="history">History</button>
+    <button class="tab-btn" data-tab="backup">Backup</button>
+  </div>
+  <div class="settings-scroll" id="settings-scroll"></div>
 </div>
 
 <script>
 'use strict';
 
-/* ═══════════════════
-   定数
-═══════════════════ */
-/* 上半円を除いた下寄り配置：-150° 〜 -30° の上弧 + 真横2つ
-   親指で届く範囲 = 下半円（90°〜270°）を使う
-   8スロットを下半円+両サイドに配置
-   角度: 左端-150° → 右端-30°（上弧）＋ 真左右各1つ */
-const SLOTS_DEF = [
-  { icon:'🔍', label:'Google',  url:'https://www.google.com'       },
-  { icon:'▶',  label:'YouTube', url:'https://www.youtube.com'      },
-  { icon:'⌥',  label:'GitHub',  url:'https://github.com'           },
-  { icon:'✦',  label:'Claude',  url:'https://claude.ai'            },
-  { icon:'◉',  label:'Maps',    url:'https://maps.google.com'      },
-  { icon:'✕',  label:'X',       url:'https://x.com'                },
-  { icon:'△',  label:'HN',      url:'https://news.ycombinator.com' },
-  { icon:'Ω',  label:'Wiki',    url:'https://www.wikipedia.org'    },
+/* ══ 定数 ══ */
+const DIRECTIONS = [
+  { id:'E',  angle:   0, label:'East',       arrow:'→' },
+  { id:'SE', angle:  45, label:'South East',  arrow:'↘' },
+  { id:'S',  angle:  90, label:'South',       arrow:'↓' },
+  { id:'SW', angle: 135, label:'South West',  arrow:'↙' },
+  { id:'W',  angle: 180, label:'West',        arrow:'←' },
+  { id:'NW', angle:-135, label:'North West',  arrow:'↖' },
+  { id:'N',  angle: -90, label:'North',       arrow:'↑' },
+  { id:'NE', angle: -45, label:'North East',  arrow:'↗' },
 ];
-
-/* 下半円に8分割配置（210°〜330° = 親指の自然な弧） */
-const ARC_ANGLES = [-150, -107, -64, -21, 21, 64, 107, 150]; // degree, 0=右
-const ARC_R      = 148;  // px
-const DEADZONE   = 22;   // px
-const LONG_DIST  = 130;  // px
-const STORAGE_KEY = 'glyph_v3_slots';
+const DEFAULTS = [
+  { url:'https://www.google.com',       icon:'🔍', label:'Google'  },
+  { url:'https://www.youtube.com',      icon:'▶',  label:'YouTube' },
+  { url:'https://github.com',           icon:'⌥',  label:'GitHub'  },
+  { url:'https://maps.google.com',      icon:'◉',  label:'Maps'    },
+  { url:'https://claude.ai',            icon:'✦',  label:'Claude'  },
+  { url:'https://x.com',               icon:'✕',  label:'X'       },
+  { url:'https://news.ycombinator.com', icon:'△',  label:'HN'      },
+  { url:'https://www.wikipedia.org',    icon:'Ω',  label:'Wiki'    },
+];
+const STORAGE_KEY = 'glyph_launch_v1';
+const HIST_KEY    = 'glyph_history_v1';
+const CONFIG_KEY  = 'glyph_config_v1';
+const THEMES      = ['cyan','green','pink','amber'];
+const DEADZONE    = 18;
+const LONG_DIST_DEF = 120;
+const HIST_MAX    = 20;
 const LONGPRESS_MS = 420;
 
-/* ═══════════════════
-   LocalStorage
-═══════════════════ */
-function lsGet(k, fb) {
-  try { const r = localStorage.getItem(k); if(r) return JSON.parse(r); } catch(e){}
-  return fb;
-}
-function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+/* ══ LocalStorage ══ */
+function lsGet(key, fb) { try { const r=localStorage.getItem(key); if(r) return JSON.parse(r); } catch(e){} return fb; }
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
 
+/* ══ スロット ══ */
 function loadSlots() {
   const p = lsGet(STORAGE_KEY, null);
-  if (Array.isArray(p) && p.length === 8 && p.every(s => s && typeof s === 'object')) return p;
-  return SLOTS_DEF.map(d => ({...d}));
+  if (Array.isArray(p) && p.length===8 && p.every(s=>s&&typeof s==='object')) return p;
+  return DEFAULTS.map((d,i)=>({ ...d, dir:DIRECTIONS[i].id }));
 }
 function saveSlots(s) { lsSet(STORAGE_KEY, s); }
 let slots = loadSlots();
 
-/* ═══════════════════
-   DOM refs
-═══════════════════ */
-const arcMenu  = document.getElementById('arc-menu');
-const arcSvg   = document.getElementById('arc-svg');
-const hubEl    = document.getElementById('hub');
-const hubDot   = document.getElementById('hub-dot');
-const idleEl   = document.getElementById('idle');
-const dirInd   = document.getElementById('dir-ind');
-const modeBadge= document.getElementById('mode-badge');
-const trailCvs = document.getElementById('trail');
-const ctx      = trailCvs.getContext('2d');
-const toastEl  = document.getElementById('toast');
-const sOverlay = document.getElementById('settings-overlay');
-const sBody    = document.getElementById('s-body');
-const sClose   = document.getElementById('s-close');
+/* ══ 設定 ══ */
+function loadConfig() {
+  const c = lsGet(CONFIG_KEY, {});
+  return {
+    longDist:     c.longDist     ?? LONG_DIST_DEF,
+    theme:        c.theme        ?? 'cyan',
+    hideEmpty:    c.hideEmpty    ?? false,
+    addTimestamp: c.addTimestamp ?? false,
+  };
+}
+function saveConfig(c) { lsSet(CONFIG_KEY, c); }
+let config = loadConfig();
 
-/* ── Canvas ── */
-function resizeCvs() { trailCvs.width = window.innerWidth; trailCvs.height = window.innerHeight; }
-resizeCvs();
-window.addEventListener('resize', resizeCvs);
+function applyTheme(theme) {
+  document.body.classList.remove(...THEMES.map(t=>'theme-'+t));
+  if (theme!=='cyan') document.body.classList.add('theme-'+theme);
+  const colors={cyan:'#000000',green:'#000800',pink:'#080008',amber:'#080400'};
+  document.querySelector('meta[name="theme-color"]').content = colors[theme]||'#000000';
+}
+applyTheme(config.theme);
 
-/* ═══════════════════
-   弧メニュービルド
-═══════════════════ */
+/* ══ 履歴 ══ */
+function loadHistory() { const h=lsGet(HIST_KEY,[]); return Array.isArray(h)?h:[]; }
+function saveHistory(h) { lsSet(HIST_KEY, h); }
+function addHistory(slot) {
+  if (!slot||!slot.url) return;
+  let h = loadHistory().filter(x=>x.url!==slot.url);
+  h.unshift({ url:slot.url, icon:slot.icon, label:slot.label });
+  if (h.length>HIST_MAX) h=h.slice(0,HIST_MAX);
+  saveHistory(h);
+}
+function clearHistory() { saveHistory([]); }
+
+/* ══ DOM refs ══ */
+const menuEl       = document.getElementById('menu');
+const menuCenterEl = document.getElementById('menu-center');
+const raysEl       = document.getElementById('menu-rays');
+const idleEl       = document.getElementById('idle');
+const dirIndEl     = document.getElementById('direction-indicator');
+const settingsOv   = document.getElementById('settings-overlay');
+const settingsScr  = document.getElementById('settings-scroll');
+const settingsClose= document.getElementById('settings-close');
+const trailCanvas  = document.getElementById('trail-canvas');
+const ctx          = trailCanvas.getContext('2d');
+const toastEl      = document.getElementById('toast');
+const previewEl    = document.getElementById('preview-popup');
+const settingsBtn  = document.getElementById('settings-btn');
+const helpBtn      = document.getElementById('help-btn');
+const helpOverlay  = document.getElementById('help-overlay');
+const helpClose    = document.getElementById('help-close');
+const helpScroll   = document.getElementById('help-scroll');
+
+/* ══ Canvas ══ */
+function resizeCanvas() { trailCanvas.width=window.innerWidth; trailCanvas.height=window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+/* ══ トースト ══ */
+let toastTimer;
+function showToast(msg, style) {
+  toastEl.textContent = msg;
+  toastEl.className   = 'show' + (style==='orange'?' orange':'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ toastEl.className=''; }, 1800);
+}
+
+/* ══ バイブ ══ */
+function vibrate(ms) { try { navigator.vibrate&&navigator.vibrate(ms); } catch(e){} }
+
+/* ══ メニュービルド ══ */
+const RADIUS_PX = 108;
 let itemEls = [];
 
-function buildArc() {
-  /* 既存アイテム削除（hub・svg以外） */
-  itemEls.forEach(el => el.remove());
+function buildMenu() {
+  itemEls.forEach(el=>el.remove());
+  raysEl.innerHTML = '';
   itemEls = [];
-
-  /* SVG弧ライン描画 */
-  const r = ARC_R + 10;
-  const W = (r + 60) * 2;
-  arcSvg.setAttribute('width', W);
-  arcSvg.setAttribute('height', W);
-  arcSvg.style.width  = W + 'px';
-  arcSvg.style.height = W + 'px';
-  const cx = W / 2, cy = W / 2;
-
-  /* 弧のstart/end角度 */
-  const startA = ARC_ANGLES[0] * Math.PI / 180;
-  const endA   = ARC_ANGLES[ARC_ANGLES.length - 1] * Math.PI / 180;
-  const sx = cx + r * Math.cos(startA);
-  const sy = cy + r * Math.sin(startA);
-  const ex = cx + r * Math.cos(endA);
-  const ey = cy + r * Math.sin(endA);
-  const largeArc = Math.abs(ARC_ANGLES[ARC_ANGLES.length-1] - ARC_ANGLES[0]) > 180 ? 1 : 0;
-
-  arcSvg.innerHTML = `
-    <path d="M ${sx} ${sy} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}"
-      fill="none" stroke="rgba(0,243,255,0.12)" stroke-width="1"
-      stroke-dasharray="4 6"/>
-    <!-- 内側リング -->
-    <circle cx="${cx}" cy="${cy}" r="28" fill="none"
-      stroke="rgba(0,243,255,0.08)" stroke-width="1"/>
-  `;
-
-  /* アイテム配置 */
-  ARC_ANGLES.forEach((deg, i) => {
-    const rad = deg * Math.PI / 180;
-    const x   = Math.cos(rad) * ARC_R;
-    const y   = Math.sin(rad) * ARC_R;
-    const s   = slots[i];
-
-    const el = document.createElement('div');
-    el.className = 'arc-item';
-    el.dataset.i = i;
-    el.style.left = x + 'px';
-    el.style.top  = y + 'px';
-    el.innerHTML  = `<span class="ai">${s.icon || '◉'}</span><span class="al">${s.label || ''}</span>`;
-    arcMenu.appendChild(el);
-    itemEls.push(el);
+  DIRECTIONS.forEach((dir, i) => {
+    const rad = dir.angle*Math.PI/180;
+    const x   = Math.cos(rad)*RADIUS_PX;
+    const y   = Math.sin(rad)*RADIUS_PX;
+    const slot = slots[i];
+    const ray = document.createElement('div');
+    ray.className = 'ray-line';
+    ray.style.cssText = `width:${RADIUS_PX-30}px;left:0;top:0;transform:rotate(${dir.angle}deg);`;
+    raysEl.appendChild(ray);
+    const item = document.createElement('div');
+    item.className  = 'menu-item';
+    item.dataset.di = i;
+    item.style.cssText = `left:${x}px;top:${y}px;`;
+    if (config.hideEmpty && (!slot.url||!slot.url.trim())) {
+      item.style.visibility='hidden'; item.style.pointerEvents='none';
+    }
+    item.innerHTML = `<span class="item-icon">${slot.icon||dir.arrow}</span><span class="item-label">${slot.label||dir.id}</span>`;
+    menuEl.appendChild(item);
+    itemEls.push(item);
   });
 }
-buildArc();
+buildMenu();
 
-/* ═══════════════════
-   タッチ状態
-═══════════════════ */
-let active     = false;
-let ox = 0, oy = 0;
-let curIdx     = -1;
-let longMode   = false;
-let trail      = [];
-let longTimer  = null;
-let longFired  = false;
+/* ══ タッチ状態 ══ */
+let touchActive=false, originX=0, originY=0, currentDirIdx=-1;
+let trailPoints=[], menuShowing=false, isLongMode=false;
+let longPressTimer=null, longPressFired=false;
 
-/* ── 角度 → アイテムインデックス（最近傍） ── */
-function angleToBestIdx(dx, dy) {
-  const deg = Math.atan2(dy, dx) * 180 / Math.PI;
-  let best = 0, bestDiff = Infinity;
-  ARC_ANGLES.forEach((a, i) => {
-    let diff = Math.abs(a - deg);
-    if (diff > 180) diff = 360 - diff;
-    if (diff < bestDiff) { bestDiff = diff; best = i; }
-  });
-  return best;
-}
+function angleToDir(a) { let d=a<0?a+360:a; return Math.round(d/45)%8; }
 
-/* ── ハイライト ── */
-function setHL(idx, lng) {
-  if (idx === curIdx && lng === longMode) return;
-  curIdx    = idx;
-  longMode  = lng;
-
-  itemEls.forEach((el, i) => {
-    el.classList.toggle('highlighted', i === idx);
-    if (i === idx) el.classList.toggle('long-fire', lng);
-    else el.classList.remove('long-fire');
-  });
-  hubEl.classList.toggle('long-mode', lng);
-  modeBadge.classList.toggle('visible', lng && idx >= 0);
-
-  if (idx >= 0) {
-    vibrate(5);
-    const tag = lng ? ' · current tab' : ' · new tab';
-    dirInd.textContent = (slots[idx].label || '') + tag;
-    dirInd.classList.add('visible');
-    dirInd.classList.toggle('long-mode', lng);
-  } else {
-    dirInd.classList.remove('visible','long-mode');
-  }
-}
-
-/* ── メニュー開閉 ── */
-function openMenu() {
-  arcMenu.classList.add('active');
+/* ══ メニュー表示 / 非表示 ══ */
+function showMenu(x, y) {
+  menuShowing=true; isLongMode=false;
+  menuEl.style.left=x+'px'; menuEl.style.top=y+'px';
+  menuEl.classList.add('active');
+  menuCenterEl.classList.remove('long-mode');
   idleEl.classList.add('hidden');
-  trailCvs.classList.add('active');
+  trailCanvas.classList.add('active');
+  settingsBtn.classList.add('hidden');
+  helpBtn.classList.add('hidden');
   vibrate(8);
 }
-function closeMenu() {
-  arcMenu.classList.remove('active');
+function hideMenu() {
+  menuShowing=false; currentDirIdx=-1; isLongMode=false;
+  menuEl.classList.remove('active');
+  menuCenterEl.classList.remove('long-mode');
   idleEl.classList.remove('hidden');
-  trailCvs.classList.remove('active');
-  dirInd.classList.remove('visible','long-mode');
-  modeBadge.classList.remove('visible');
-  hubEl.classList.remove('long-mode');
-  itemEls.forEach(el => el.classList.remove('highlighted','long-fire'));
-  ctx.clearRect(0, 0, trailCvs.width, trailCvs.height);
-  trail = [];
-  curIdx   = -1;
-  longMode = false;
+  trailCanvas.classList.remove('active');
+  dirIndEl.classList.remove('visible','long-mode');
+  itemEls.forEach(el=>el.classList.remove('highlighted','long-fire'));
+  clearTrail(); trailPoints=[];
+  hidePreview();
+  settingsBtn.classList.remove('hidden');
+  helpBtn.classList.remove('hidden');
 }
 
-/* ── トレイル ── */
-function drawTrail() {
-  ctx.clearRect(0, 0, trailCvs.width, trailCvs.height);
-  if (trail.length < 2) return;
-  const color = longMode ? 'rgba(255,149,0,.35)' : 'rgba(0,243,255,.28)';
-  const glow  = longMode ? 'rgba(255,149,0,.6)'  : 'rgba(0,243,255,.6)';
-  ctx.beginPath();
-  ctx.moveTo(trail[0].x, trail[0].y);
-  for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = 2;
-  ctx.lineCap = ctx.lineJoin = 'round';
-  ctx.shadowColor = glow; ctx.shadowBlur = 8;
-  ctx.stroke();
-}
-
-/* ── ユーティリティ ── */
-function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
-
-function spawnRipple(x, y) {
-  const el = document.createElement('div');
-  el.className = 'ripple';
-  el.style.cssText = `left:${x}px;top:${y}px;width:44px;height:44px;`;
-  document.body.appendChild(el);
-  el.addEventListener('animationend', () => el.remove(), { once:true });
-}
-
-let toastT;
-function toast(msg, style) {
-  toastEl.textContent = msg;
-  toastEl.className   = 'show' + (style === 'orange' ? ' orange' : '');
-  clearTimeout(toastT);
-  toastT = setTimeout(() => { toastEl.className = ''; }, 1800);
-}
-
-/* ── トリプルタップ（設定） ── */
-let tapCnt = 0, tapT = null, openingSettings = false;
-function checkTriple(y) {
-  if (y > window.innerHeight * 0.2) return;
-  tapCnt++;
-  clearTimeout(tapT);
-  tapT = setTimeout(() => { tapCnt = 0; }, 500);
-  if (tapCnt >= 3) { tapCnt = 0; openingSettings = true; openSettings(); }
-}
-
-/* ═══════════════════
-   タッチイベント
-═══════════════════ */
-document.addEventListener('touchstart',  onTS, { passive:false });
-document.addEventListener('touchmove',   onTM, { passive:false });
-document.addEventListener('touchend',    onTE, { passive:false });
-document.addEventListener('touchcancel', onTC, { passive:false });
-document.addEventListener('contextmenu', e => e.preventDefault());
-
-function onTS(e) {
-  if (sOverlay.classList.contains('open')) return;
-  e.preventDefault();
-  openingSettings = false;
-  longFired = false;
-
-  const t = e.changedTouches[0];
-  ox = t.clientX; oy = t.clientY;
-  trail = [{ x:ox, y:oy }];
-
-  checkTriple(oy);
-  if (openingSettings) return;
-
-  active = true;
-  spawnRipple(ox, oy);
-  openMenu();
-
-  clearTimeout(longTimer);
-  longTimer = setTimeout(() => {
-    if (!active) return;
-    longFired = true;
-    vibrate([6, 10, 6]);
-  }, LONGPRESS_MS);
-}
-
-function onTM(e) {
-  if (!active) return;
-  e.preventDefault();
-  const t  = e.changedTouches[0];
-  const dx = t.clientX - ox;
-  const dy = t.clientY - oy;
-  const d  = Math.hypot(dx, dy);
-
-  trail.push({ x:t.clientX, y:t.clientY });
-  if (trail.length > 40) trail.shift();
-
-  if (d > 10) clearTimeout(longTimer);
-
-  const lng = d >= LONG_DIST;
-
-  if (d < DEADZONE) {
-    setHL(-1, false);
-    drawTrail();
-    return;
+/* ══ ハイライト ══ */
+function setHighlight(idx, longMode) {
+  if (idx===currentDirIdx && longMode===isLongMode) return;
+  currentDirIdx=idx; isLongMode=longMode;
+  itemEls.forEach((el,i)=>{
+    el.classList.toggle('highlighted', i===idx);
+    i===idx ? el.classList.toggle('long-fire',longMode) : el.classList.remove('long-fire');
+  });
+  menuCenterEl.classList.toggle('long-mode', longMode);
+  if (idx>=0) {
+    vibrate(4);
+    const tag = longMode?' [CURRENT TAB]':' [NEW TAB]';
+    dirIndEl.textContent = DIRECTIONS[idx].arrow+' '+(slots[idx].label||DIRECTIONS[idx].label)+tag;
+    dirIndEl.classList.add('visible');
+    dirIndEl.classList.toggle('long-mode', longMode);
+  } else {
+    dirIndEl.classList.remove('visible','long-mode');
   }
+}
 
-  setHL(angleToBestIdx(dx, dy), lng);
+/* ══ プレビュー ══ */
+function showPreview(idx, tx, ty) {
+  if (idx<0) return;
+  const slot=slots[idx];
+  if (!slot||!slot.url) return;
+  previewEl.innerHTML=`<div class="preview-icon">${slot.icon||DIRECTIONS[idx].arrow}</div><div class="preview-label">${slot.label||DIRECTIONS[idx].id}</div><div class="preview-url">${slot.url}</div><div class="preview-hint">Release to open · Long-swipe = current tab</div>`;
+  const pw=260,ph=120;
+  let px=tx+20, py=ty-ph-16;
+  if (px+pw>window.innerWidth-8) px=tx-pw-20;
+  if (py<8) py=ty+20;
+  previewEl.style.left=px+'px'; previewEl.style.top=py+'px';
+  previewEl.classList.add('visible');
+  vibrate(6);
+}
+function hidePreview() { previewEl.classList.remove('visible'); }
+
+/* ══ トレイル ══ */
+function drawTrail() {
+  ctx.clearRect(0,0,trailCanvas.width,trailCanvas.height);
+  if (trailPoints.length<2) return;
+  const color=isLongMode?'rgba(255,149,0,0.35)':'rgba(0,243,255,0.3)';
+  const glow =isLongMode?'rgba(255,149,0,0.6)':'rgba(0,243,255,0.6)';
+  ctx.beginPath(); ctx.moveTo(trailPoints[0].x,trailPoints[0].y);
+  for (let i=1;i<trailPoints.length;i++) ctx.lineTo(trailPoints[i].x,trailPoints[i].y);
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.shadowColor=glow; ctx.shadowBlur=8; ctx.stroke();
+}
+function clearTrail() { ctx.clearRect(0,0,trailCanvas.width,trailCanvas.height); }
+
+/* ══ リップル ══ */
+function spawnRipple(x, y) {
+  const el=document.createElement('div');
+  el.className='ripple';
+  el.style.cssText=`left:${x}px;top:${y}px;width:40px;height:40px;`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=>el.remove(),{once:true});
+}
+
+/* ══ トリプルタップ ══ */
+let topTapCount=0, topTapTimer=null, openingSettings=false;
+function checkTopTripleTap(y) {
+  if (y>window.innerHeight*0.2) return;
+  topTapCount++;
+  clearTimeout(topTapTimer);
+  topTapTimer=setTimeout(()=>{ topTapCount=0; },500);
+  if (topTapCount>=3) { topTapCount=0; openingSettings=true; openSettings(); }
+}
+
+/* ══ タッチイベント ══ */
+document.addEventListener('touchstart',  onTouchStart,  {passive:false});
+document.addEventListener('touchmove',   onTouchMove,   {passive:false});
+document.addEventListener('touchend',    onTouchEnd,    {passive:false});
+document.addEventListener('touchcancel', onTouchCancel, {passive:false});
+document.addEventListener('contextmenu', e=>e.preventDefault());
+
+function onTouchStart(e) {
+  if (settingsOv.classList.contains('open')) return;
+  e.preventDefault();
+  openingSettings=false; longPressFired=false;
+  hidePreview();
+  const t=e.changedTouches[0];
+  originX=t.clientX; originY=t.clientY;
+  trailPoints=[{x:originX,y:originY}];
+  checkTopTripleTap(originY);
+  if (openingSettings) return;
+  touchActive=true;
+  spawnRipple(originX,originY);
+  showMenu(originX,originY);
+  clearTimeout(longPressTimer);
+  longPressTimer=setTimeout(()=>{
+    if (!touchActive||!menuShowing) return;
+    longPressFired=true;
+    showPreview(currentDirIdx,originX,originY);
+  },LONGPRESS_MS);
+}
+function onTouchMove(e) {
+  if (!touchActive||!menuShowing) return;
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  const dx=t.clientX-originX, dy=t.clientY-originY;
+  const dist=Math.hypot(dx,dy);
+  trailPoints.push({x:t.clientX,y:t.clientY});
+  if (trailPoints.length>40) trailPoints.shift();
+  if (dist>10) clearTimeout(longPressTimer);
+  const longMode=dist>=config.longDist;
+  if (dist<DEADZONE) { setHighlight(-1,false); drawTrail(); return; }
+  const angle=Math.atan2(dy,dx)*180/Math.PI;
+  const dirIdx=angleToDir(angle);
+  const slot=slots[dirIdx];
+  if (config.hideEmpty&&(!slot.url||!slot.url.trim())) { setHighlight(-1,false); drawTrail(); return; }
+  setHighlight(dirIdx,longMode);
+  if (longPressFired&&currentDirIdx>=0) showPreview(currentDirIdx,t.clientX,t.clientY);
   drawTrail();
 }
-
-function onTE(e) {
-  if (!active) return;
-  active = false;
-  clearTimeout(longTimer);
-
-  const t = e.changedTouches && e.changedTouches[0];
+function onTouchEnd(e) {
+  if (!touchActive) return;
+  touchActive=false;
+  clearTimeout(longPressTimer);
+  const t=e.changedTouches&&e.changedTouches[0];
   if (t) {
-    const dx = t.clientX - ox;
-    const dy = t.clientY - oy;
-    const d  = Math.hypot(dx, dy);
-
-    if (d >= DEADZONE && curIdx >= 0) {
-      const s   = slots[curIdx];
-      const lng = d >= LONG_DIST;
-      if (s && s.url) {
-        vibrate([10, 18, 10]);
-        if (lng) {
-          toast('Opening in current tab', 'orange');
-          setTimeout(() => { window.location.href = s.url; }, 80);
-        } else {
-          toast('Opening in new tab');
-          setTimeout(() => { window.open(s.url, '_blank'); }, 80);
-        }
+    const dx=t.clientX-originX, dy=t.clientY-originY;
+    const dist=Math.hypot(dx,dy);
+    if (dist>=DEADZONE&&currentDirIdx>=0) {
+      const slot=slots[currentDirIdx];
+      const longMode=dist>=config.longDist;
+      if (slot&&slot.url) {
+        vibrate([10,20,10]);
+        addHistory(slot);
+        const rawUrl=slot.url;
+        const url=config.addTimestamp ? rawUrl+(rawUrl.includes('?')?'&':'?')+'t='+Date.now() : rawUrl;
+        if (longMode) { showToast('Opening in current tab','orange'); setTimeout(()=>{ window.location.href=url; },80); }
+        else           { showToast('Opening in new tab');             setTimeout(()=>{ window.open(url,'_blank'); },80); }
       }
     }
   }
-  closeMenu();
+  hideMenu();
+}
+function onTouchCancel() { touchActive=false; clearTimeout(longPressTimer); hideMenu(); }
+
+/* ══════════════════════════════════════════
+   ヘルプパネル
+══════════════════════════════════════════ */
+function openHelp() {
+  vibrate(8);
+  renderHelp();
+  helpOverlay.classList.add('open');
+}
+function closeHelp() {
+  helpOverlay.classList.remove('open');
 }
 
-function onTC() {
-  active = false;
-  clearTimeout(longTimer);
-  closeMenu();
+let hBtnFired=false;
+const onHelpBtn=(e)=>{
+  e.preventDefault(); e.stopPropagation();
+  if(hBtnFired) return; hBtnFired=true;
+  setTimeout(()=>{ hBtnFired=false; },300);
+  openHelp();
+};
+helpBtn.addEventListener('touchend', onHelpBtn);
+helpBtn.addEventListener('click',    onHelpBtn);
+
+helpClose.addEventListener('click', closeHelp);
+helpClose.addEventListener('touchend',(e)=>{ e.preventDefault(); closeHelp(); });
+
+helpOverlay.addEventListener('touchstart', e=>e.stopPropagation());
+helpOverlay.addEventListener('touchmove',  e=>e.stopPropagation());
+helpOverlay.addEventListener('touchend',   e=>e.stopPropagation());
+
+function renderHelp() {
+  helpScroll.innerHTML='';
+
+  const html = `
+  <!-- ═══ 基本操作 ═══ -->
+  <div class="h-section">
+    <div class="h-sec-title">Basic — 基本の使い方</div>
+
+    <div class="h-item">
+      <div class="h-icon">👆</div>
+      <div class="h-text">
+        <div class="h-label">どこでもタッチしてスワイプ</div>
+        <div class="h-desc">画面のどこでもタッチしたまま指を動かすと、ラジアルメニューが出現。スワイプした方向にあるアプリが選択される。指を離すと開く。</div>
+      </div>
+    </div>
+
+    <div class="h-item">
+      <div class="h-icon">📏</div>
+      <div class="h-text">
+        <div class="h-label">スワイプの長さで開き方が変わる</div>
+        <div class="h-desc">
+          <span class="h-badge blue">短スワイプ</span>新しいタブで開く<br>
+          <span class="h-badge orange">長スワイプ</span>現在のタブで開く<br>
+          長スワイプ時はメニュー中心とトレイルがオレンジに変わる。<br>閾値はSettings→Long-swipe thresholdで調整可能。
+        </div>
+      </div>
+    </div>
+
+    <div class="h-item">
+      <div class="h-icon">🔍</div>
+      <div class="h-text">
+        <div class="h-label">長押し → プレビュー表示</div>
+        <div class="h-desc">タッチしたまま動かさずに約0.4秒待つと、選択中のアプリのURLプレビューが表示される。誤操作防止に。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 8方向の配置 ═══ -->
+  <div class="h-section">
+    <div class="h-sec-title">Direction — 8方向の配置</div>
+    <div class="dir-grid">
+      <div class="dir-cell"><span class="dir-cell-arrow">↖</span><span class="dir-cell-id">NW</span></div>
+      <div class="dir-cell"><span class="dir-cell-arrow">↑</span><span class="dir-cell-id">N</span></div>
+      <div class="dir-cell"><span class="dir-cell-arrow">↗</span><span class="dir-cell-id">NE</span></div>
+      <div class="dir-cell"><span class="dir-cell-arrow">←</span><span class="dir-cell-id">W</span></div>
+      <div class="dir-cell center-cell"><span class="dir-cell-arrow" style="font-size:10px;color:rgba(0,243,255,.5);">●</span><span class="dir-cell-id">START</span></div>
+      <div class="dir-cell"><span class="dir-cell-arrow">→</span><span class="dir-cell-id">E</span></div>
+      <div class="dir-cell"><span class="dir-cell-arrow">↙</span><span class="dir-cell-id">SW</span></div>
+      <div class="dir-cell"><span class="dir-cell-arrow">↓</span><span class="dir-cell-id">S</span></div>
+      <div class="dir-cell"><span class="dir-cell-arrow">↘</span><span class="dir-cell-id">SE</span></div>
+    </div>
+    <div class="h-tip" style="margin-top:10px;">タッチした位置が中心。そこから8方向どれかにスワイプ。指を置いた場所は関係ない。</div>
+  </div>
+
+  <!-- ═══ 設定画面の使い方 ═══ -->
+  <div class="h-section">
+    <div class="h-sec-title">Settings ⚙ — 設定の使い方</div>
+
+    <div class="h-item">
+      <div class="h-icon" style="font-size:13px;letter-spacing:0;">⚙</div>
+      <div class="h-text">
+        <div class="h-label">設定を開く方法 2通り</div>
+        <div class="h-desc">① 右下の ⚙ ボタンをタップ<br>② 画面上部20%以内を素早く3回タップ（トリプルタップ）</div>
+      </div>
+    </div>
+
+    <div class="h-tip">
+      <strong>Slots タブ</strong> — 各方向にアプリを登録する。<br>
+      アイコン（絵文字1〜2文字）・ラベル（名前）・URLを入力。<br>
+      URLは長押し→全選択→ペーストで入力できる。<br>
+      ✕ Clear で1スロット丸ごとリセット。<br>
+      <strong>必ず最後に [ Save All &amp; Close ] を押すこと。</strong>
+    </div>
+    <div class="h-tip">
+      <strong>Settings タブ</strong> — テーマ色・長スワイプ閾値・空スロット非表示などを設定。
+    </div>
+    <div class="h-tip">
+      <strong>History タブ</strong> — 最近開いたアプリ一覧（最大20件）。ここから直接開くことも可能。
+    </div>
+    <div class="h-tip">
+      <strong>Backup タブ</strong> — スロット設定のエクスポート／インポート。<br>
+      Export: [ Select All ] → 長押しコピー → どこかに保存<br>
+      Import: テキストをペーストして [ Import ] ボタン
+    </div>
+  </div>
+
+  <!-- ═══ ヒント ═══ -->
+  <div class="h-section">
+    <div class="h-sec-title">Tips — 便利な使い方</div>
+    <div class="h-tip">よく使うアプリを 東/西/北/南 の4方向に置くと迷わない。斜め4方向はサブ的な使い方に。</div>
+    <div class="h-tip">URLに <strong>javascript:</strong> から始まるブックマークレットも登録できる。</div>
+    <div class="h-tip">GitHub Pages上でこのアプリを使う場合は、Cache-bust timestamp をONにするとキャッシュ問題を回避できる。</div>
+    <div class="h-tip">Backupを使えば複数端末で同じスロット設定を共有できる。</div>
+  </div>
+  `;
+
+  helpScroll.innerHTML = html;
 }
 
-/* ═══════════════════
+/* ══════════════════════════════════════════
    設定パネル
-═══════════════════ */
+══════════════════════════════════════════ */
+let currentTab = 'slots';
+
 function openSettings() {
   vibrate(12);
-  renderSettings();
-  sOverlay.classList.add('open');
+  settingsOv.classList.add('open');
+  renderTab(currentTab);
 }
-sClose.addEventListener('click',    closeSettings);
-sClose.addEventListener('touchend', e => { e.preventDefault(); closeSettings(); });
-function closeSettings() { sOverlay.classList.remove('open'); }
+function closeSettings() {
+  settingsOv.classList.remove('open');
+}
 
-function renderSettings() {
-  sBody.innerHTML = '';
-  slots.forEach((s, i) => {
+/* ── 設定ボタン ── */
+let sBtnFired=false;
+const onSettingsBtn=(e)=>{
+  e.preventDefault(); e.stopPropagation();
+  if(sBtnFired) return; sBtnFired=true;
+  setTimeout(()=>{ sBtnFired=false; },300);
+  openSettings();
+};
+settingsBtn.addEventListener('touchend', onSettingsBtn);
+settingsBtn.addEventListener('click',    onSettingsBtn);
+
+settingsClose.addEventListener('click', closeSettings);
+settingsClose.addEventListener('touchend',(e)=>{ e.preventDefault(); closeSettings(); });
+
+/* タブ切り替え */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  addBtn(btn, ()=>{
+    currentTab=btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    renderTab(currentTab);
+  });
+});
+
+settingsOv.addEventListener('touchstart', e=>e.stopPropagation());
+settingsOv.addEventListener('touchmove',  e=>{ e.stopPropagation(); /* スクロールはブラウザに任せるのでpreventDefaultしない */ });
+settingsOv.addEventListener('touchend',   e=>e.stopPropagation());
+
+/* ═══════ タブレンダラー ═══════ */
+function renderTab(tab) {
+  settingsScr.innerHTML='';
+  if      (tab==='slots')    renderSlots();
+  else if (tab==='behavior') renderBehavior();
+  else if (tab==='history')  renderHistory();
+  else if (tab==='backup')   renderBackup();
+}
+
+/* ── Slotsタブ ── */
+function renderSlots() {
+  /* 一括Save ボタン（上部） */
+  const saveTop = document.createElement('button');
+  saveTop.className='s-btn s-btn-blue';
+  saveTop.textContent='[ Save All & Close ]';
+  saveTop.style.marginBottom='12px';
+  addBtn(saveTop, ()=>{ saveAllSlots(); closeSettings(); showToast('Saved'); vibrate([8,10,8]); });
+  settingsScr.appendChild(saveTop);
+
+  DIRECTIONS.forEach((dir, i)=>{
+    const slot = slots[i];
     const card = document.createElement('div');
-    card.className = 'slot-card';
-    card.innerHTML = `
-      <div class="slot-head">
-        <span class="slot-arrow">${i+1}</span>
-        <span class="slot-name">Slot ${i+1} — ${ARC_ANGLES[i]}°</span>
+    card.className='s-card';
+    card.innerHTML=`
+      <div class="slot-header">
+        <span class="slot-arrow">${dir.arrow}</span>
+        <span class="slot-dir">${dir.label}</span>
+        <button class="slot-clear-btn" data-idx="${i}">✕ Clear</button>
       </div>
-      <label class="f-label">Icon / Label</label>
       <div class="f-row">
-        <input class="f-input f-icon" data-i="${i}" data-f="icon" type="text" maxlength="2" value="${s.icon||''}" placeholder="✦">
-        <input class="f-input" data-i="${i}" data-f="label" type="text" maxlength="12" value="${s.label||''}" placeholder="Label">
+        <input class="f-input icon-input" data-idx="${i}" data-field="icon"
+          type="text" maxlength="2" value="${escHtml(slot.icon||'')}" placeholder="✦">
+        <input class="f-input" data-idx="${i}" data-field="label"
+          type="text" maxlength="12" value="${escHtml(slot.label||'')}" placeholder="Label">
       </div>
-      <label class="f-label">URL</label>
-      <div class="f-row">
-        <input class="f-input" data-i="${i}" data-f="url" type="url" value="${s.url||''}" placeholder="https://">
+      <div style="margin-bottom:4px;">
+        <label class="f-label">URL (長押し→選択→ペースト)</label>
+        <textarea class="url-textarea" data-idx="${i}" data-field="url"
+          placeholder="https://" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
       </div>
     `;
-    sBody.appendChild(card);
+    /* textareaのURLはinnerHTMLではなく.valueで設定（&等エスケープ不要） */
+    card.querySelector(`[data-idx="${i}"][data-field="url"]`).value = slot.url || '';
+
+    /* クリアボタン */
+    const clearBtn = card.querySelector('.slot-clear-btn');
+    addBtn(clearBtn, ()=>{
+      const idx=+clearBtn.dataset.idx;
+      card.querySelector(`[data-idx="${idx}"][data-field="icon"]`).value='';
+      card.querySelector(`[data-idx="${idx}"][data-field="label"]`).value='';
+      card.querySelector(`[data-idx="${idx}"][data-field="url"]`).value='';
+      showToast('Cleared');
+    });
+    settingsScr.appendChild(card);
   });
 
-  const btn = document.createElement('button');
-  btn.className   = 'save-btn';
-  btn.textContent = '[ Save & Close ]';
-  btn.addEventListener('click',    saveSettings);
-  btn.addEventListener('touchend', e => { e.preventDefault(); saveSettings(); });
-  sBody.appendChild(btn);
+  /* 一括Save ボタン（下部） */
+  const saveBot = document.createElement('button');
+  saveBot.className='s-btn s-btn-blue';
+  saveBot.textContent='[ Save All & Close ]';
+  saveBot.style.marginTop='4px';
+  addBtn(saveBot, ()=>{ saveAllSlots(); closeSettings(); showToast('Saved'); vibrate([8,10,8]); });
+  settingsScr.appendChild(saveBot);
 
-  const hint = document.createElement('p');
-  hint.className   = 's-hint';
-  hint.textContent = 'Triple-tap top of screen to reopen';
-  sBody.appendChild(hint);
+  const hint=document.createElement('p');
+  hint.className='settings-hint';
+  hint.textContent='Triple-tap top of screen to reopen';
+  settingsScr.appendChild(hint);
 }
 
-function saveSettings() {
-  sBody.querySelectorAll('.f-input').forEach(inp => {
-    const i = +inp.dataset.i;
-    const f = inp.dataset.f;
-    if (['icon','label','url'].includes(f) && !isNaN(i)) {
-      slots[i][f] = inp.value.trim();
+function saveAllSlots() {
+  settingsScr.querySelectorAll('[data-field]').forEach(inp=>{
+    const idx=+inp.dataset.idx;
+    const field=inp.dataset.field;
+    if (['icon','label','url'].includes(field) && !isNaN(idx)) {
+      slots[idx][field]=inp.value.trim();
     }
   });
   saveSlots(slots);
-  buildArc();
-  closeSettings();
-  toast('Saved');
-  vibrate([8,10,8]);
+  buildMenu();
 }
 
-sOverlay.addEventListener('touchstart', e => e.stopPropagation());
-sOverlay.addEventListener('touchmove',  e => e.stopPropagation());
-sOverlay.addEventListener('touchend',   e => e.stopPropagation());
+/* ── Behaviorタブ ── */
+function renderBehavior() {
+  /* テーマ */
+  const themeCard=document.createElement('div');
+  themeCard.className='s-card';
+  themeCard.innerHTML=`
+    <div class="sec-title" style="margin-top:0;">Color Theme</div>
+    <div class="theme-row">
+      <button class="theme-btn${config.theme==='cyan'  ?' active':''}" data-theme="cyan" >◉ Cyan</button>
+      <button class="theme-btn${config.theme==='green' ?' active':''}" data-theme="green">◉ Green</button>
+      <button class="theme-btn${config.theme==='pink'  ?' active':''}" data-theme="pink" >◉ Pink</button>
+      <button class="theme-btn${config.theme==='amber' ?' active':''}" data-theme="amber">◉ Amber</button>
+    </div>`;
+  themeCard.querySelectorAll('.theme-btn').forEach(btn=>{
+    addBtn(btn, ()=>{
+      config.theme=btn.dataset.theme;
+      applyTheme(config.theme);
+      themeCard.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      vibrate(6);
+    });
+  });
+  settingsScr.appendChild(themeCard);
+
+  /* 空スロット非表示 */
+  const hideCard=document.createElement('div');
+  hideCard.className='s-card';
+  hideCard.innerHTML=`
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+      <input type="checkbox" id="hide-chk" ${config.hideEmpty?'checked':''}
+        style="width:18px;height:18px;accent-color:var(--neon-blue);cursor:pointer;">
+      <div>
+        <div class="f-label" style="margin-bottom:2px;">Hide empty slots</div>
+        <div style="font-size:9px;color:rgba(0,243,255,.3);">URL未設定のスロットを非表示</div>
+      </div>
+    </label>`;
+  settingsScr.appendChild(hideCard);
+
+  /* タイムスタンプ */
+  const tsCard=document.createElement('div');
+  tsCard.className='s-card';
+  tsCard.innerHTML=`
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+      <input type="checkbox" id="ts-chk" ${config.addTimestamp?'checked':''}
+        style="width:18px;height:18px;accent-color:var(--neon-blue);cursor:pointer;">
+      <div>
+        <div class="f-label" style="margin-bottom:2px;">Cache-bust timestamp</div>
+        <div style="font-size:9px;color:rgba(0,243,255,.3);">URLに ?t=timestamp を付加</div>
+      </div>
+    </label>`;
+  settingsScr.appendChild(tsCard);
+
+  /* 長スワイプ閾値 */
+  const thCard=document.createElement('div');
+  thCard.className='s-card';
+  thCard.innerHTML=`
+    <div class="f-label">Long-swipe threshold</div>
+    <div class="threshold-row">
+      <input type="range" class="threshold-slider" id="thresh-slider" min="60" max="220" step="10" value="${config.longDist}">
+      <span class="threshold-val" id="thresh-val">${config.longDist}px</span>
+    </div>
+    <div class="threshold-hint">Short(&lt;threshold)→New tab &nbsp;|&nbsp; Long(≥threshold)→Current tab</div>`;
+  const slider=thCard.querySelector('#thresh-slider');
+  const valSpan=thCard.querySelector('#thresh-val');
+  slider.addEventListener('input',()=>{ valSpan.textContent=slider.value+'px'; });
+  settingsScr.appendChild(thCard);
+
+  /* 保存ボタン */
+  const saveBtn=document.createElement('button');
+  saveBtn.className='s-btn s-btn-blue';
+  saveBtn.style.marginTop='8px';
+  saveBtn.textContent='[ Save Settings ]';
+  addBtn(saveBtn, ()=>{
+    config.hideEmpty    = document.getElementById('hide-chk').checked;
+    config.addTimestamp = document.getElementById('ts-chk').checked;
+    config.longDist     = +slider.value;
+    saveConfig(config);
+    buildMenu();
+    showToast('Saved');
+    vibrate([8,10,8]);
+  });
+  settingsScr.appendChild(saveBtn);
+}
+
+/* ── Historyタブ ── */
+function renderHistory() {
+  settingsScr.innerHTML='';   /* 再呼び出し時も必ずクリア */
+  const h=loadHistory();
+
+  if (h.length>0) {
+    const clearBtn=document.createElement('button');
+    clearBtn.className='s-btn s-btn-red';
+    clearBtn.style.marginBottom='12px';
+    clearBtn.textContent=`[ Clear History (${h.length}) ]`;
+    addBtn(clearBtn, ()=>{ clearHistory(); showToast('History cleared'); renderHistory(); });
+    settingsScr.appendChild(clearBtn);
+
+    h.forEach(item=>{
+      const row=document.createElement('div');
+      row.className='hist-row';
+      row.innerHTML=`
+        <span class="hist-icon">${item.icon||'◉'}</span>
+        <span class="hist-label">${escHtml(item.label||item.url)}</span>
+        <button class="hist-launch">▶ Open</button>`;
+      const btn=row.querySelector('.hist-launch');
+      addBtn(btn, ()=>{
+        closeSettings();
+        vibrate([10,20,10]);
+        const url=config.addTimestamp&&item.url ? item.url+(item.url.includes('?')?'&':'?')+'t='+Date.now() : item.url;
+        setTimeout(()=>{ window.open(url,'_blank'); },80);
+      });
+      settingsScr.appendChild(row);
+    });
+  } else {
+    const empty=document.createElement('div');
+    empty.style.cssText='padding:24px 0;text-align:center;font-size:10px;letter-spacing:.2em;color:rgba(0,243,255,.25);';
+    empty.textContent='-- No history --';
+    settingsScr.appendChild(empty);
+  }
+}
+
+/* ── Backupタブ ── */
+function renderBackup() {
+  const info=document.createElement('div');
+  info.style.cssText='font-size:9px;color:rgba(0,243,255,.3);letter-spacing:.1em;line-height:1.8;margin-bottom:14px;';
+  info.innerHTML='スロット設定をJSON形式でエクスポート／インポートできます。<br>テキストを長押し→全選択→コピー でバックアップ。<br>インポートはテキストエリアに貼り付けて [Import] ボタンを押します。';
+  settingsScr.appendChild(info);
+
+  /* Export エリア */
+  const expLabel=document.createElement('div');
+  expLabel.className='sec-title';
+  expLabel.textContent='Export';
+  settingsScr.appendChild(expLabel);
+
+  const expCard=document.createElement('div');
+  expCard.className='s-card';
+  const expTa=document.createElement('textarea');
+  expTa.className='backup-textarea';
+  expTa.readOnly=true;
+  expTa.style.height='130px';
+  expTa.value=JSON.stringify({slots, config}, null, 2);
+  expCard.appendChild(expTa);
+  settingsScr.appendChild(expCard);
+
+  /* Export 全選択ボタン */
+  const selBtn=document.createElement('button');
+  selBtn.className='s-btn s-btn-blue';
+  selBtn.style.marginBottom='16px';
+  selBtn.textContent='[ Select All (→ copy) ]';
+  addBtn(selBtn, ()=>{ expTa.focus(); expTa.select(); showToast('Selected — now copy'); });
+  settingsScr.appendChild(selBtn);
+
+  /* Import エリア */
+  const impLabel=document.createElement('div');
+  impLabel.className='sec-title';
+  impLabel.textContent='Import';
+  settingsScr.appendChild(impLabel);
+
+  const impCard=document.createElement('div');
+  impCard.className='s-card';
+  const impTa=document.createElement('textarea');
+  impTa.className='backup-textarea';
+  impTa.placeholder='ここにJSONをペーストしてください…';
+  impCard.appendChild(impTa);
+  settingsScr.appendChild(impCard);
+
+  const impBtn=document.createElement('button');
+  impBtn.className='s-btn s-btn-blue';
+  impBtn.style.marginBottom='8px';
+  impBtn.textContent='[ Import from above text ]';
+  addBtn(impBtn, ()=>{
+    const text=impTa.value.trim();
+    if (!text) { showToast('Nothing to import'); return; }
+    try {
+      const parsed=JSON.parse(text);
+      if (parsed.slots&&Array.isArray(parsed.slots)&&parsed.slots.length===8
+          &&parsed.slots.every(s=>s&&typeof s==='object')) {
+        slots=parsed.slots;
+        saveSlots(slots);
+        if (parsed.config&&typeof parsed.config==='object') {
+          config=Object.assign({},config,parsed.config);
+          saveConfig(config);
+          applyTheme(config.theme);
+        }
+        buildMenu();
+        impTa.value='';
+        closeSettings();
+        showToast('Restored ✓');
+        vibrate([8,10,8]);
+      } else {
+        showToast('Invalid data');
+      }
+    } catch(err) {
+      showToast('Parse error');
+    }
+  });
+  settingsScr.appendChild(impBtn);
+}
+
+/* ══ addBtn ヘルパー（二重発火防止） ══ */
+function addBtn(el, fn) {
+  let fired=false;
+  const handler=(e)=>{
+    e.preventDefault();
+    if (fired) return; fired=true;
+    setTimeout(()=>{ fired=false; },300);
+    fn();
+  };
+  el.addEventListener('touchend', handler);
+  el.addEventListener('click',    handler);
+}
+
+/* ══ escHtml ══ */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 </script>
 </body>
 </html>
