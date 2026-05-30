@@ -3097,8 +3097,12 @@ var helpData = {
       title: '.pin-badge(position:absolute)の親.fcにposition:relativeがなくタップ全滅',
       body: '<div class="lesson-label">① 何が問題だったか</div>.pin-badge{position:absolute}の親要素.fcにposition指定がなく(static)、pin-badgeがbody基準で配置されてフィード全体を覆うスタックコンテキストを作りタップをブロック。<div class="lesson-label">② どう解決したか</div>.fcにposition:relativeを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:absoluteの子要素を持つ親には必ずposition:relativeを付ける。fc・mc・カード系クラスは全てposition:relative必須。</div>'
     },
+    {
+      title: '新バージョンでDB名変更必須：同名DB_VERアップで旧アプリ全滅',
       body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。v5で登録したデータもv4.1からは見えない状態に。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
     },
+    {
+      title: 'calWrap2のdisplay:none設定忘れで検索タブ開いた瞬間カレンダー全展開',
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
     },
     {
@@ -3108,6 +3112,9 @@ var helpData = {
     {
       title: 'マイグレーション失敗→0件表示：OLD_DB_VERは現在のバージョンに合わせる',
       body: '<div class="lesson-label">① 何が問題だったか</div>migrateFromOldDB()でOLD_DB_VER=3を指定していたが、v5古いバージョンがEternalMemoryDBをVER=4に上げていたためopenがブロックされてマイグレーション失敗→フィード0件。em_v5_migratedフラグ=1が残っていると再実行もされない。<div class="lesson-label">② どう解決したか</div>indexedDB.open(OLD_DB_NAME)でバージョン指定なし（現在のバージョンで開く）に変更。フラグを=2にして強制再マイグレーション。<div class="lesson-label">③ 次回Claudeへの指示</div>旧DBを読む際はバージョン指定なしでopen()する。マイグレーションロジック修正時はフラグ値を上げて強制再実行させること。</div>'
+    },
+    {
+      title: 'クラス名リネーム後にquerySelectorの参照が古いまま残り機能停止',
       body: '<div class="lesson-label">① 何が問題だったか</div>v4の.input-cardクラスをv5で.post-cardに変更したのにpickColor()内のquerySelectorが.input-card参照のまま残り、色選択が機能しなかった。またtoggleExpand()が汎用[data-eid]セレクタを使っており、編集モーダルのtextareaと衝突する可能性があった。<div class="lesson-label">② どう解決したか</div>pickColor()を.post-wrap .color-dotに変更。toggleExpand()を.fc-body[data-eid]に限定。<div class="lesson-label">③ 次回Claudeへの指示</div>クラス名をリネームしたときはquerySelectorAll参照を必ず全文検索で追う。セレクタは可能な限りスコープを絞る。</div>'
     }
   ]
