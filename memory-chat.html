@@ -702,6 +702,206 @@ textarea.chat-ta { resize: vertical; min-height: 80px; font-family: var(--sans);
   animation: fadeUp .2s ease;
 }
 #send-to-chat-banner.on { display: block; }
+
+/* ============================================================
+   HELP MODAL CSS
+   ============================================================ */
+:root {
+  --help-accent:       oklch(0.80 0.15 195);
+  --help-accent-dim:   oklch(0.80 0.15 195 / 0.2);
+  --help-bg:           oklch(0.18 0.02 250 / 0.98);
+  --help-border:       oklch(0.80 0.15 195 / 0.3);
+  --help-text:         oklch(0.88 0.02 250);
+  --help-text-dim:     oklch(0.55 0.02 250);
+  --help-section-bg:   oklch(0.80 0.15 195 / 0.10);
+  --help-item-bg:      oklch(0.25 0.02 250 / 0.5);
+  --help-btn-size:     2.2rem;
+}
+/* ❓ボタン（ヘッダー内フロー配置） */
+#helpBtn {
+  width: var(--help-btn-size);
+  height: var(--help-btn-size);
+  border-radius: 50%;
+  border: 1.5px solid var(--help-border);
+  background: transparent;
+  color: var(--help-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s, transform .15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+#helpBtn:hover { background: var(--help-accent-dim); transform: scale(1.08); }
+#helpBtn:active { transform: scale(.95); }
+/* オーバーレイ */
+#helpOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 910;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+#helpOverlay.active { display: flex; }
+/* モーダル本体 */
+#helpModal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  background: var(--help-bg);
+  border: 1px solid var(--help-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,.7), 0 0 0 1px var(--help-accent-dim);
+}
+#helpModal .help-header {
+  padding: .9rem 1.2rem;
+  border-bottom: 1px solid var(--help-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+#helpModal .help-header-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--help-accent);
+  letter-spacing: .05em;
+}
+#helpCloseBtn {
+  width: 2rem; height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--help-border);
+  background: transparent;
+  color: var(--help-text-dim);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .15s, background .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+#helpCloseBtn:hover { color: #fff; background: rgba(255,255,255,.08); }
+#helpBody {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: .8rem .8rem 1.2rem;
+  flex: 1;
+}
+.help-section-title {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--help-accent);
+  text-transform: uppercase;
+  background: var(--help-section-bg);
+  border-radius: .45rem;
+  padding: .45rem .7rem;
+  margin-bottom: .4rem;
+  margin-top: .6rem;
+}
+.help-section-title:first-child { margin-top: 0; }
+.help-item { border-radius: .5rem; overflow: hidden; margin-bottom: .3rem; }
+.help-item-trigger {
+  width: 100%;
+  text-align: left;
+  background: var(--help-item-bg);
+  border: 1px solid transparent;
+  border-radius: .5rem;
+  color: var(--help-text);
+  font-size: .88rem;
+  font-weight: 600;
+  padding: .6rem .8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  transition: border-color .15s, background .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.help-item-trigger:hover { border-color: var(--help-border); }
+.help-item-trigger.open {
+  border-color: var(--help-accent-dim);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background: oklch(0.80 0.15 195 / 0.08);
+}
+.help-item-trigger .help-chevron {
+  font-size: .7rem;
+  color: var(--help-text-dim);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.help-item-trigger.open .help-chevron { transform: rotate(180deg); }
+.help-item-body {
+  display: none;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--help-accent-dim);
+  border-top: none;
+  border-bottom-left-radius: .5rem;
+  border-bottom-right-radius: .5rem;
+  padding: .65rem .85rem .75rem;
+  font-size: .83rem;
+  color: var(--help-text);
+  line-height: 1.65;
+}
+.help-item-body.open { display: block; }
+.help-item-body .lesson-label {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--help-text-dim);
+  text-transform: uppercase;
+  margin-top: .5rem;
+  margin-bottom: .15rem;
+}
+.help-item-body .lesson-label:first-child { margin-top: 0; }
+.help-item-body strong { color: #fff; font-weight: 700; }
+.help-item-body code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  background: rgba(0,0,0,.4);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: .25rem;
+  padding: .05em .35em;
+  color: oklch(0.80 0.15 195);
+}
+#helpCopyPromptBtn {
+  display: block;
+  width: calc(100% - 1.6rem);
+  margin: .6rem .8rem .2rem;
+  padding: .65rem;
+  background: var(--help-accent-dim);
+  border: 1px solid var(--help-border);
+  border-radius: .5rem;
+  color: var(--help-accent);
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: .04em;
+  transition: background .15s, transform .1s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+#helpCopyPromptBtn:hover  { background: oklch(0.80 0.15 195 / 0.3); }
+#helpCopyPromptBtn:active { transform: scale(.97); }
 </style>
 </head>
 <body>
@@ -722,6 +922,7 @@ textarea.chat-ta { resize: vertical; min-height: 80px; font-family: var(--sans);
       <button class="btn-icon pink" onclick="openCatModal()" title="カテゴリ管理">⚙</button>
       <button class="btn-icon amber" onclick="cycleFontSize()" title="文字サイズ">Aa</button>
       <button class="btn-icon green" onclick="toggleIoBar()" title="入出力">⇅</button>
+      <button id="helpBtn" aria-label="ヘルプを開く">❓</button>
     </div>
     <div class="hd-acts" id="chat-actions" style="display:none;">
       <div id="ai-badge" class="ai-badge openai" onclick="openChatSettingsAt('ai')" style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:var(--sur2);border:1px solid var(--bdr);font-size:12px;font-weight:500;cursor:pointer;">
@@ -1977,6 +2178,217 @@ async function startScanCam(){if(scanStream){scanStream.getTracks().forEach(func
 function flipScanCam(){scanFacing=scanFacing==='environment'?'user':'environment';startScanCam();}
 function closeScanCam(){if(scanStream){scanStream.getTracks().forEach(function(t){t.stop()});scanStream=null;}document.getElementById('camScanWrap').classList.remove('on');setScanStatus('カメラ起動中...',false);}
 async function doShutter(){var video=document.getElementById('scanVideo');if(!video.videoWidth){setScanStatus('映像が取得できません',true);return;}setScanStatus('撮影中...',false);var cvs=document.createElement('canvas');cvs.width=video.videoWidth;cvs.height=video.videoHeight;var ctx=cvs.getContext('2d');ctx.drawImage(video,0,0);setScanStatus('文字を認識中...',false);if(!tesseractReady||!scanWorker){setScanStatus('OCR初期化中...',false);await initTesseract();}try{var result=await scanWorker.recognize(cvs);var text=result.data.text.trim();if(!text){setScanStatus('文字が認識できませんでした',true);return;}var ta=document.getElementById('txt');ta.value=(ta.value?ta.value+'\n':'')+text;setScanStatus('認識完了 ✦ テキストに追記しました',false);speak(text,true);setTimeout(closeScanCam,1200);}catch(e){setScanStatus('OCRエラー: '+e.message,true);}}
+
+/* ============================================================
+   HELP MODAL JS
+   ============================================================ */
+var helpData = {
+  howto: [
+    {
+      title: '📖 Memory タブ — 記憶の保存・操作',
+      body: '<strong>保存</strong><br>テキスト入力→色・タグ・カテゴリを選んで「✦ 保存」。<br><br>' +
+            '<strong>カードボタン</strong><br>' +
+            '▶ 読む / 📍 ピン / ✎ 編集 / コピー / { } JSON表示 / 📋 JSONコピー / 🗂 律スキーマ / 💬 チャットに送る / 削除<br><br>' +
+            '<strong>📷 OCRスキャン</strong><br>カメラで文字を撮影してテキスト入力欄に自動追記。<br><br>' +
+            '<strong>🔍 絞り込み</strong><br>キーワード・タグチップ・カテゴリタブ・カレンダー日付で絞り込み可能。'
+    },
+    {
+      title: '💬 Chat タブ — AIチャット',
+      body: '<strong>AI選択</strong><br>右上のモデルバッジをタップ→OpenAI / Gemini / Claude を切り替え。<br><br>' +
+            '<strong>連携機能</strong><br>' +
+            'Memory カードの「💬 送る」→ Chatの入力欄に記憶を流し込む。<br>' +
+            'AI返答の「📖 記憶に保存」→ そのままMemoryに保存。<br><br>' +
+            '<strong>GeminiキーはMemoryと自動同期</strong><br>どちらか一方で設定すれば両方で使える。<br><br>' +
+            '<strong>🗂 律スキーマ</strong><br>カードの律ボタンで律・分析モード専用プロンプトをコピーして任意のAIに貼り付けて使用。'
+    },
+    {
+      title: '✦ Gemini API / データ管理',
+      body: '<strong>Gemini API設定</strong><br>ヘッダーの ✦ ボタン→APIキー入力→「設定」。<br>要約・タグ提案・キャラ分析・フリー質問が使える。<br><br>' +
+            '<strong>データ入出力</strong><br>ヘッダー ⇅ → TXTエクスポート / JSONエクスポート / JSONインポート。<br><br>' +
+            '<strong>保存先</strong><br>IndexedDB（EternalMemoryDB）がメイン。LocalStorageに自動バックアップあり。'
+    }
+  ],
+  lessons: [
+    {
+      title: 'モードパネルの表示漏れ（display制御）',
+      body: '<div class="lesson-label">① 何が問題だったか</div>' +
+            '<code>.mode-panel.active { display:flex }</code> を共通クラスで当てたら、' +
+            'MemoryとChatが同時に表示されてチャットバブルが漏れた。' +
+            '<div class="lesson-label">② どう解決したか</div>' +
+            '<code>#panel-memory.active { display:block }</code> と ' +
+            '<code>#panel-chat.active { display:flex }</code> をIDで明示的に分離した。' +
+            '<div class="lesson-label">③ 次回Claudeへの指示</div>' +
+            'モードパネルの表示切り替えは必ずIDセレクタで個別に定義すること。共通クラスで一括指定しない。'
+    },
+    {
+      title: 'チャット型UIのフレックス設計',
+      body: '<div class="lesson-label">① 何が問題だったか</div>' +
+            '<code>position:absolute; inset:0</code> でパネルを重ねたため、' +
+            'Chatパネルの <code>height:100%</code> が効かずキーボード出現時に入力欄が埋もれた。' +
+            '<div class="lesson-label">② どう解決したか</div>' +
+            '<code>display:flex; flex-direction:column; flex:1; min-height:0</code> のチェーンで' +
+            'flexを正しく継承させ、<code>requestAnimationFrame</code> でスクロールをflex確定後に実行。' +
+            '<div class="lesson-label">③ 次回Claudeへの指示</div>' +
+            'チャット型UIは最初からflexチェーンで組む。<code>position:absolute</code> でパネルを重ねない。'
+    },
+    {
+      title: 'Android Brave 互換（スプレッド・for...of）',
+      body: '<div class="lesson-label">① 何が問題だったか</div>' +
+            '<code>{...obj}</code> スプレッドと <code>for...of</code> がAndroid Braveの古めのV8で' +
+            '実行時エラーになるケースがある。' +
+            '<div class="lesson-label">② どう解決したか</div>' +
+            '<code>Object.assign({}, obj)</code> とインデックスループに変換。' +
+            '<div class="lesson-label">③ 次回Claudeへの指示</div>' +
+            'このアプリでは <code>Object.assign</code> とインデックスループを標準とせよ。' +
+            'スプレッド構文・<code>for...of</code> は使わない。'
+    },
+    {
+      title: 'IndexedDB連携アプリへの機能追加',
+      body: '<div class="lesson-label">① 何が問題だったか</div>' +
+            '既存DBストアの変更はバージョン管理ミスで全データ消失に直結する。' +
+            '<div class="lesson-label">② どう解決したか</div>' +
+            '新機能は必ず新しいストア名で隔離（例: <code>gemcrypto</code> ストアを新設）。' +
+            '<div class="lesson-label">③ 次回Claudeへの指示</div>' +
+            'IndexedDB の既存ストア（<code>memories</code>・<code>cats</code>）には絶対に触れるな。' +
+            '追加機能は新ストア名で分離すること。'
+    },
+    {
+      title: 'cpJson の meta にオブジェクト全体が入るバグ',
+      body: '<div class="lesson-label">① 何が問題だったか</div>' +
+            '<code>meta.date</code> に <code>mems.find()</code> の結果（オブジェクト全体）を代入してしまい、' +
+            'JSONが巨大な入れ子になった。' +
+            '<div class="lesson-label">② どう解決したか</div>' +
+            'findの結果を変数に受けてから <code>m.date</code> / <code>m.cat</code> / <code>m.tags</code> を個別に参照。' +
+            '<div class="lesson-label">③ 次回Claudeへの指示</div>' +
+            'JSONエクスポート系の関数は必ずスキーマを明示してから実装し、' +
+            'find結果をそのままオブジェクトに展開しない。'
+    }
+  ]
+};
+
+var COMMON_PROMPT =
+'【前提条件（必ず守れ）】\n' +
+'- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）\n' +
+'- IndexedDB（EternalMemoryDB）+ LocalStorageバックアップ構成\n' +
+'- モバイル前提（Android Brave、タップ操作）\n' +
+'- 既存機能を削除するな\n' +
+'- UIを破壊するな\n' +
+'- スプレッド構文・for...of は使わずObject.assign・インデックスループで書け\n' +
+'- モードパネルはIDセレクタで個別にdisplay制御すること\n';
+
+function helpStripHtml(h) {
+  var tmp = document.createElement('div');
+  tmp.innerHTML = h;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+function helpBuildPrompt() {
+  var lines = [COMMON_PROMPT, '【このアプリの教訓（過去のバグ・制約）】'];
+  for (var i = 0; i < helpData.lessons.length; i++) {
+    var l = helpData.lessons[i];
+    lines.push('・' + l.title + '\n  ' + helpStripHtml(l.body));
+  }
+  return lines.join('\n');
+}
+function helpCopyPrompt() {
+  var text = helpBuildPrompt();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      toast('📋 プロンプトをコピーしました');
+    }).catch(function() { toast('コピー失敗'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('📋 プロンプトをコピーしました');
+  }
+}
+
+(function initHelpModal() {
+  var overlay  = document.getElementById('helpOverlay');
+  var body     = document.getElementById('helpBody');
+  var openBtn  = document.getElementById('helpBtn');
+  var closeBtn = document.getElementById('helpCloseBtn');
+  var copyBtn  = document.getElementById('helpCopyPromptBtn');
+
+  function escH(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function makeSection(label, items, prefix) {
+    var wrap = document.createElement('div');
+    var title = document.createElement('div');
+    title.className = 'help-section-title';
+    title.textContent = label;
+    wrap.appendChild(title);
+    for (var i = 0; i < items.length; i++) {
+      (function(item, idx) {
+        var id = prefix + '-' + idx;
+        var row = document.createElement('div');
+        row.className = 'help-item';
+        var trigger = document.createElement('button');
+        trigger.className = 'help-item-trigger';
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-controls', id);
+        trigger.innerHTML = '<span>' + escH(item.title) + '</span><span class="help-chevron">▼</span>';
+        var panel = document.createElement('div');
+        panel.className = 'help-item-body';
+        panel.id = id;
+        panel.innerHTML = item.body;
+        trigger.addEventListener('click', function() {
+          var isOpen = trigger.classList.contains('open');
+          var allTriggers = wrap.querySelectorAll('.help-item-trigger.open');
+          for (var j = 0; j < allTriggers.length; j++) {
+            allTriggers[j].classList.remove('open');
+            allTriggers[j].setAttribute('aria-expanded', 'false');
+            document.getElementById(allTriggers[j].getAttribute('aria-controls')).classList.remove('open');
+          }
+          if (!isOpen) {
+            trigger.classList.add('open');
+            trigger.setAttribute('aria-expanded', 'true');
+            panel.classList.add('open');
+          }
+        });
+        row.appendChild(trigger);
+        row.appendChild(panel);
+        wrap.appendChild(row);
+      })(items[i], i);
+    }
+    return wrap;
+  }
+
+  function renderHelp() {
+    body.innerHTML = '';
+    body.appendChild(makeSection('📖 使い方', helpData.howto, 'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓', helpData.lessons, 'lesson'));
+  }
+  function openModal() { renderHelp(); overlay.classList.add('active'); }
+  function closeModal() { overlay.classList.remove('active'); }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  copyBtn.addEventListener('click', helpCopyPrompt);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+})();
+/* ============================================================
+   HELP MODAL JS ここまで
+   ============================================================ */
 </script>
+
+<!-- HELP MODAL HTML -->
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">❓ ヘルプ / 教訓</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
+  </div>
+</div>
 </body>
 </html>
