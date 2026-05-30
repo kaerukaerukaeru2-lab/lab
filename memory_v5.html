@@ -1481,17 +1481,16 @@ var VC={
 // dbName: "EternalMemoryDB"  storeName: "memories"
 // 設定値（テーマ・フォントサイズ・タブ等）→ LocalStorage（同期）
 // メイン記憶データ（JSONオブジェクト配列）→ IndexedDB（非同期）
-var DB_NAME='EternalMemoryDB', DB_VER=4;
-var DB_STORE='memories';   // 記憶データ本体
-var CAT_STORE='cats';      // カテゴリデータ
-var GEM_CRYPTO_STORE='gemcrypto'; // Gemini暗号化キー (v4.1)
-var IMG_STORE='images';    // 添付画像Blob (v5.0)
+var DB_NAME='EternalMemoryDB_v5', DB_VER=1;  // v4.1と別DBで共存
+var DB_STORE='memories';
+var CAT_STORE='cats';
+var GEM_CRYPTO_STORE='gemcrypto';
+var IMG_STORE='images';
 var _db=null;
 
 /* --- IndexedDB 開閉ラッパー --- */
 function openDB(){
   return new Promise(function(resolve,reject){
-    // キャッシュ済みDBのバージョンが古い場合は破棄して再オープン
     if(_db){
       if(_db.version===DB_VER){resolve(_db);return;}
       _db.close();
@@ -1501,21 +1500,15 @@ function openDB(){
 
     req.onupgradeneeded=function(e){
       var db=e.target.result;
-      var oldVer=e.oldVersion; // 0 = 新規, 1/2 = 既存バージョン
-
-      // 新規作成 or バージョン1以前からのアップグレード
       if(!db.objectStoreNames.contains(DB_STORE))
         db.createObjectStore(DB_STORE,{keyPath:'id'});
       if(!db.objectStoreNames.contains(CAT_STORE))
         db.createObjectStore(CAT_STORE,{keyPath:'k'});
-      // v3で追加: gemcrypto（既存DBに追加するだけ。データは消えない）
       if(!db.objectStoreNames.contains(GEM_CRYPTO_STORE))
         db.createObjectStore(GEM_CRYPTO_STORE,{keyPath:'k'});
-      // v4で追加: images（添付画像Blob）
       if(!db.objectStoreNames.contains(IMG_STORE))
         db.createObjectStore(IMG_STORE,{keyPath:'k'});
 
-      // アップグレードトランザクションのエラーを捕捉
       var upgradeTx=e.target.transaction;
       if(upgradeTx){
         upgradeTx.onerror=function(){
@@ -1530,14 +1523,9 @@ function openDB(){
       }
     };
 
-    req.onsuccess=function(e){_db=e.target.result;
-
-      // 別タブ等でバージョンアップが走った場合に古い接続を閉じる
-      _db.onversionchange=function(){
-        _db.close();
-        _db=null;
-      };
-
+    req.onsuccess=function(e){
+      _db=e.target.result;
+      _db.onversionchange=function(){_db.close();_db=null;};
       resolve(_db);
     };
 
@@ -1553,6 +1541,61 @@ function openDB(){
       toast('⚠ DBブロック中: 他のタブを閉じてリロードしてください');
       reject(new Error('openDB blocked'));
     };
+  });
+}
+
+/* --- 旧DB（EternalMemoryDB）からのマイグレーション --- */
+var OLD_DB_NAME='EternalMemoryDB';
+var OLD_DB_VER=3;
+function migrateFromOldDB(){
+  // マイグレーション済みフラグ
+  if(localStorage.getItem('em_v5_migrated')==='1')return Promise.resolve();
+  return new Promise(function(resolve){
+    var req=indexedDB.open(OLD_DB_NAME,OLD_DB_VER);
+    req.onsuccess=function(e){
+      var oldDb=e.target.result;
+      var stores=['memories','cats','gemcrypto'];
+      var results={memories:[],cats:[],gemcrypto:[]};
+      var pending=stores.length;
+      for(var i=0;i<stores.length;i++){
+        (function(s){
+          if(!oldDb.objectStoreNames.contains(s)){pending--;if(!pending)done();return;}
+          var tx=oldDb.transaction(s,'readonly');
+          var r=tx.objectStore(s).getAll();
+          r.onsuccess=function(){results[s]=r.result||[];pending--;if(!pending)done();};
+          r.onerror=function(){pending--;if(!pending)done();};
+        })(stores[i]);
+      }
+      function done(){
+        oldDb.close();
+        openDB().then(function(db){
+          var allStores=[DB_STORE,CAT_STORE,GEM_CRYPTO_STORE];
+          var allData=[results.memories,results.cats,results.gemcrypto];
+          var p=Promise.resolve();
+          for(var j=0;j<allStores.length;j++){
+            (function(store,data){
+              if(!data||!data.length)return;
+              p=p.then(function(){return idbPutAll(store,data);});
+            })(allStores[j],allData[j]);
+          }
+          p.then(function(){
+            localStorage.setItem('em_v5_migrated','1');
+            if(results.memories&&results.memories.length){
+              toast('✦ 旧データ '+results.memories.length+' 件を移行しました');
+            }
+            resolve();
+          }).catch(function(e){
+            console.error('[EternalMemory] migration write error:',e);
+            resolve();
+          });
+        }).catch(function(){resolve();});
+      }
+    };
+    req.onerror=function(){
+      // 旧DBがない場合はスキップ
+      resolve();
+    };
+    req.onblocked=function(){resolve();};
   });
 }
 
@@ -1846,7 +1889,7 @@ function setS(ok){
 }
 
 /* --- 旧 load() → loadData() へ委譲 --- */
-function load(){return loadData();}
+function load(){return migrateFromOldDB().then(function(){return loadData();});}
 
 // ===== CATEGORY SELECT =====
 function buildCatSelect(){
@@ -3051,7 +3094,9 @@ var helpData = {
       body: '<div class="lesson-label">① 何が問題だったか</div>①クリック委譲はiframe（クロスオリジン）タップを拾えない。②fc-yt-playにpointer-events未設定でfc-ytのonclickに届かない。③再生中にposition:absoluteな✕ボタン（z-index:10）で他カード全体のタップをブロック。④ヘルプモーダルopen時のdocument.body.style.overflow=hiddenがAndroid Braveで全タップをブロック。<div class="lesson-label">② どう解決したか</div>①fc-yt divのonclickで直接toggleYtPlayer()を呼ぶ。②fc-yt-playにpointer-events:none追加。③閉じるはフロー配置のfc-yt-close。④body.style.overflow操作を完全削除。<div class="lesson-label">③ 次回Claudeへの指示</div>Android Braveではdocument.body.style.overflow=hiddenを絶対に使わない。装飾的absoluteレイヤーは必ずpointer-events:noneにする。</div>'
     },
     {
-      title: 'calWrap系は必ずdisplay:noneで初期非表示にする',
+      title: '【重大】DB名共有によるv4.1/統合アプリのDB破壊',
+      body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。v5で登録したデータもv4.1からは見えない状態に。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
+    },
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
     },
     {
@@ -3066,7 +3111,7 @@ var COMMON_PROMPT =
 '- アプリ名: My Eternal Memory v5.1\n' +
 '- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）\n' +
 '- ストレージ: IndexedDB（メイン）+ LocalStorage（設定・バックアップ）\n' +
-'- DB名: EternalMemoryDB / ストア: memories, cats, gemcrypto, images\n' +
+'- DB名: EternalMemoryDB_v5 / ストア: memories, cats, gemcrypto, images\n' +
 '- モバイル前提（Android Brave、タップ操作）\n' +
 '- ES5互換スタイル（Object.assign・インデックスループ推奨、Array.fromは許容）\n' +
 '- スプレッド演算子・for...of禁止\n' +
