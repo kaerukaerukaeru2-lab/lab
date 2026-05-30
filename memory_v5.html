@@ -3252,6 +3252,16 @@ document.addEventListener('DOMContentLoaded',function(){
     if(feedBtn)feedBtn.classList.add('active');
   });
   if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=function(){};
+
+  // キーボード表示でナビバーが消えるのを防ぐ
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',function(){
+      var nav=document.getElementById('tabNav');
+      if(!nav)return;
+      var offsetBottom=window.innerHeight-(window.visualViewport.offsetTop+window.visualViewport.height);
+      nav.style.bottom=Math.max(0,offsetBottom)+'px';
+    });
+  }
 });
 </script>
 
