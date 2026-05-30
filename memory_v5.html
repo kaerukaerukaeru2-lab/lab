@@ -47,7 +47,7 @@
 
 /* ===== RESET ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { background: var(--bg); color: var(--tx); font-family: var(--sans); padding-bottom: 6rem; min-height: 100vh; }
+body { background: var(--bg); color: var(--tx); font-family: var(--sans); min-height: 100vh; }
 
 /* ===== GLASS UTILITIES ===== */
 .glass {
@@ -85,6 +85,7 @@ body { background: var(--bg); color: var(--tx); font-family: var(--sans); paddin
   content: ''; position: absolute; inset: 0;
   background: var(--cy2); border-radius: 50%; filter: blur(6px);
   animation: pulseGlow 2s ease-in-out infinite;
+  pointer-events: none;
 }
 .ttl { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--cy); letter-spacing: .1em; }
 .ttl small { display: block; font-family: var(--sans); font-size: 9px; color: var(--tx2); font-weight: 400; letter-spacing: 0; }
@@ -529,10 +530,11 @@ body.fs-large .mx { font-size: 17px; }
 
 /* ===== BOTTOM TAB NAV (v5) ===== */
 .tab-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+  position: fixed; top: auto; bottom: 0; left: 0; right: 0; z-index: 300;
   background: oklch(0.17 0.02 250);
   border-top: 1px solid var(--bdr);
-  display: flex; height: 56px;
+  display: flex; height: 56px; max-height: 56px; min-height: 56px;
+  overflow: hidden;
 }
 .tab-nav-btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -547,7 +549,7 @@ body.fs-large .mx { font-size: 17px; }
 
 /* ===== TAB PANES (v5) ===== */
 .pane { display: none; }
-.pane.active { display: block; }
+.pane.active { display: block; padding-bottom: 5rem; }
 
 /* ===== FEED CARD (v5 Xスタイル) ===== */
 .feed { display: flex; flex-direction: column; }
@@ -3097,17 +3099,13 @@ var helpData = {
       title: '.pin-badge(position:absolute)の親.fcにposition:relativeがなくタップ全滅',
       body: '<div class="lesson-label">① 何が問題だったか</div>.pin-badge{position:absolute}の親要素.fcにposition指定がなく(static)、pin-badgeがbody基準で配置されてフィード全体を覆うスタックコンテキストを作りタップをブロック。<div class="lesson-label">② どう解決したか</div>.fcにposition:relativeを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:absoluteの子要素を持つ親には必ずposition:relativeを付ける。fc・mc・カード系クラスは全てposition:relative必須。</div>'
     },
-    {
-      title: '【重大】DB名共有によるv4.1/統合アプリのDB破壊',
-      body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
+      body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。v5で登録したデータもv4.1からは見えない状態に。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
     },
-    {
-      title: 'calWrap系は必ずdisplay:noneで初期非表示にする',
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
     },
     {
-      title: 'helpData lessonsのJSON構造破損でJS全停止→全タップ無反応',
-      body: '<div class="lesson-label">① 何が問題だったか</div>helpData.lessons[]内のオブジェクトでtitle:が欠落しbody:だけ孤立する構文エラーが発生。JSがパース段階でクラッシュし全onclickが無効化→全タップ無反応になった。<div class="lesson-label">② どう解決したか</div>孤立したbody:行にtitle:と開き波括弧{を追加して正しいオブジェクト構造に修正。<div class="lesson-label">③ 次回Claudeへの指示</div>helpDataを編集したら必ずtitle:の件数とbody:の件数が一致するか確認する。lessonsを追加・削除するときは{title:...,body:...}のペアを必ず守る。JSパースエラーは全機能停止につながるため最優先で確認すること。</div>'
+      title: '【真犯人】tab-nav(position:fixed)が画面全体を覆い全タップ無効',
+      body: '<div class="lesson-label">① 何が問題だったか</div>tab-nav{position:fixed;bottom:0;height:56px}のtopを未指定にしていたため、Android Braveでtop:0として解釈され画面全体（top:0〜bottom:0）を覆った。フィードのどこをタップしてもtabNavに吸収され全onclick無効。デバッグツールで全タップがtabNav z:300に反応することで確定。<div class="lesson-label">② どう解決したか</div>top:auto;max-height:56px;min-height:56px;overflow:hiddenを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:fixedの要素は必ずtop/bottomを両方明示するか、top:autoを明記する。height指定だけでは不十分。Android Braveではtop未指定のfixed要素がtop:0に展開されることがある。</div>'
     },
       body: '<div class="lesson-label">① 何が問題だったか</div>v4の.input-cardクラスをv5で.post-cardに変更したのにpickColor()内のquerySelectorが.input-card参照のまま残り、色選択が機能しなかった。またtoggleExpand()が汎用[data-eid]セレクタを使っており、編集モーダルのtextareaと衝突する可能性があった。<div class="lesson-label">② どう解決したか</div>pickColor()を.post-wrap .color-dotに変更。toggleExpand()を.fc-body[data-eid]に限定。<div class="lesson-label">③ 次回Claudeへの指示</div>クラス名をリネームしたときはquerySelectorAll参照を必ず全文検索で追う。セレクタは可能な限りスコープを絞る。</div>'
     }
@@ -3151,7 +3149,7 @@ function _escHelpHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-(function initHelpModal() {
+function initHelpModal() {
   var overlay  = document.getElementById('helpOverlay');
   var body     = document.getElementById('helpBody');
   var openBtn  = document.getElementById('helpBtn');
@@ -3232,10 +3230,11 @@ function _escHelpHtml(str) {
   };
   overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
-})();
+}
 
 // ===== BOOT =====
 document.addEventListener('DOMContentLoaded',function(){
+  initHelpModal();
   load().then(function(){
     buildTagChips();
     checkGemSaved();
