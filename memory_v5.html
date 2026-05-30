@@ -1544,12 +1544,13 @@ function openDB(){
 
 /* --- 旧DB（EternalMemoryDB）からのマイグレーション --- */
 var OLD_DB_NAME='EternalMemoryDB';
-var OLD_DB_VER=3;
+var OLD_DB_VER=4;  // v5古いバージョンがVER=4に上げてしまったため
 function migrateFromOldDB(){
-  // マイグレーション済みフラグ
-  if(localStorage.getItem('em_v5_migrated')==='1')return Promise.resolve();
+  // マイグレーション済みフラグ（VER=4対応版はv2）
+  if(localStorage.getItem('em_v5_migrated')==='2')return Promise.resolve();
   return new Promise(function(resolve){
-    var req=indexedDB.open(OLD_DB_NAME,OLD_DB_VER);
+    // VER=4で開く（既にアップグレード済みのため）
+    var req=indexedDB.open(OLD_DB_NAME);  // バージョン指定なし＝現在のバージョンで開く
     req.onsuccess=function(e){
       var oldDb=e.target.result;
       var stores=['memories','cats','gemcrypto'];
@@ -1577,7 +1578,7 @@ function migrateFromOldDB(){
             })(allStores[j],allData[j]);
           }
           p.then(function(){
-            localStorage.setItem('em_v5_migrated','1');
+            localStorage.setItem('em_v5_migrated','2');  // v2フラグで再実行
             if(results.memories&&results.memories.length){
               toast('✦ 旧データ '+results.memories.length+' 件を移行しました');
             }
@@ -1589,10 +1590,7 @@ function migrateFromOldDB(){
         }).catch(function(){resolve();});
       }
     };
-    req.onerror=function(){
-      // 旧DBがない場合はスキップ
-      resolve();
-    };
+    req.onerror=function(){resolve();};
     req.onblocked=function(){resolve();};
   });
 }
@@ -3105,8 +3103,11 @@ var helpData = {
     },
     {
       title: '【真犯人】tab-nav(position:fixed)が画面全体を覆い全タップ無効',
-      body: '<div class="lesson-label">① 何が問題だったか</div>tab-nav{position:fixed;bottom:0;height:56px}のtopを未指定にしていたため、Android Braveでtop:0として解釈され画面全体（top:0〜bottom:0）を覆った。フィードのどこをタップしてもtabNavに吸収され全onclick無効。デバッグツールで全タップがtabNav z:300に反応することで確定。<div class="lesson-label">② どう解決したか</div>top:auto;max-height:56px;min-height:56px;overflow:hiddenを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:fixedの要素は必ずtop/bottomを両方明示するか、top:autoを明記する。height指定だけでは不十分。Android Braveではtop未指定のfixed要素がtop:0に展開されることがある。</div>'
+      body: '<div class="lesson-label">① 何が問題だったか</div>tab-nav{position:fixed;bottom:0;height:56px}のtopを未指定にしていたため、Android Braveでtop:0として解釈され画面全体を覆った。全タップがtabNavに吸収されonclick無効。<div class="lesson-label">② どう解決したか</div>top:auto;max-height:56px;min-height:56px;overflow:hiddenを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:fixedは必ずtop/bottomを両方明示またはtop:autoを明記。Android Braveではtop未指定のfixed要素がtop:0に展開される。</div>'
     },
+    {
+      title: 'マイグレーション失敗→0件表示：OLD_DB_VERは現在のバージョンに合わせる',
+      body: '<div class="lesson-label">① 何が問題だったか</div>migrateFromOldDB()でOLD_DB_VER=3を指定していたが、v5古いバージョンがEternalMemoryDBをVER=4に上げていたためopenがブロックされてマイグレーション失敗→フィード0件。em_v5_migratedフラグ=1が残っていると再実行もされない。<div class="lesson-label">② どう解決したか</div>indexedDB.open(OLD_DB_NAME)でバージョン指定なし（現在のバージョンで開く）に変更。フラグを=2にして強制再マイグレーション。<div class="lesson-label">③ 次回Claudeへの指示</div>旧DBを読む際はバージョン指定なしでopen()する。マイグレーションロジック修正時はフラグ値を上げて強制再実行させること。</div>'
       body: '<div class="lesson-label">① 何が問題だったか</div>v4の.input-cardクラスをv5で.post-cardに変更したのにpickColor()内のquerySelectorが.input-card参照のまま残り、色選択が機能しなかった。またtoggleExpand()が汎用[data-eid]セレクタを使っており、編集モーダルのtextareaと衝突する可能性があった。<div class="lesson-label">② どう解決したか</div>pickColor()を.post-wrap .color-dotに変更。toggleExpand()を.fc-body[data-eid]に限定。<div class="lesson-label">③ 次回Claudeへの指示</div>クラス名をリネームしたときはquerySelectorAll参照を必ず全文検索で追う。セレクタは可能な限りスコープを絞る。</div>'
     }
   ]
