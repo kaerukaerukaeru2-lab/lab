@@ -601,7 +601,7 @@ body.fs-large .mx { font-size: 17px; }
 .fc-yt img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; opacity: .9; }
 .fc-yt-play {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.25); z-index: 2;
+  background: rgba(0,0,0,.25); z-index: 2; pointer-events: none;
 }
 .fc-yt-play svg { width: 48px; height: 48px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
 .fc-yt-title { padding: 5px 8px; font-size: 11px; color: var(--tx2); background: oklch(0.18 0.02 250); }
@@ -3048,8 +3048,10 @@ var helpData = {
     },
     {
       title: 'YouTubeサムネタップ無反応・全消え・全タップ無効バグ',
-      body: '<div class="lesson-label">① 何が問題だったか</div>①クリック委譲はiframe（クロスオリジン）タップを拾えない。②fc-yt-playにz-indexがなくimgがタップを吸収。③再生中にposition:absoluteな✕ボタン（z-index:10）をfc-ytの外に追加したことで他カード全体のタップをブロック→全タップ無効。<div class="lesson-label">② どう解決したか</div>①fc-yt divのonclickで直接toggleYtPlayer()を呼ぶ。②再生状態管理をel.dataset.playing='1'フラグで行い、onclickは常に有効のまま（再生中タップ→閉じる）。③閉じるボタンはposition:absoluteを使わずフロー配置のfc-yt-closeで実装（overflow:hidden外に絶対配置禁止）。<div class="lesson-label">③ 次回Claudeへの指示</div>fc-ytの中でabsolute配置した要素がfc-ytのoverflow:hiddenを突き破ると隣カードをブロックする。閉じる操作はフロー配置のdivに任せる。iframeが絡む領域でz-indexを高くした絶対配置要素は禁止。</div>'
-    }
+      body: '<div class="lesson-label">① 何が問題だったか</div>①クリック委譲はiframe（クロスオリジン）タップを拾えない。②fc-yt-playにpointer-events未設定でfc-ytのonclickに届かない。③再生中にposition:absoluteな✕ボタン（z-index:10）で他カード全体のタップをブロック。④ヘルプモーダルopen時のdocument.body.style.overflow=hiddenがAndroid Braveで全タップをブロック。<div class="lesson-label">② どう解決したか</div>①fc-yt divのonclickで直接toggleYtPlayer()を呼ぶ。②fc-yt-playにpointer-events:none追加。③閉じるはフロー配置のfc-yt-close。④body.style.overflow操作を完全削除。<div class="lesson-label">③ 次回Claudeへの指示</div>Android Braveではdocument.body.style.overflow=hiddenを絶対に使わない。装飾的absoluteレイヤーは必ずpointer-events:noneにする。</div>'
+    },
+    {
+      title: 'calWrap系は必ずdisplay:noneで初期非表示にする',
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
     },
     {
@@ -3072,7 +3074,8 @@ var COMMON_PROMPT =
 '- 既存機能を削除するな\n' +
 '- UIを破壊するな\n' +
 '- 同期ロジックを勝手に変えるな\n' +
-'- 画像はimgToWebP()で長辺1280px・WebP品質0.75に自動圧縮済み\n' +
+'- Android Braveではdocument.body.style.overflow=hiddenを絶対に使わない\n' +
+'- 装飾的absoluteレイヤー（::before/::after含む）は必ずpointer-events:noneにする\n' +
 '- 動画はYouTube URLからIDだけ保存、再生はiframe embed\n';
 
 function _helpStripHtml(html) {
@@ -3154,11 +3157,9 @@ function _escHelpHtml(str) {
   function openModal() {
     renderHelp();
     overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
   }
   function closeModal() {
     overlay.classList.remove('active');
-    document.body.style.overflow = '';
   }
 
   openBtn.onclick = openModal;
