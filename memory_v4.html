@@ -1192,7 +1192,7 @@ var VC={
 // dbName: "EternalMemoryDB"  storeName: "memories"
 // 設定値（テーマ・フォントサイズ・タブ等）→ LocalStorage（同期）
 // メイン記憶データ（JSONオブジェクト配列）→ IndexedDB（非同期）
-var DB_NAME='EternalMemoryDB', DB_VER=3;
+var DB_NAME='EternalMemoryDB', DB_VER=4;
 var DB_STORE='memories';   // 記憶データ本体
 var CAT_STORE='cats';      // カテゴリデータ
 var GEM_CRYPTO_STORE='gemcrypto'; // Gemini暗号化キー (v4.1)
@@ -1221,6 +1221,9 @@ function openDB(){
       // v3で追加: gemcrypto（既存DBに追加するだけ。データは消えない）
       if(!db.objectStoreNames.contains(GEM_CRYPTO_STORE))
         db.createObjectStore(GEM_CRYPTO_STORE,{keyPath:'k'});
+      // v4で追加: images（v5との共存のため宣言のみ。v4.2では使用しない）
+      if(!db.objectStoreNames.contains('images'))
+        db.createObjectStore('images',{keyPath:'k'});
 
       // アップグレードトランザクションのエラーを捕捉
       var upgradeTx=e.target.transaction;
