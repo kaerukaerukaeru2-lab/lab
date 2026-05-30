@@ -3097,12 +3097,18 @@ var helpData = {
       title: '.pin-badge(position:absolute)の親.fcにposition:relativeがなくタップ全滅',
       body: '<div class="lesson-label">① 何が問題だったか</div>.pin-badge{position:absolute}の親要素.fcにposition指定がなく(static)、pin-badgeがbody基準で配置されてフィード全体を覆うスタックコンテキストを作りタップをブロック。<div class="lesson-label">② どう解決したか</div>.fcにposition:relativeを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:absoluteの子要素を持つ親には必ずposition:relativeを付ける。fc・mc・カード系クラスは全てposition:relative必須。</div>'
     },
-      body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。v5で登録したデータもv4.1からは見えない状態に。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
+    {
+      title: '【重大】DB名共有によるv4.1/統合アプリのDB破壊',
+      body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
     },
+    {
+      title: 'calWrap系は必ずdisplay:noneで初期非表示にする',
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
     },
     {
-      title: 'pickColor/toggleExpandはv5のクラス構造に合わせる',
+      title: 'helpData lessonsのJSON構造破損でJS全停止→全タップ無反応',
+      body: '<div class="lesson-label">① 何が問題だったか</div>helpData.lessons[]内のオブジェクトでtitle:が欠落しbody:だけ孤立する構文エラーが発生。JSがパース段階でクラッシュし全onclickが無効化→全タップ無反応になった。<div class="lesson-label">② どう解決したか</div>孤立したbody:行にtitle:と開き波括弧{を追加して正しいオブジェクト構造に修正。<div class="lesson-label">③ 次回Claudeへの指示</div>helpDataを編集したら必ずtitle:の件数とbody:の件数が一致するか確認する。lessonsを追加・削除するときは{title:...,body:...}のペアを必ず守る。JSパースエラーは全機能停止につながるため最優先で確認すること。</div>'
+    },
       body: '<div class="lesson-label">① 何が問題だったか</div>v4の.input-cardクラスをv5で.post-cardに変更したのにpickColor()内のquerySelectorが.input-card参照のまま残り、色選択が機能しなかった。またtoggleExpand()が汎用[data-eid]セレクタを使っており、編集モーダルのtextareaと衝突する可能性があった。<div class="lesson-label">② どう解決したか</div>pickColor()を.post-wrap .color-dotに変更。toggleExpand()を.fc-body[data-eid]に限定。<div class="lesson-label">③ 次回Claudeへの指示</div>クラス名をリネームしたときはquerySelectorAll参照を必ず全文検索で追う。セレクタは可能な限りスコープを絞る。</div>'
     }
   ]
