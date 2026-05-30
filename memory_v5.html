@@ -51,14 +51,10 @@ body { background: var(--bg); color: var(--tx); font-family: var(--sans); paddin
 
 /* ===== GLASS UTILITIES ===== */
 .glass {
-  background: oklch(0.20 0.02 250 / 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: oklch(0.20 0.02 250 / 0.95);
 }
 .glass-strong {
-  background: oklch(0.20 0.02 250 / 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: oklch(0.20 0.02 250 / 0.98);
 }
 
 /* ===== GLOW EFFECTS ===== */
@@ -124,7 +120,7 @@ body { background: var(--bg); color: var(--tx); font-family: var(--sans); paddin
 /* ===== CARD BASE ===== */
 .card {
   background: oklch(0.20 0.02 250 / 0.6);
-  backdrop-filter: blur(12px);
+ 
   border: 1px solid var(--bdr);
   border-radius: 18px;
   padding: 1rem 1.1rem;
@@ -325,7 +321,7 @@ input[type=range] { flex: 1; accent-color: var(--cy); height: 4px; cursor: point
 /* ===== MEMORY CARDS ===== */
 .cards { display: flex; flex-direction: column; gap: 10px; }
 .mc {
-  background: oklch(0.20 0.02 250 / 0.6); backdrop-filter: blur(8px);
+  background: oklch(0.20 0.02 250 / 0.6);
   border: 1px solid var(--bdr); border-radius: 16px; padding: 1rem 1.1rem;
   animation: fadeUp .22s ease; position: relative;
   transition: transform .18s, box-shadow .18s;
@@ -440,7 +436,7 @@ body.fs-large .mx { font-size: 17px; }
   background: oklch(0.25 0.02 250); border: 1px solid var(--bdr);
   color: var(--tx); padding: 10px 18px; border-radius: 12px;
   font-size: 12px; opacity: 0; transition: opacity .25s; pointer-events: none;
-  z-index: 999; white-space: nowrap; backdrop-filter: blur(16px);
+  z-index: 999; white-space: nowrap;
 }
 .toast.on { opacity: 1; }
 
@@ -534,8 +530,7 @@ body.fs-large .mx { font-size: 17px; }
 /* ===== BOTTOM TAB NAV (v5) ===== */
 .tab-nav {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
-  background: oklch(0.17 0.02 250 / 0.97);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  background: oklch(0.17 0.02 250);
   border-top: 1px solid var(--bdr);
   display: flex; height: 56px;
 }
@@ -633,7 +628,7 @@ body.fs-large .mx { font-size: 17px; }
 /* ===== 投稿フォーム (✍️タブ) ===== */
 .post-wrap { padding: 1rem; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: .75rem; }
 .post-card {
-  background: oklch(0.20 0.02 250 / 0.6); backdrop-filter: blur(12px);
+  background: oklch(0.20 0.02 250 / 0.6);
   border: 1px solid oklch(0.80 0.15 195 / 0.25); border-radius: 18px;
   padding: 1rem 1.1rem;
 }
@@ -676,7 +671,7 @@ body.fs-large .mx { font-size: 17px; }
 
 /* ===== 設定タブ (⚙️) ===== */
 .settings-pane { padding: 1rem; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: .75rem; }
-.set-card { background: oklch(0.20 0.02 250 / 0.6); backdrop-filter: blur(12px); border: 1px solid var(--bdr); border-radius: 18px; padding: 1rem 1.1rem; }
+.set-card { background: oklch(0.20 0.02 250 / 0.6); border: 1px solid var(--bdr); border-radius: 18px; padding: 1rem 1.1rem; }
 .set-ttl { font-family: var(--mono); font-size: 10px; color: var(--cy); letter-spacing: .1em; margin-bottom: .75rem; display: flex; align-items: center; gap: 5px; }
 .set-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -798,8 +793,8 @@ body.fs-large .mx { font-size: 17px; }
   inset: 0;
   z-index: 910;
   background: rgba(0,0,0,.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+ 
+ 
   align-items: center;
   justify-content: center;
   padding: 1rem;
@@ -3094,7 +3089,9 @@ var helpData = {
       body: '<div class="lesson-label">① 何が問題だったか</div>①クリック委譲はiframe（クロスオリジン）タップを拾えない。②fc-yt-playにpointer-events未設定でfc-ytのonclickに届かない。③再生中にposition:absoluteな✕ボタン（z-index:10）で他カード全体のタップをブロック。④ヘルプモーダルopen時のdocument.body.style.overflow=hiddenがAndroid Braveで全タップをブロック。<div class="lesson-label">② どう解決したか</div>①fc-yt divのonclickで直接toggleYtPlayer()を呼ぶ。②fc-yt-playにpointer-events:none追加。③閉じるはフロー配置のfc-yt-close。④body.style.overflow操作を完全削除。<div class="lesson-label">③ 次回Claudeへの指示</div>Android Braveではdocument.body.style.overflow=hiddenを絶対に使わない。装飾的absoluteレイヤーは必ずpointer-events:noneにする。</div>'
     },
     {
-      title: '【重大】DB名共有によるv4.1/統合アプリのDB破壊',
+      title: 'backdrop-filterがAndroid BraveでタップをブロックするCSS問題',
+      body: '<div class="lesson-label">① 何が問題だったか</div>ヘッダー（position:sticky）とタブナビ（position:fixed）にbackdrop-filter:blur()を設定していたため、Android Braveでフィード全体のタップイベントがブロックされた。ヘッダーやナビの「下」にある要素がタップできない状態になった。<div class="lesson-label">② どう解決したか</div>ファイル内の全backdrop-filterを削除。backgroundを不透明な固定色に変更。<div class="lesson-label">③ 次回Claudeへの指示</div>Android Brave向けアプリではbackdrop-filterを絶対に使わない。position:sticky/fixedの要素にbackdrop-filterがあると下の要素のタップが全滅する。</div>'
+    },
       body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。v5で登録したデータもv4.1からは見えない状態に。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
     },
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
@@ -3119,6 +3116,7 @@ var COMMON_PROMPT =
 '- 既存機能を削除するな\n' +
 '- UIを破壊するな\n' +
 '- 同期ロジックを勝手に変えるな\n' +
+'- backdrop-filterを絶対に使わない（Android Braveでタップが全滅する）\n' +
 '- Android Braveではdocument.body.style.overflow=hiddenを絶対に使わない\n' +
 '- 装飾的absoluteレイヤー（::before/::after含む）は必ずpointer-events:noneにする\n' +
 '- 動画はYouTube URLからIDだけ保存、再生はiframe embed\n';
