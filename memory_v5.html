@@ -557,6 +557,7 @@ body.fs-large .mx { font-size: 17px; }
   animation: fadeUp .18s ease;
   transition: background .12s;
   cursor: default;
+  position: relative;
 }
 .fc:active { background: oklch(0.22 0.02 250 / 0.5); }
 .fc-header { display: flex; align-items: center; gap: 7px; margin-bottom: .45rem; }
@@ -3091,6 +3092,10 @@ var helpData = {
     {
       title: 'backdrop-filterがAndroid BraveでタップをブロックするCSS問題',
       body: '<div class="lesson-label">① 何が問題だったか</div>ヘッダー（position:sticky）とタブナビ（position:fixed）にbackdrop-filter:blur()を設定していたため、Android Braveでフィード全体のタップイベントがブロックされた。ヘッダーやナビの「下」にある要素がタップできない状態になった。<div class="lesson-label">② どう解決したか</div>ファイル内の全backdrop-filterを削除。backgroundを不透明な固定色に変更。<div class="lesson-label">③ 次回Claudeへの指示</div>Android Brave向けアプリではbackdrop-filterを絶対に使わない。position:sticky/fixedの要素にbackdrop-filterがあると下の要素のタップが全滅する。</div>'
+    },
+    {
+      title: '.pin-badge(position:absolute)の親.fcにposition:relativeがなくタップ全滅',
+      body: '<div class="lesson-label">① 何が問題だったか</div>.pin-badge{position:absolute}の親要素.fcにposition指定がなく(static)、pin-badgeがbody基準で配置されてフィード全体を覆うスタックコンテキストを作りタップをブロック。<div class="lesson-label">② どう解決したか</div>.fcにposition:relativeを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:absoluteの子要素を持つ親には必ずposition:relativeを付ける。fc・mc・カード系クラスは全てposition:relative必須。</div>'
     },
       body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。v5で登録したデータもv4.1からは見えない状態に。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
     },
