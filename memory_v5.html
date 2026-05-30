@@ -1479,7 +1479,7 @@ var VC={
 // dbName: "EternalMemoryDB"  storeName: "memories"
 // 設定値（テーマ・フォントサイズ・タブ等）→ LocalStorage（同期）
 // メイン記憶データ（JSONオブジェクト配列）→ IndexedDB（非同期）
-var DB_NAME='EternalMemoryDB_v5', DB_VER=1;  // v4.1と別DBで共存
+var DB_NAME='EternalMemoryDB', DB_VER=4;  // v4.2・memory-chatと同じDB、VER=4で統一
 var DB_STORE='memories';
 var CAT_STORE='cats';
 var GEM_CRYPTO_STORE='gemcrypto';
@@ -1885,7 +1885,7 @@ function setS(ok){
 }
 
 /* --- 旧 load() → loadData() へ委譲 --- */
-function load(){return migrateFromOldDB().then(function(){return loadData();});}
+function load(){return loadData();}
 
 // ===== CATEGORY SELECT =====
 function buildCatSelect(){
@@ -3118,7 +3118,7 @@ var COMMON_PROMPT =
 '- アプリ名: My Eternal Memory v5.1\n' +
 '- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）\n' +
 '- ストレージ: IndexedDB（メイン）+ LocalStorage（設定・バックアップ）\n' +
-'- DB名: EternalMemoryDB_v5 / ストア: memories, cats, gemcrypto, images\n' +
+'- DB名: EternalMemoryDB / ストア: memories, cats, gemcrypto, images（VER=4、v4.2・memory-chatと共有）\n' +
 '- モバイル前提（Android Brave、タップ操作）\n' +
 '- ES5互換スタイル（Object.assign・インデックスループ推奨、Array.fromは許容）\n' +
 '- スプレッド演算子・for...of禁止\n' +
