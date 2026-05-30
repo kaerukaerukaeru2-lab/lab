@@ -601,7 +601,7 @@ body.fs-large .mx { font-size: 17px; }
 .fc-yt img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; opacity: .9; }
 .fc-yt-play {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.25);
+  background: rgba(0,0,0,.25); z-index: 2;
 }
 .fc-yt-play svg { width: 48px; height: 48px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
 .fc-yt-title { padding: 5px 8px; font-size: 11px; color: var(--tx2); background: oklch(0.18 0.02 250); }
@@ -2187,7 +2187,7 @@ function renderFeedCard(m){
   // YouTube
   var ytHtml='';
   if(m.ytId){
-    ytHtml='<div class="fc-yt" id="fyt_'+m.id+'">'
+    ytHtml='<div class="fc-yt" id="fyt_'+m.id+'" onclick="toggleYtPlayer('+m.id+')">'
       +'<img src="'+ytThumb(m.ytId)+'" alt="">'
       +'<div class="fc-yt-play"><svg viewBox="0 0 68 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="68" height="48" rx="10" fill="red" fill-opacity=".9"/><path d="M45 24L27 34.5V13.5L45 24Z" fill="white"/></svg></div>'
       +'</div>';
@@ -2265,8 +2265,16 @@ function toggleYtPlayer(memId){
   if(!el)return;
   var m=mems.find(function(x){return x.id===memId;});
   if(!m||!m.ytId)return;
-  if(el.querySelector('.fc-yt-player')){el.innerHTML='<img src="'+ytThumb(m.ytId)+'" alt=""><div class="fc-yt-play" onclick="toggleYtPlayer('+memId+')"><svg viewBox="0 0 68 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="68" height="48" rx="10" fill="red" fill-opacity=".9"/><path d="M45 24L27 34.5V13.5L45 24Z" fill="white"/></svg></div>';return;}
-  el.innerHTML='<div class="fc-yt-player"><iframe src="https://www.youtube.com/embed/'+m.ytId+'?autoplay=1" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>';
+  // 再生中 → サムネに戻す
+  if(el.querySelector('.fc-yt-player')){
+    el.onclick=function(){toggleYtPlayer(memId);};
+    el.innerHTML='<img src="'+ytThumb(m.ytId)+'" alt=""><div class="fc-yt-play"><svg viewBox="0 0 68 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="68" height="48" rx="10" fill="red" fill-opacity=".9"/><path d="M45 24L27 34.5V13.5L45 24Z" fill="white"/></svg></div>';
+    return;
+  }
+  // サムネ → 再生開始。iframeタップがonclickに届かないよう一時無効化
+  el.onclick=null;
+  el.innerHTML='<div class="fc-yt-player"><iframe src="https://www.youtube.com/embed/'+m.ytId+'?autoplay=1" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>'
+    +'<div style="position:absolute;top:0;right:0;width:48px;height:48px;z-index:10;cursor:pointer;" onclick="toggleYtPlayer('+memId+')" title="閉じる"><span style="display:block;background:rgba(0,0,0,.6);color:#fff;font-size:18px;text-align:center;line-height:48px;border-radius:0 0 0 8px;">✕</span></div>';
 }
 
 function toggleChildren(id){var el=document.getElementById('ch_'+id);if(el)el.classList.toggle('on');}
@@ -3033,7 +3041,9 @@ var helpData = {
       body: '<div class="lesson-label">① 設計</div>imgToWebP()でCanvas経由でリサイズ（長辺MAX 1280px、アスペクト比保持）→ WebP品質0.75でBlob化 → IDBに保存。<div class="lesson-label">② 定数</div>IMG_MAX_EDGE=1280、IMG_QUALITY=0.75。調整はこの2定数のみ変更。<div class="lesson-label">③ 次回Claudeへの指示</div>imgToWebP()は投稿・編集両方で使う共通関数。リサイズ処理を変更するときはこの1関数だけ変えればよい。品質・サイズの定数変更もここ。</div>'
     },
     {
-      title: 'calWrap系は必ずdisplay:noneで初期非表示にする',
+      title: 'YouTubeサムネタップ無反応・全消えバグ',
+      body: '<div class="lesson-label">① 何が問題だったか</div>①クリック委譲（document.addEventListener）はiframe（クロスオリジン）内タップを拾えない。②fc-yt-playにz-indexがなくimgがタップを吸収。③再生中にiframe外をタップするとカード全体のonclickが発火してrender()が走りDOMが再生成→iframeが消える。<div class="lesson-label">② どう解決したか</div>委譲をやめてfc-yt div本体にonclick属性で直接toggleYtPlayer()を付与。再生中はel.onclick=nullでiframeタップ漏れを防止。右上に✕ボタン（z-index:10）を追加して明示的に閉じられるように。fc-yt-playにz-index:2を追加。<div class="lesson-label">③ 次回Claudeへの指示</div>iframeが絡むクリックはdocument委譲では取れない。fc-ytのonclickは属性で直書き。再生中はonclick=nullで必ず無効化すること。</div>'
+    }
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
     },
     {
@@ -3174,14 +3184,6 @@ document.addEventListener('DOMContentLoaded',function(){
     if(feedBtn)feedBtn.classList.add('active');
   });
   if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=function(){};
-  // fc-yt クリック委譲（サムネ→YouTube展開）
-  document.addEventListener('click',function(e){
-    var yt=e.target.closest('.fc-yt');
-    if(yt&&!yt.querySelector('iframe')){
-      var id=yt.id.replace('fyt_','');
-      if(id)toggleYtPlayer(parseInt(id));
-    }
-  });
 });
 </script>
 
