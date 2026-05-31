@@ -1374,7 +1374,7 @@ var colorMap={
 };
 
 // ===== VOICE COMMANDS =====
-var CMD_KEY='mem_voice_cmds_v1';
+var CMD_KEY='mem_voice_cmds_v5';
 var voiceCmds=[];
 var recognition=null;
 var micOn=false;
@@ -1454,7 +1454,7 @@ function _buildSearchText(m){
   m._s=parts.join(' ').toLowerCase();
 }
 var newColor='default',editColor='default',fontSize='normal';
-var KEY='mem_eternal_v3',CAT_KEY='mem_cats_v2';
+var KEY='mem_eternal_v5',CAT_KEY='mem_cats_v5';
 var mfFilter='all';
 var pendingImgs=[]; // 投稿フォーム：{dataUrl,blob}
 var editPendingImgs=[];
@@ -1680,21 +1680,21 @@ function doAutoBackup(){
   if(!mems.length)return;
   try{
     var payload={_ver:'4.0',_exportedAt:new Date().toISOString(),_count:mems.length,mems:mems,cats:cats};
-    localStorage.setItem('mem_auto_backup_v3',JSON.stringify(payload));
+    localStorage.setItem('mem_auto_backup_v5',JSON.stringify(payload));
   }catch(e){}
 }
 
 /* --- 設定のみ LocalStorage で同期保存 --- */
 function saveSettings(){
   try{
-    localStorage.setItem('mem_settings_v3',JSON.stringify({
+    localStorage.setItem('mem_settings_v5',JSON.stringify({
       activeTab:activeTab,fontSize:fontSize,ch:ch,speedMult:speedMult
     }));
   }catch(e){}
 }
 function loadSettings(){
   try{
-    var s=localStorage.getItem('mem_settings_v3');
+    var s=localStorage.getItem('mem_settings_v5');
     if(s){var o=JSON.parse(s);
       if(o.activeTab)activeTab=o.activeTab;
       if(o.fontSize)fontSize=o.fontSize;
@@ -1706,7 +1706,7 @@ function loadSettings(){
 
 /* --- LS→IDB マイグレーション（破壊的変更なし） --- */
 // 旧キーが残っていれば IDB へ移行し、完了後に LS 側をクリア
-var LEGACY_KEYS=['mem_eternal_v3','mem_eternal_v2_new'];
+var LEGACY_KEYS=['mem_eternal_v5','mem_eternal_v3','mem_eternal_v2_new'];
 function migrateFromLS(){
   return openDB().then(function(){
     return idbGetAll(DB_STORE);
@@ -1737,7 +1737,7 @@ function migrateFromLS(){
 // 二重保存ガード
 var _saving=false;
 // 予備LSバックアップキー（最新30件）
-var LS_BACKUP_KEY='mem_backup_v3';
+var LS_BACKUP_KEY='mem_backup_v5';
 
 /**
  * saveData() ― 安全版
@@ -1780,7 +1780,7 @@ function saveData(){
       console.error('[EternalMemory] saveData IDB error:',e);
       var lsOk=false;
       try{
-        localStorage.setItem('mem_eternal_v3',JSON.stringify(mems));
+        localStorage.setItem('mem_eternal_v5',JSON.stringify(mems));
         lsOk=true;
       }catch(e2){}
       if(lsOk){
@@ -1813,7 +1813,7 @@ function loadData(){
 
       // ── IDBが空 & LSバックアップがある → バックアップから復旧してIDBに書き直す
       if(idbMems.length===0){
-        var bk=localStorage.getItem(LS_BACKUP_KEY)||localStorage.getItem('mem_auto_backup_v3')||localStorage.getItem('mem_eternal_v3');
+        var bk=localStorage.getItem(LS_BACKUP_KEY)||localStorage.getItem('mem_auto_backup_v5')||localStorage.getItem('mem_eternal_v5');
         if(bk){
           try{
             var parsed=JSON.parse(bk);
@@ -1856,9 +1856,9 @@ function loadData(){
       toast('⚠ DB読込失敗('+ename+'): LS復旧を試みます');
       console.warn('[EternalMemory] loadData error, LS fallback:',e);
       try{
-        var r=localStorage.getItem('mem_eternal_v3')
+        var r=localStorage.getItem('mem_eternal_v5')
           ||localStorage.getItem(LS_BACKUP_KEY)
-          ||localStorage.getItem('mem_auto_backup_v3');
+          ||localStorage.getItem('mem_auto_backup_v5');
         if(r){
           var parsed=JSON.parse(r);
           mems=Array.isArray(parsed)?parsed:(parsed.mems||[]);
@@ -3097,12 +3097,8 @@ var helpData = {
       title: '.pin-badge(position:absolute)の親.fcにposition:relativeがなくタップ全滅',
       body: '<div class="lesson-label">① 何が問題だったか</div>.pin-badge{position:absolute}の親要素.fcにposition指定がなく(static)、pin-badgeがbody基準で配置されてフィード全体を覆うスタックコンテキストを作りタップをブロック。<div class="lesson-label">② どう解決したか</div>.fcにposition:relativeを追加。<div class="lesson-label">③ 次回Claudeへの指示</div>position:absoluteの子要素を持つ親には必ずposition:relativeを付ける。fc・mc・カード系クラスは全てposition:relative必須。</div>'
     },
-    {
-      title: '新バージョンでDB名変更必須：同名DB_VERアップで旧アプリ全滅',
       body: '<div class="lesson-label">① 何が問題だったか</div>v5がv4.1と同じDB名EternalMemoryDBを使い、DB_VERを3→4にアップグレード。一度v5を開くとv4.1（DB_VER=3を期待）が「DBが開けません」エラーになり、v4.1・統合アプリ全滅。v5で登録したデータもv4.1からは見えない状態に。<div class="lesson-label">② どう解決したか</div>v5のDB名をEternalMemoryDB_v5に変更しDB_VER=1に戻す。初回起動時にmigrateFromOldDB()で旧DBのmemories/cats/gemcryptoを新DBにコピー。移行済みフラグem_v5_migrated=1をlocalStorageに保存して二重移行防止。<div class="lesson-label">③ 次回Claudeへの指示</div>アプリを新バージョンに分けるときは必ずDB名も変える。同じDB名でDB_VERだけ上げると旧バージョンが全滅する。DB名はアプリファイル名に対応させること（例：EternalMemoryDB_v5）。</div>'
     },
-    {
-      title: 'calWrap2のdisplay:none設定忘れで検索タブ開いた瞬間カレンダー全展開',
       body: '<div class="lesson-label">① 何が問題だったか</div>calWrap2（検索タブのカレンダー）にdisplay:noneを設定し忘れ、検索タブを開くと即カレンダーが全展開されていた。<div class="lesson-label">② どう解決したか</div>style="display:none;margin-top:.5rem;"を付与。<div class="lesson-label">③ 次回Claudeへの指示</div>calWrap・calWrap2は両方ともHTML記述時にstyle="display:none;"を必ず付ける。toggleCal()で表示/非表示を制御する設計。</div>'
     },
     {
@@ -3112,9 +3108,6 @@ var helpData = {
     {
       title: 'マイグレーション失敗→0件表示：OLD_DB_VERは現在のバージョンに合わせる',
       body: '<div class="lesson-label">① 何が問題だったか</div>migrateFromOldDB()でOLD_DB_VER=3を指定していたが、v5古いバージョンがEternalMemoryDBをVER=4に上げていたためopenがブロックされてマイグレーション失敗→フィード0件。em_v5_migratedフラグ=1が残っていると再実行もされない。<div class="lesson-label">② どう解決したか</div>indexedDB.open(OLD_DB_NAME)でバージョン指定なし（現在のバージョンで開く）に変更。フラグを=2にして強制再マイグレーション。<div class="lesson-label">③ 次回Claudeへの指示</div>旧DBを読む際はバージョン指定なしでopen()する。マイグレーションロジック修正時はフラグ値を上げて強制再実行させること。</div>'
-    },
-    {
-      title: 'クラス名リネーム後にquerySelectorの参照が古いまま残り機能停止',
       body: '<div class="lesson-label">① 何が問題だったか</div>v4の.input-cardクラスをv5で.post-cardに変更したのにpickColor()内のquerySelectorが.input-card参照のまま残り、色選択が機能しなかった。またtoggleExpand()が汎用[data-eid]セレクタを使っており、編集モーダルのtextareaと衝突する可能性があった。<div class="lesson-label">② どう解決したか</div>pickColor()を.post-wrap .color-dotに変更。toggleExpand()を.fc-body[data-eid]に限定。<div class="lesson-label">③ 次回Claudeへの指示</div>クラス名をリネームしたときはquerySelectorAll参照を必ず全文検索で追う。セレクタは可能な限りスコープを絞る。</div>'
     }
   ]
@@ -3126,6 +3119,7 @@ var COMMON_PROMPT =
 '- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）\n' +
 '- ストレージ: IndexedDB（メイン）+ LocalStorage（設定・バックアップ）\n' +
 '- DB名: EternalMemoryDB / ストア: memories, cats, gemcrypto, images（VER=4、v4.2・memory-chatと共有）\n' +
+'- localStorageキーは全て_v5サフィックス（mem_eternal_v5等）。v4.2(_v3)と競合しない\n' +
 '- モバイル前提（Android Brave、タップ操作）\n' +
 '- ES5互換スタイル（Object.assign・インデックスループ推奨、Array.fromは許容）\n' +
 '- スプレッド演算子・for...of禁止\n' +
@@ -3252,16 +3246,6 @@ document.addEventListener('DOMContentLoaded',function(){
     if(feedBtn)feedBtn.classList.add('active');
   });
   if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=function(){};
-
-  // キーボード表示でナビバーが消えるのを防ぐ
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',function(){
-      var nav=document.getElementById('tabNav');
-      if(!nav)return;
-      var offsetBottom=window.innerHeight-(window.visualViewport.offsetTop+window.visualViewport.height);
-      nav.style.bottom=Math.max(0,offsetBottom)+'px';
-    });
-  }
 });
 </script>
 
