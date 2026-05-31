@@ -1379,6 +1379,8 @@ function migrateFromLS(){
   return openDB().then(function(){
     return idbGetAll(DB_STORE);
   }).then(function(existing){
+    var lsVal=localStorage.getItem('mem_eternal_v4');
+    toast('起動: IDB='+existing.length+'件 LS='+(lsVal?'あり('+lsVal.length+'chars)':'なし'));
     if(existing&&existing.length>0)return;
     for(var i=0;i<LEGACY_KEYS.length;i++){
       var raw=localStorage.getItem(LEGACY_KEYS[i]);
@@ -1386,12 +1388,12 @@ function migrateFromLS(){
       var parsed;
       try{parsed=JSON.parse(raw);}catch(e){continue;}
       if(!Array.isArray(parsed)||!parsed.length)continue;
+      toast('LS移行実行: '+LEGACY_KEYS[i]+' '+parsed.length+'件');
       parsed.forEach(function(m){
         if(!m.createdAt){var d=new Date((m.date||'').replace(/\//g,'-'));m.createdAt=isNaN(d.getTime())?Date.now():d.getTime();}
         if(m.parentId===undefined)m.parentId=null;
       });
       return idbPutAll(DB_STORE,parsed).then(function(){
-        // mem_eternal_v4はLS保険として残す。旧キーだけ削除
         try{localStorage.removeItem('mem_eternal_v3');}catch(e){}
         try{localStorage.removeItem('mem_eternal_v2_new');}catch(e){}
       });
@@ -1436,12 +1438,8 @@ function saveData(){
       return idbDeleteOrphans(DB_STORE,activeIds);
     })
     .then(function(){
-      // IDB書き込み後に読み返して確認
-      return idbGetAll(DB_STORE).then(function(check){
-        toast('IDB確認: '+check.length+'件 / mems:'+mems.length+'件');
-        setS(true);
-        scheduleBackup();
-      });
+      setS(true);
+      scheduleBackup();
     })
     .catch(function(e){
       var ename=(e&&e.name)||'不明';
