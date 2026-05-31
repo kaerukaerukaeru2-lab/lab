@@ -1374,7 +1374,7 @@ var colorMap={
 };
 
 // ===== VOICE COMMANDS =====
-var CMD_KEY='mem_voice_cmds_v1';
+var CMD_KEY='mem_voice_cmds_v5';
 var voiceCmds=[];
 var recognition=null;
 var micOn=false;
@@ -1454,7 +1454,7 @@ function _buildSearchText(m){
   m._s=parts.join(' ').toLowerCase();
 }
 var newColor='default',editColor='default',fontSize='normal';
-var KEY='mem_eternal_v3',CAT_KEY='mem_cats_v2';
+var KEY='mem_eternal_v5',CAT_KEY='mem_cats_v5';
 var mfFilter='all';
 var pendingImgs=[]; // 投稿フォーム：{dataUrl,blob}
 var editPendingImgs=[];
@@ -1479,7 +1479,7 @@ var VC={
 // dbName: "EternalMemoryDB"  storeName: "memories"
 // 設定値（テーマ・フォントサイズ・タブ等）→ LocalStorage（同期）
 // メイン記憶データ（JSONオブジェクト配列）→ IndexedDB（非同期）
-var DB_NAME='EternalMemoryDB', DB_VER=4;  // v4.2・memory-chatと同じDB、VER=4で統一
+var DB_NAME='EternalMemoryDB_v5', DB_VER=1;  // v4.2・memory-chatと完全分離
 var DB_STORE='memories';
 var CAT_STORE='cats';
 var GEM_CRYPTO_STORE='gemcrypto';
@@ -1680,21 +1680,21 @@ function doAutoBackup(){
   if(!mems.length)return;
   try{
     var payload={_ver:'4.0',_exportedAt:new Date().toISOString(),_count:mems.length,mems:mems,cats:cats};
-    localStorage.setItem('mem_auto_backup_v3',JSON.stringify(payload));
+    localStorage.setItem('mem_auto_backup_v5',JSON.stringify(payload));
   }catch(e){}
 }
 
 /* --- 設定のみ LocalStorage で同期保存 --- */
 function saveSettings(){
   try{
-    localStorage.setItem('mem_settings_v3',JSON.stringify({
+    localStorage.setItem('mem_settings_v5',JSON.stringify({
       activeTab:activeTab,fontSize:fontSize,ch:ch,speedMult:speedMult
     }));
   }catch(e){}
 }
 function loadSettings(){
   try{
-    var s=localStorage.getItem('mem_settings_v3');
+    var s=localStorage.getItem('mem_settings_v5');
     if(s){var o=JSON.parse(s);
       if(o.activeTab)activeTab=o.activeTab;
       if(o.fontSize)fontSize=o.fontSize;
@@ -1706,7 +1706,7 @@ function loadSettings(){
 
 /* --- LS→IDB マイグレーション（破壊的変更なし） --- */
 // 旧キーが残っていれば IDB へ移行し、完了後に LS 側をクリア
-var LEGACY_KEYS=['mem_eternal_v3','mem_eternal_v2_new'];
+var LEGACY_KEYS=['mem_eternal_v5','mem_eternal_v3','mem_eternal_v2_new'];
 function migrateFromLS(){
   return openDB().then(function(){
     return idbGetAll(DB_STORE);
@@ -1737,7 +1737,7 @@ function migrateFromLS(){
 // 二重保存ガード
 var _saving=false;
 // 予備LSバックアップキー（最新30件）
-var LS_BACKUP_KEY='mem_backup_v3';
+var LS_BACKUP_KEY='mem_backup_v5';
 
 /**
  * saveData() ― 安全版
@@ -1780,7 +1780,7 @@ function saveData(){
       console.error('[EternalMemory] saveData IDB error:',e);
       var lsOk=false;
       try{
-        localStorage.setItem('mem_eternal_v3',JSON.stringify(mems));
+        localStorage.setItem('mem_eternal_v5',JSON.stringify(mems));
         lsOk=true;
       }catch(e2){}
       if(lsOk){
@@ -1813,7 +1813,7 @@ function loadData(){
 
       // ── IDBが空 & LSバックアップがある → バックアップから復旧してIDBに書き直す
       if(idbMems.length===0){
-        var bk=localStorage.getItem(LS_BACKUP_KEY)||localStorage.getItem('mem_auto_backup_v3')||localStorage.getItem('mem_eternal_v3');
+        var bk=localStorage.getItem(LS_BACKUP_KEY)||localStorage.getItem('mem_auto_backup_v5')||localStorage.getItem('mem_eternal_v5');
         if(bk){
           try{
             var parsed=JSON.parse(bk);
@@ -1856,9 +1856,9 @@ function loadData(){
       toast('⚠ DB読込失敗('+ename+'): LS復旧を試みます');
       console.warn('[EternalMemory] loadData error, LS fallback:',e);
       try{
-        var r=localStorage.getItem('mem_eternal_v3')
+        var r=localStorage.getItem('mem_eternal_v5')
           ||localStorage.getItem(LS_BACKUP_KEY)
-          ||localStorage.getItem('mem_auto_backup_v3');
+          ||localStorage.getItem('mem_auto_backup_v5');
         if(r){
           var parsed=JSON.parse(r);
           mems=Array.isArray(parsed)?parsed:(parsed.mems||[]);
