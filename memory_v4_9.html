@@ -2282,6 +2282,23 @@ var helpData = {
   ],
   lessons: [
     {
+      title: '🚨 最重要【loadDataが一度も呼ばれていなかった】IIFEのDOM前実行でJS全停止',
+      body: '<div class="lesson-label">① 何が問題だったか</div>'
+        + 'ヘルプモーダルの初期化コード <code>(function initHelpModal(){...})()</code> がIIFE（即時実行関数）として <code>&lt;/script&gt;</code> タグの直前に書かれていた。'
+        + 'しかしヘルプモーダルのHTML（<code>id="helpOverlay"</code>など）はそのscriptブロックより後ろにあったため、'
+        + 'IIFEが実行される時点でDOMが存在せず <code>getElementById</code> がnullを返してエラー → <strong>JSが全停止</strong>。'
+        + 'その結果 <code>window.onload</code> も <code>DOMContentLoaded</code> も到達せず、<strong>loadDataが一度も呼ばれなかった</strong>。'
+        + '<div class="lesson-label">② 症状（非常に紛らわしい）</div>'
+        + '保存ボタンを押した時だけ「IDB書き込み1件」と表示される。ページを開いてもDBから読まない。リロードするたびデータが消える。'
+        + 'IDBのせいだと思って何日も格闘したが、実はIDBは一切関係なかった。<strong>loadDataが呼ばれてないのが真の原因</strong>。'
+        + '<div class="lesson-label">③ どう解決したか</div>'
+        + 'IIFEを削除し、<code>initHelpModal</code>の中身ごと <code>window.onload</code> 内に移動。DOM生成後に実行されるようにした。'
+        + '<div class="lesson-label">④ 次回Claudeへの指示（最重要）</div>'
+        + 'このアプリでは <strong>scriptブロック内でIIFEを使う場合、必ずDOM要素より前にscriptが来るか確認すること</strong>。'
+        + 'ヘルプモーダルのHTMLはbody末尾にある。initHelpModalは必ず <code>window.onload</code> 内で呼ぶこと。絶対にIIFEとして単独で書かない。'
+        + 'デバッグ時に「保存だけ動いてloadが動かない」症状が出たら、まずBOOTのイベントハンドラに到達しているか確認すること。'
+    },
+    {
       title: 'IndexedDB → localStorage 一本化（Android Brave対応）',
       body: '<div class="lesson-label">① 何が問題だったか</div>Android Brave では IndexedDB がセッション扱いになりリロードで全データが消える。<code>storage.persist()</code> を要求しても Brave はデフォルト拒否する。<div class="lesson-label">② どう解決したか</div>v4.3〜v4.8ではlocalStorage一本化で対処。<div class="lesson-label">③ v4.9でIDB復活した理由</div>v5・memory-chatではIDBが正常動作している事実から、v4でのIDB失敗は「過去の開発中に同じDBキーを違うスキーマで繰り返し作り直したことによる残骸衝突」が原因だったと判断。v4.9では完全新規キー <code>EternalMemoryDB_v4new</code> でIDBを再導入し解決。<div class="lesson-label">④ 次回Claudeへの指示</div>このアプリのIDBキーは <code>EternalMemoryDB_v4new</code>、DBバージョンは <code>1</code>。スキーマ変更が必要なら必ずDBキーごと変えること（バージョン番号だけ上げない）。IDB失敗時はlocalStorageにフォールバックする設計を維持。'
     },
