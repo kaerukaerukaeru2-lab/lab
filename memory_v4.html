@@ -1423,44 +1423,20 @@ function saveData(){
   saveSettings();
   if(_saving){return Promise.resolve();}
   _saving=true;
-  setS(false); // 書き込み確定前にOKを出さない
+  setS(false);
 
-  // 予備LS保存（IDB結果に関係なく先に実行）
   try{
+    localStorage.setItem('mem_eternal_v4',JSON.stringify(mems));
     localStorage.setItem(LS_BACKUP_KEY,JSON.stringify(mems.slice(0,30)));
-    localStorage.setItem('mem_eternal_v4',JSON.stringify(mems)); // 常時LS保存
-  }catch(e){}
-
-  var activeIds=mems.map(function(m){return m.id;});
-
-  return idbPutAll(DB_STORE,mems)
-    .then(function(){
-      return idbDeleteOrphans(DB_STORE,activeIds);
-    })
-    .then(function(){
-      // ここに来た時点でtx.oncomplete発火済み = 物理書き込み確定
-      setS(true);
-      scheduleBackup();
-    })
-    .catch(function(e){
-      var ename=(e&&e.name)||'不明';
-      var emsg=(e&&e.message)||'';
-      console.error('[EternalMemory] saveData IDB error:',e);
-      var lsOk=false;
-      try{
-        localStorage.setItem('mem_eternal_v4',JSON.stringify(mems));
-        lsOk=true;
-      }catch(e2){}
-      if(lsOk){
-        setS(true);
-        toast('⚠ IDB失敗→LS退避: '+ename+' '+emsg);
-      }else{
-        setS(false);
-        toast('⚠ 保存完全失敗: '+ename+' '+emsg);
-      }
-    })
-    .then(function(){_saving=false;})
-    .catch(function(){_saving=false;});
+    setS(true);
+    scheduleBackup();
+  }catch(e){
+    setS(false);
+    toast('⚠ 保存失敗: '+((e&&e.message)||'容量不足の可能性'));
+    console.error('[EternalMemory] saveData error:',e);
+  }
+  _saving=false;
+  return Promise.resolve();
 }
 
 /**
@@ -1468,75 +1444,40 @@ function saveData(){
  * @returns {Promise<void>}
  */
 function loadData(){
-  loadSettings(); // 設定は即時 LS から
+  loadSettings();
   setScanStatus&&setScanStatus('Loading...', false);
   setS&&setS(false);
-  return migrateFromLS()
-    .then(function(){
-      return Promise.all([idbGetAll(DB_STORE),idbGetAll(CAT_STORE)]);
-    })
-    .then(function(results){
-      var idbMems=results[0]||[];
-      var idbCatItems=results[1]||[];
 
-      // ── IDBが空 & LSバックアップがある → バックアップから復旧してIDBに書き直す
-      if(idbMems.length===0){
-        var bk=localStorage.getItem(LS_BACKUP_KEY)||localStorage.getItem('mem_auto_backup_v4')||localStorage.getItem('mem_eternal_v4');
-        if(bk){
-          try{
-            var parsed=JSON.parse(bk);
-            var recovered=Array.isArray(parsed)?parsed:(parsed.mems||[]);
-            if(recovered.length>0){
-              console.warn('[EternalMemory] IDBが空のためLSバックアップから復旧します: '+recovered.length+'件');
-              idbMems=recovered;
-              // 非同期でIDBに書き戻す（UIは先に表示）
-              idbPutAll(DB_STORE,recovered).catch(function(e){
-                console.error('[EternalMemory] 復旧データのIDB書き戻し失敗:',e);
-              });
-            }
-          }catch(e2){console.warn('[EternalMemory] バックアップ解析失敗:',e2);}
-        }
-      }
-
-      // 記憶データ
-      mems=idbMems;
-      mems.forEach(function(m){
-        if(m.parentId===undefined)m.parentId=null;
-        if(!m.createdAt)m.createdAt=m.id||Date.now();
-        _buildSearchText(m);
-      });
-      // カテゴリ（IDB → LS フォールバック → デフォルト）
-      var catEntry=idbCatItems.find(function(x){return x.k==='cats';});
-      if(catEntry&&catEntry.data){
-        cats=catEntry.data;
-      } else {
-        var lsCat=localStorage.getItem(CAT_KEY);
-        cats=lsCat?JSON.parse(lsCat):JSON.parse(JSON.stringify(defaultCats));
-        persistCats();
-      }
-      setS(true);
-      buildCatSelect();buildTabs();render();loadCmds();buildRecallBanner();buildCal();
-      // フォントサイズ復元
-      document.body.className=fontSize==='normal'?'':'fs-'+fontSize;
-    })
-    .catch(function(e){
-      var ename=(e&&e.name)||'不明';
-      toast('⚠ DB読込失敗('+ename+'): LS復旧を試みます');
-      console.warn('[EternalMemory] loadData error, LS fallback:',e);
-      try{
-        var r=localStorage.getItem('mem_eternal_v4')
-          ||localStorage.getItem(LS_BACKUP_KEY)
-          ||localStorage.getItem('mem_auto_backup_v4');
-        if(r){
-          var parsed=JSON.parse(r);
-          mems=Array.isArray(parsed)?parsed:(parsed.mems||[]);
-        }
-        var c=localStorage.getItem(CAT_KEY);cats=c?JSON.parse(c):JSON.parse(JSON.stringify(defaultCats));
-        setS(true);
-      }catch(e2){cats=JSON.parse(JSON.stringify(defaultCats));setS(false);}
-      mems.forEach(function(m){if(m.parentId===undefined)m.parentId=null;if(!m.createdAt)m.createdAt=m.id||Date.now();_buildSearchText(m);});
-      buildCatSelect();buildTabs();render();loadCmds();buildRecallBanner();buildCal();
+  // LSをメインストレージとして読み込む（IDB競合問題を回避）
+  try{
+    var r=localStorage.getItem('mem_eternal_v4')
+      ||localStorage.getItem(LS_BACKUP_KEY)
+      ||localStorage.getItem('mem_auto_backup_v4')
+      ||localStorage.getItem('mem_eternal_v3'); // 旧キーからの移行
+    if(r){
+      var parsed=JSON.parse(r);
+      mems=Array.isArray(parsed)?parsed:(parsed.mems||[]);
+    } else {
+      mems=[];
+    }
+    var c=localStorage.getItem(CAT_KEY);
+    cats=c?JSON.parse(c):JSON.parse(JSON.stringify(defaultCats));
+    mems.forEach(function(m){
+      if(m.parentId===undefined)m.parentId=null;
+      if(!m.createdAt)m.createdAt=m.id||Date.now();
+      _buildSearchText(m);
     });
+    setS(true);
+  }catch(e){
+    mems=[];
+    cats=JSON.parse(JSON.stringify(defaultCats));
+    setS(false);
+    console.error('[EternalMemory] loadData error:',e);
+  }
+
+  buildCatSelect();buildTabs();render();loadCmds();buildRecallBanner();buildCal();
+  document.body.className=fontSize==='normal'?'':'fs-'+fontSize;
+  return Promise.resolve();
 }
 
 /* --- 後方互換エイリアス（旧コードから persist/load を呼ぶ箇所用） --- */
