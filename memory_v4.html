@@ -1174,7 +1174,7 @@ function _buildSearchText(m){
   m._s=parts.join(' ').toLowerCase();
 }
 var newColor='default',editColor='default',fontSize='normal';
-var KEY='mem_eternal_v3',CAT_KEY='mem_cats_v2';
+var KEY='mem_eternal_v4',CAT_KEY='mem_cats_v4';
 var COLLAPSE_LEN=200;
 var defaultCats=[{name:'憲法',color:'cyan'},{name:'創作',color:'purple'},{name:'日常',color:'green'}];
 var cats=[];
@@ -1192,7 +1192,7 @@ var VC={
 // dbName: "EternalMemoryDB"  storeName: "memories"
 // 設定値（テーマ・フォントサイズ・タブ等）→ LocalStorage（同期）
 // メイン記憶データ（JSONオブジェクト配列）→ IndexedDB（非同期）
-var DB_NAME='EternalMemoryDB', DB_VER=3;
+var DB_NAME='EternalMemoryDB', DB_VER=4;
 var DB_STORE='memories';   // 記憶データ本体
 var CAT_STORE='cats';      // カテゴリデータ
 var GEM_CRYPTO_STORE='gemcrypto'; // Gemini暗号化キー (v4.1)
@@ -1221,6 +1221,9 @@ function openDB(){
       // v3で追加: gemcrypto
       if(!db.objectStoreNames.contains(GEM_CRYPTO_STORE))
         db.createObjectStore(GEM_CRYPTO_STORE,{keyPath:'k'});
+      // v4で追加: images（v5との共存用、v4.2では使用しない）
+      if(!db.objectStoreNames.contains('images'))
+        db.createObjectStore('images',{keyPath:'k'});
 
       // アップグレードトランザクションのエラーを捕捉
       var upgradeTx=e.target.transaction;
@@ -1348,21 +1351,21 @@ function doAutoBackup(){
   if(!mems.length)return;
   try{
     var payload={_ver:'4.0',_exportedAt:new Date().toISOString(),_count:mems.length,mems:mems,cats:cats};
-    localStorage.setItem('mem_auto_backup_v3',JSON.stringify(payload));
+    localStorage.setItem('mem_auto_backup_v4',JSON.stringify(payload));
   }catch(e){}
 }
 
 /* --- 設定のみ LocalStorage で同期保存 --- */
 function saveSettings(){
   try{
-    localStorage.setItem('mem_settings_v3',JSON.stringify({
+    localStorage.setItem('mem_settings_v4',JSON.stringify({
       activeTab:activeTab,fontSize:fontSize,ch:ch,speedMult:speedMult
     }));
   }catch(e){}
 }
 function loadSettings(){
   try{
-    var s=localStorage.getItem('mem_settings_v3');
+    var s=localStorage.getItem('mem_settings_v4');
     if(s){var o=JSON.parse(s);
       if(o.activeTab)activeTab=o.activeTab;
       if(o.fontSize)fontSize=o.fontSize;
@@ -1374,7 +1377,7 @@ function loadSettings(){
 
 /* --- LS→IDB マイグレーション（破壊的変更なし） --- */
 // 旧キーが残っていれば IDB へ移行し、完了後に LS 側をクリア
-var LEGACY_KEYS=['mem_eternal_v3','mem_eternal_v2_new'];
+var LEGACY_KEYS=['mem_eternal_v4','mem_eternal_v3','mem_eternal_v2_new'];
 function migrateFromLS(){
   return openDB().then(function(){
     return idbGetAll(DB_STORE);
@@ -1402,7 +1405,7 @@ function migrateFromLS(){
 // 二重保存ガード
 var _saving=false;
 // 予備LSバックアップキー（最新30件）
-var LS_BACKUP_KEY='mem_backup_v3';
+var LS_BACKUP_KEY='mem_backup_v4';
 
 /**
  * saveData() ― 安全版
@@ -1426,7 +1429,7 @@ function saveData(){
   // 予備LS保存（IDB結果に関係なく先に実行）
   try{
     localStorage.setItem(LS_BACKUP_KEY,JSON.stringify(mems.slice(0,30)));
-    localStorage.setItem('mem_eternal_v3',JSON.stringify(mems)); // 常時LS保存
+    localStorage.setItem('mem_eternal_v4',JSON.stringify(mems)); // 常時LS保存
   }catch(e){}
 
   var activeIds=mems.map(function(m){return m.id;});
@@ -1446,7 +1449,7 @@ function saveData(){
       console.error('[EternalMemory] saveData IDB error:',e);
       var lsOk=false;
       try{
-        localStorage.setItem('mem_eternal_v3',JSON.stringify(mems));
+        localStorage.setItem('mem_eternal_v4',JSON.stringify(mems));
         lsOk=true;
       }catch(e2){}
       if(lsOk){
@@ -1479,7 +1482,7 @@ function loadData(){
 
       // ── IDBが空 & LSバックアップがある → バックアップから復旧してIDBに書き直す
       if(idbMems.length===0){
-        var bk=localStorage.getItem(LS_BACKUP_KEY)||localStorage.getItem('mem_auto_backup_v3')||localStorage.getItem('mem_eternal_v3');
+        var bk=localStorage.getItem(LS_BACKUP_KEY)||localStorage.getItem('mem_auto_backup_v4')||localStorage.getItem('mem_eternal_v4');
         if(bk){
           try{
             var parsed=JSON.parse(bk);
@@ -1522,9 +1525,9 @@ function loadData(){
       toast('⚠ DB読込失敗('+ename+'): LS復旧を試みます');
       console.warn('[EternalMemory] loadData error, LS fallback:',e);
       try{
-        var r=localStorage.getItem('mem_eternal_v3')
+        var r=localStorage.getItem('mem_eternal_v4')
           ||localStorage.getItem(LS_BACKUP_KEY)
-          ||localStorage.getItem('mem_auto_backup_v3');
+          ||localStorage.getItem('mem_auto_backup_v4');
         if(r){
           var parsed=JSON.parse(r);
           mems=Array.isArray(parsed)?parsed:(parsed.mems||[]);
