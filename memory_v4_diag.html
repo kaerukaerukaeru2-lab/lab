@@ -1427,9 +1427,9 @@ function saveData(){
 
   try{
     localStorage.setItem('mem_eternal_v4',JSON.stringify(mems));
-    var verify=localStorage.getItem('mem_eternal_v4');
-    toast(verify?'LS書込OK '+mems.length+'件':'LS書込失敗！');
     localStorage.setItem(LS_BACKUP_KEY,JSON.stringify(mems.slice(0,30)));
+    var _chk=localStorage.getItem('mem_eternal_v4');
+    toast('SAVE: '+mems.length+'件 LS='+(_chk?_chk.length+'chars':'null'));
     setS(true);
     scheduleBackup();
   }catch(e){
@@ -1445,7 +1445,7 @@ function saveData(){
  * loadData() — 設定(LS)と記憶データ(IDB)を並列で読み込む（非同期）
  * @returns {Promise<void>}
  */
-function loadData(){
+function loadData(){toast('LOAD開始 LS='+localStorage.getItem('mem_eternal_v4')?.length+'chars');
   loadSettings();
   setScanStatus&&setScanStatus('Loading...', false);
   setS&&setS(false);
