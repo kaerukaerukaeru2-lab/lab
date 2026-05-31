@@ -1192,7 +1192,7 @@ var VC={
 // dbName: "EternalMemoryDB"  storeName: "memories"
 // 設定値（テーマ・フォントサイズ・タブ等）→ LocalStorage（同期）
 // メイン記憶データ（JSONオブジェクト配列）→ IndexedDB（非同期）
-var DB_NAME='EternalMemoryDB', DB_VER=4;
+var DB_NAME='EternalMemoryDB_v4', DB_VER=1;
 var DB_STORE='memories';   // 記憶データ本体
 var CAT_STORE='cats';      // カテゴリデータ
 var GEM_CRYPTO_STORE='gemcrypto'; // Gemini暗号化キー (v4.1)
@@ -1221,9 +1221,6 @@ function openDB(){
       // v3で追加: gemcrypto
       if(!db.objectStoreNames.contains(GEM_CRYPTO_STORE))
         db.createObjectStore(GEM_CRYPTO_STORE,{keyPath:'k'});
-      // v4で追加: images（v5との共存用、v4.2では使用しない）
-      if(!db.objectStoreNames.contains('images'))
-        db.createObjectStore('images',{keyPath:'k'});
 
       // アップグレードトランザクションのエラーを捕捉
       var upgradeTx=e.target.transaction;
@@ -1394,7 +1391,9 @@ function migrateFromLS(){
         if(m.parentId===undefined)m.parentId=null;
       });
       return idbPutAll(DB_STORE,parsed).then(function(){
-        LEGACY_KEYS.forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});
+        // mem_eternal_v4はLS保険として残す。旧キーだけ削除
+        try{localStorage.removeItem('mem_eternal_v3');}catch(e){}
+        try{localStorage.removeItem('mem_eternal_v2_new');}catch(e){}
       });
     }
   });
