@@ -1380,7 +1380,6 @@ function migrateFromLS(){
     return idbGetAll(DB_STORE);
   }).then(function(existing){
     if(existing&&existing.length>0)return; // IDB にデータがあればスキップ
-    var migrated=false;
     for(var i=0;i<LEGACY_KEYS.length;i++){
       var raw=localStorage.getItem(LEGACY_KEYS[i]);
       if(!raw)continue;
@@ -1391,11 +1390,8 @@ function migrateFromLS(){
         if(!m.createdAt){var d=new Date((m.date||'').replace(/\//g,'-'));m.createdAt=isNaN(d.getTime())?Date.now():d.getTime();}
         if(m.parentId===undefined)m.parentId=null;
       });
-      // IDB へ書き込み、完了後に LS 側をクリア
-      return idbPutAll(DB_STORE,parsed).then(function(){
-        LEGACY_KEYS.forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});
-        return parsed;
-      });
+      return idbPutAll(DB_STORE,parsed);
+      // LSはそのまま残す（リロード時の保険）
     }
   });
 }
@@ -1429,6 +1425,7 @@ function saveData(){
   // 予備LS保存（IDB結果に関係なく先に実行）
   try{
     localStorage.setItem(LS_BACKUP_KEY,JSON.stringify(mems.slice(0,30)));
+    localStorage.setItem('mem_eternal_v4',JSON.stringify(mems)); // 常時LS保存
   }catch(e){}
 
   var activeIds=mems.map(function(m){return m.id;});
