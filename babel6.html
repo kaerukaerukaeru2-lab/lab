@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#09090f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>BABEL v6</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #09090f; --surface: #111118;
+      --border:   rgba(255,255,255,0.07); --border-hi: rgba(255,255,255,0.15);
+      --text:     #e8e8f0; --muted: rgba(232,232,240,0.35);
+      --accent:   #00ffe0; --accent2: #7b5ef8; --danger: #ff3860;
+      --side-w:   56px;
+      --font-mono: 'Space Mono', monospace;
+      --font-disp: 'Syne', sans-serif;
+      --font-body: 'Noto Sans JP', sans-serif;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+
+    /* 3カラムレイアウト */
+    .app { display: grid; grid-template-columns: var(--side-w) 1fr var(--side-w); height: 100dvh; overflow: hidden; }
+
+    /* サイドバー */
+    .side { display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 4px; background: var(--surface); z-index: 10; }
+    .side.left  { border-right: 1px solid var(--border); }
+    .side.right { border-left:  1px solid var(--border); }
+    .side-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; padding: 10px 0; transition: color 0.2s; position: relative; }
+    .side-btn svg { width: 18px; height: 18px; }
+    .side-btn span { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.05em; }
+    .side-btn:hover, .side-btn.active { color: var(--accent); }
+    .side-btn.danger:hover { color: var(--danger); }
+
+    /* メインステージ */
+    .stage { display: flex; flex-direction: column; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 0 14px; }
+
+    /* ヘッダー */
+    .stage-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 10px; flex-shrink: 0; }
+    .logo { font-family: var(--font-disp); font-size: 17px; font-weight: 800; letter-spacing: 0.15em; }
+    .logo-v { color: var(--accent2); }
+    .status-pill { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: 0.3s; }
+    .status-pill.listening   .status-dot { background: var(--danger);  box-shadow: 0 0 8px var(--danger);  animation: blink 1s infinite; }
+    .status-pill.translating .status-dot { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); animation: blink .6s infinite; }
+    .status-pill.done        .status-dot { background: var(--accent);   box-shadow: 0 0 8px var(--accent); }
+    .status-text { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--muted); transition: color 0.2s; }
+    .status-pill.listening   .status-text { color: var(--danger); }
+    .status-pill.translating .status-text { color: var(--accent2); }
+    .status-pill.done        .status-text { color: var(--accent); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ビジュアライザー */
+    .viz-wrap { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; position: relative; flex-shrink: 0; margin-bottom: 12px; }
+    #vizCanvas { width: 100%; height: 100%; display: block; }
+    #ocrPreview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: none; background: #000; }
+    .ocr-loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.85); }
+    .ocr-loading.show { display: flex; }
+    .ocr-loading-text { font-family: var(--font-mono); font-size: 11px; color: var(--accent); letter-spacing: 0.1em; animation: blink 1s infinite; }
+
+    /* カード */
+    .cards { display: flex; flex-direction: column; gap: 10px; padding-bottom: 175px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; min-height: 70px; }
+    .card--src { border-left: 3px solid var(--accent2); }
+    .card--tgt { border-left: 3px solid var(--accent); }
+    .card-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 6px; }
+    .card-text { font-size: 15px; line-height: 1.65; color: var(--text); word-break: break-word; white-space: pre-wrap; min-height: 1.65em; }
+    .placeholder { color: var(--muted); font-size: 13px; }
+    .interim { color: var(--muted); font-style: italic; }
+    .src-textarea { width: 100%; background: transparent; border: none; outline: none; resize: none; font-family: var(--font-body); font-size: 15px; line-height: 1.65; color: var(--text); padding: 0; caret-color: var(--accent); display: none; }
+    .src-textarea::placeholder { color: var(--muted); font-size: 13px; }
+    .text-translate-btn { display: none; margin-top: 8px; width: 100%; padding: 8px; background: var(--accent2); border: none; border-radius: 8px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #fff; cursor: pointer; transition: opacity 0.2s; }
+    .text-translate-btn:hover { opacity: 0.85; }
+    .api-badge { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; color: var(--muted); opacity: 0.4; text-align: right; margin-top: 4px; }
+
+    /* ボトムコントロール */
+    .bottom { position: fixed; bottom: 0; left: var(--side-w); right: var(--side-w); background: linear-gradient(to top, var(--bg) 80%, transparent); padding: 16px 12px 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 5; }
+    .lang-bar { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 18px; }
+    .lang-btn { background: transparent; border: none; font-family: var(--font-disp); font-size: 14px; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); cursor: pointer; padding: 3px 8px; border-radius: 999px; transition: all 0.2s; }
+    .lang-btn.active { color: var(--bg); background: var(--accent); }
+    .swap-btn { background: transparent; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); cursor: pointer; padding: 5px 8px; display: flex; align-items: center; transition: all 0.25s; }
+    .swap-btn:hover { border-color: var(--accent); color: var(--accent); transform: rotate(180deg); }
+    .mode-bar { display: flex; gap: 6px; }
+    .mode-tab { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--muted); cursor: pointer; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; transition: all 0.2s; background: transparent; }
+    .mode-tab.active { color: var(--accent2); border-color: var(--accent2); background: rgba(123,94,248,0.1); }
+    .main-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--surface); border: 1.5px solid var(--border-hi); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 0 0 rgba(0,255,224,0); }
+    .main-btn:hover { border-color: var(--accent); box-shadow: 0 0 20px rgba(0,255,224,0.2); transform: scale(1.05); }
+    .main-btn.listening { background: var(--danger); border-color: var(--danger); box-shadow: 0 0 30px rgba(255,56,96,0.4); }
+    .main-btn.ocr-mode  { border-color: var(--accent2); }
+    .main-btn svg { width: 26px; height: 26px; }
+
+    /* オーバーレイパネル（FAV / HIST / SUBTITLE）*/
+    .panel { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.92); display: none; flex-direction: column; padding: 0; }
+    .panel.open { display: flex; }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .panel-title { font-family: var(--font-disp); font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; }
+    .panel-close { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; padding: 6px 10px; font-family: var(--font-mono); font-size: 10px; }
+    .panel-close:hover { color: var(--text); border-color: var(--border-hi); }
+    .panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .empty-msg { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: center; padding: 24px 0; opacity: 0.4; }
+
+    /* FAVアイテム */
+    .fav-item { background: var(--surface); border: 1px solid var(--border); border-left: 2px solid var(--accent2); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.2s; animation: slideIn .25s ease; }
+    .fav-item:hover { border-color: var(--accent2); }
+    .fav-texts { flex: 1; min-width: 0; }
+    .fav-src { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fav-tgt { font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fav-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .fav-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 5px; display: flex; align-items: center; transition: color 0.2s; }
+    .fav-btn.speak:hover { color: var(--accent); }
+    .fav-btn.del:hover   { color: var(--danger); }
+
+    /* HISTアイテム */
+    .hist-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: border-color 0.2s; animation: slideIn .25s ease; }
+    .hist-item:hover { border-color: var(--border-hi); }
+    .hist-meta { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .hist-langs { font-family: var(--font-mono); font-size: 9px; color: var(--accent2); }
+    .hist-time  { font-family: var(--font-mono); font-size: 9px; color: var(--muted); opacity: .5; }
+    .hist-src { font-size: 12px; color: var(--muted); word-break: break-word; }
+    .hist-tgt { font-size: 14px; color: var(--text); border-left: 2px solid var(--accent); padding-left: 8px; margin-top: 4px; word-break: break-word; }
+
+    /* 字幕パネル */
+    .subtitle-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 20px; }
+    .sub-lang-bar { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.15em; }
+    .sub-src { font-size: clamp(14px,3vw,22px); color: rgba(255,255,255,0.3); text-align: center; line-height: 1.5; }
+    .sub-tgt { font-size: clamp(32px,7vw,64px); color: #fff; text-align: center; line-height: 1.3; word-break: break-word; text-shadow: 0 0 40px rgba(0,255,224,0.3); }
+    .sub-mic-btn { width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+    .sub-mic-btn.active { background: var(--danger); border-color: var(--danger); box-shadow: 0 0 25px rgba(255,56,96,0.5); }
+
+    @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+    /* 言語ピッカー */
+    .lang-picker { position:fixed; bottom:180px; left:50%; transform:translateX(-50%); z-index:60; /* B6: パネル(50)より上 */ background:var(--surface); border:1px solid var(--border-hi); border-radius:14px; padding:10px; width:min(90vw,320px); animation:slideIn .18s ease; }
+    .lang-picker-inner { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    .lang-pick-btn { background:transparent; border:1px solid var(--border); border-radius:8px; font-family:var(--font-disp); font-size:13px; font-weight:700; letter-spacing:0.1em; color:var(--muted); cursor:pointer; padding:8px 4px; transition:all 0.18s; }
+    .lang-pick-btn:hover  { border-color:var(--accent); color:var(--accent); }
+    .lang-pick-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(0,255,224,0.08); }
+
+    /* 辞書 */
+    .dict-input { flex:1; min-width:70px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:7px 10px; font-size:12px; color:var(--text); outline:none; transition:border-color 0.2s; }
+    .dict-input:focus { border-color:var(--accent2); }
+    .dict-add-btn { background:var(--accent2); border:none; border-radius:8px; color:#fff; font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:0.1em; cursor:pointer; padding:7px 12px; transition:opacity 0.2s; }
+    .dict-add-btn:hover { opacity:0.85; }
+    .dict-item { background:var(--bg); border-radius:8px; padding:8px 10px; font-size:12px; display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .dict-from { color:var(--accent2); font-family:var(--font-mono); flex:1; }
+    .dict-to   { color:var(--text); flex:1; }
+    .dict-del  { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:0 4px; }
+    .dict-del:hover { color:var(--danger); }
+    .side-btn.active { color:var(--accent); }
+    #btnPin.active { color:var(--accent2); }
+    #btnPin.active svg { fill:var(--accent2); stroke:var(--accent2); }
+    .hist-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px; padding:0 2px; margin-left:auto; opacity:0.5; transition:opacity 0.15s; }
+    .hist-del:hover { color:var(--danger); opacity:1; }
+    .hist-meta { display:flex; align-items:center; gap:6px; }
+
+    /* ============================================================
+       HELP MODAL CSS
+       ============================================================ */
+    :root {
+      --help-accent:     var(--accent2);
+      --help-accent-dim: rgba(123,94,248,0.22);
+      --help-bg:         rgba(9,9,15,0.97);
+      --help-border:     rgba(123,94,248,0.28);
+      --help-text:       #c8c8e0;
+      --help-text-dim:   #5a5a80;
+      --help-section-bg: rgba(123,94,248,0.10);
+      --help-item-bg:    rgba(255,255,255,0.04);
+      --help-btn-size:   2.2rem;
+    }
+
+    #helpBtn {
+      position: fixed;
+      bottom: 1rem;
+      right: calc(var(--side-w) + 0.6rem);
+      z-index: 900;
+      width: var(--help-btn-size);
+      height: var(--help-btn-size);
+      border-radius: 50%;
+      border: 1.5px solid var(--help-border);
+      background: var(--help-bg);
+      color: var(--help-accent);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .2s, transform .15s;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 0 10px rgba(123,94,248,0.25);
+    }
+    #helpBtn:hover { background: var(--help-accent-dim); transform: scale(1.08); }
+    #helpBtn:active { transform: scale(.95); }
+
+    #helpOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 910;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #helpOverlay.active { display: flex; }
+
+    #helpModal {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      background: var(--help-bg);
+      border: 1px solid var(--help-border);
+      border-radius: 1rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 40px rgba(0,0,0,.7), 0 0 0 1px var(--help-accent-dim);
+    }
+
+    #helpModal .help-header {
+      padding: .9rem 1.2rem;
+      border-bottom: 1px solid var(--help-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    #helpModal .help-header-title {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--help-accent);
+      letter-spacing: .08em;
+      font-family: var(--font-disp);
+    }
+    #helpCloseBtn {
+      width: 2rem; height: 2rem;
+      border-radius: 50%;
+      border: 1px solid var(--help-border);
+      background: transparent;
+      color: var(--help-text-dim);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .15s, background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #helpCloseBtn:hover { color: #fff; background: rgba(255,255,255,.08); }
+
+    #helpBody {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: .8rem .8rem 1.2rem;
+      flex: 1;
+    }
+
+    .help-section-title {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .14em;
+      color: var(--help-accent);
+      text-transform: uppercase;
+      background: var(--help-section-bg);
+      border-radius: .45rem;
+      padding: .45rem .7rem;
+      margin-bottom: .4rem;
+      margin-top: .6rem;
+      font-family: var(--font-mono);
+    }
+    .help-section-title:first-child { margin-top: 0; }
+
+    .help-item { border-radius: .5rem; overflow: hidden; margin-bottom: .3rem; }
+    .help-item-trigger {
+      width: 100%; text-align: left;
+      background: var(--help-item-bg);
+      border: 1px solid transparent;
+      border-radius: .5rem;
+      color: var(--help-text);
+      font-size: .85rem;
+      font-weight: 600;
+      padding: .6rem .8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+      transition: border-color .15s, background .15s;
+      -webkit-tap-highlight-color: transparent;
+      font-family: var(--font-body);
+    }
+    .help-item-trigger:hover { border-color: var(--help-border); }
+    .help-item-trigger.open {
+      border-color: var(--help-accent-dim);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      background: rgba(123,94,248,0.08);
+    }
+    .help-item-trigger .help-chevron { font-size: .65rem; color: var(--help-text-dim); transition: transform .2s; flex-shrink: 0; }
+    .help-item-trigger.open .help-chevron { transform: rotate(180deg); }
+
+    .help-item-body {
+      display: none;
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--help-accent-dim);
+      border-top: none;
+      border-bottom-left-radius: .5rem;
+      border-bottom-right-radius: .5rem;
+      padding: .65rem .85rem .75rem;
+      font-size: .82rem;
+      color: var(--help-text);
+      line-height: 1.7;
+      font-family: var(--font-body);
+    }
+    .help-item-body.open { display: block; }
+
+    .help-item-body .lesson-label {
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      color: var(--help-text-dim);
+      text-transform: uppercase;
+      margin-top: .55rem;
+      margin-bottom: .15rem;
+      font-family: var(--font-mono);
+    }
+    .help-item-body .lesson-label:first-child { margin-top: 0; }
+    .help-item-body strong { color: #fff; font-weight: 700; }
+    .help-item-body code {
+      font-family: var(--font-mono);
+      font-size: .76rem;
+      background: rgba(0,0,0,.4);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: .25rem;
+      padding: .05em .35em;
+      color: var(--accent);
+    }
+    /* help-grid */
+    .help-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 3px;
+      margin: .5rem 0;
+      max-width: 120px;
+    }
+    .help-grid-cell {
+      background: rgba(255,255,255,.07);
+      border-radius: 3px;
+      text-align: center;
+      padding: .3rem;
+      font-size: .7rem;
+    }
+    .help-grid-cell.center { background: var(--help-accent-dim); }
+
+    /* プロンプトコピーボタン */
+    #helpCopyPromptBtn {
+      display: block;
+      width: calc(100% - 1.6rem);
+      margin: .6rem .8rem .2rem;
+      padding: .65rem;
+      background: var(--help-accent-dim);
+      border: 1px solid var(--help-border);
+      border-radius: .5rem;
+      color: var(--help-accent);
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      letter-spacing: .04em;
+      transition: background .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+      font-family: var(--font-body);
+    }
+    #helpCopyPromptBtn:hover  { background: rgba(123,94,248,.35); }
+    #helpCopyPromptBtn:active { transform: scale(.97); }
+
+    /* ============================================================
+       HELP MODAL CSS ここまで
+       ============================================================ */
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 左サイドバー -->
+  <aside class="side left">
+    <button class="side-btn active" id="btnHome">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>HOME</span>
+    </button>
+    <button class="side-btn" id="btnHist">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>HIST</span>
+    </button>
+    <button class="side-btn" id="btnFav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15 8 22 9 17 14 18 21 12 17 6 21 7 14 2 9 9 8 12 2"/></svg>
+      <span>FAV</span>
+    </button>
+  </aside>
+
+  <!-- メインステージ -->
+  <main class="stage" id="stageMain">
+    <header class="stage-header">
+      <div class="logo">BABEL<span class="logo-v">6</span></div>
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot"></span>
+        <span class="status-text" id="statusText">READY</span>
+      </div>
+    </header>
+
+    <div class="viz-wrap">
+      <canvas id="vizCanvas"></canvas>
+      <img id="ocrPreview" alt="OCR preview" />
+      <div class="ocr-loading" id="ocrLoading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" width="32" height="32"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="ocr-loading-text">OCR SCANNING...</span>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card card--src">
+        <div class="card-label" id="srcLabel">INPUT</div>
+        <div class="card-text" id="srcText"><span class="placeholder">ここに話しかけてください…</span></div>
+        <textarea class="src-textarea" id="srcTextarea" placeholder="テキストを入力… (Enterで翻訳)" rows="3"></textarea>
+        <button class="text-translate-btn" id="textTranslateBtn">翻訳する</button>
+      </div>
+      <div class="card card--tgt">
+        <div class="card-label">RESULT</div>
+        <div class="card-text" id="tgtText"><span class="placeholder">翻訳結果がここに表示されます</span></div>
+      </div>
+      <div class="api-badge" id="apiBadge">— —</div>
+    </div>
+
+    <div class="bottom">
+      <div class="lang-bar">
+        <button class="lang-btn active" id="langSrc">EN</button>
+        <button class="swap-btn" id="swapBtn">
+          <svg width="18" height="12" viewBox="0 0 20 14" fill="none">
+            <path d="M1 4h14M11 1l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 10H5M9 7l-4 3 4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="lang-btn" id="langTgt">JA</button>
+      </div>
+      <div class="mode-bar">
+        <button class="mode-tab active" id="tabVoice">🎤 VOICE</button>
+        <button class="mode-tab" id="tabText">⌨️ TEXT</button>
+        <button class="mode-tab" id="tabOcr">📷 OCR</button>
+      </div>
+      <button class="main-btn" id="mainBtn">
+        <svg id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor" stroke="none"/><path d="M5 10a7 7 0 0014 0" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="21" stroke-linecap="round"/><line x1="8" y1="21" x2="16" y2="21" stroke-linecap="round"/></svg>
+        <svg id="stopIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        <svg id="ocrIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
+    </div>
+  </main>
+
+  <!-- 右サイドバー -->
+  <aside class="side right">
+    <button class="side-btn" id="btnDict" title="辞書">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="4" y="3" width="13" height="18" rx="2"/><line x1="8" y1="8" x2="13" y2="8" stroke-linecap="round"/><line x1="8" y1="12" x2="15" y2="12" stroke-linecap="round"/><line x1="8" y1="16" x2="11" y2="16" stroke-linecap="round"/></svg>
+      <span>DICT</span>
+    </button>
+    <button class="side-btn" id="btnPin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15 8 22 9 17 14 18 21 12 17 6 21 7 14 2 9 9 8 12 2"/></svg>
+      <span>PIN</span>
+    </button>
+    <button class="side-btn" id="btnSub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2"/><line x1="6" y1="11" x2="18" y2="11" stroke-linecap="round"/><line x1="6" y1="15" x2="14" y2="15" stroke-linecap="round"/></svg>
+      <span>SUB</span>
+    </button>
+    <button class="side-btn" id="btnSpeak">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19 5a10 10 0 0 1 0 14M15 9a5 5 0 0 1 0 6"/></svg>
+      <span>SPEAK</span>
+    </button>
+    <button class="side-btn" id="btnCopy">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <span>COPY</span>
+    </button>
+  </aside>
+</div>
+
+<!-- 言語ピッカー -->
+<div class="lang-picker" id="langPicker" style="display:none">
+  <div class="lang-picker-inner" id="langPickerInner"></div>
+</div>
+
+<!-- 辞書パネル -->
+<div class="panel" id="dictPanel">
+  <div class="panel-header">
+    <span class="panel-title">📖 DICT</span>
+    <button class="panel-close" id="dictClose">✕</button>
+  </div>
+  <div class="panel-body">
+    <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.6">音声認識の誤変換を自動修正します。<br>「認識される文字」→「正しい文字」で登録。</p>
+    <div id="dictBody"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:12px;flex-wrap:wrap">
+      <input class="dict-input" id="dictFrom" placeholder="認識される文字">
+      <span style="color:var(--muted);font-size:12px">→</span>
+      <input class="dict-input" id="dictTo" placeholder="正しい文字">
+      <button class="dict-add-btn" id="dictAddBtn">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- OCR ファイル入力 -->
+<input type="file" id="ocrInput" accept="image/*" capture="environment" style="display:none" />
+
+<!-- 履歴パネル -->
+<div class="panel" id="histPanel">
+  <div class="panel-header">
+    <span class="panel-title">HISTORY</span>
+    <div style="display:flex;gap:8px">
+      <button class="panel-close" id="histClear">CLEAR</button>
+      <button class="panel-close" id="histClose">✕</button>
+    </div>
+  </div>
+  <div class="panel-body" id="histBody">
+    <div class="empty-msg" id="histEmpty">翻訳するとここに履歴が表示されます</div>
+  </div>
+</div>
+
+<!-- FAVパネル -->
+<div class="panel" id="favPanel">
+  <div class="panel-header">
+    <span class="panel-title">★ FAVORITES</span>
+    <button class="panel-close" id="favClose">✕</button>
+  </div>
+  <div class="panel-body" id="favBody">
+    <div class="empty-msg" id="favEmpty">PINでピン留めした定型文がここに表示されます</div>
+  </div>
+</div>
+
+<!-- 字幕パネル -->
+<div class="panel" id="subPanel">
+  <div class="panel-header">
+    <span class="panel-title">SUBTITLE</span>
+    <button class="panel-close" id="subClose">✕ CLOSE</button>
+  </div>
+  <div class="subtitle-body">
+    <div class="sub-lang-bar">
+      <span id="subSrcLang">EN</span>
+      <span>→</span>
+      <span id="subTgtLang">JA</span>
+    </div>
+    <div class="sub-src" id="subSrcText">—</div>
+    <div class="sub-tgt" id="subTgtText">—</div>
+    <button class="sub-mic-btn" id="subMicBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="24" height="24"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor" stroke="none"/><path d="M5 10a7 7 0 0014 0" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="21" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ❓ ヘルプボタン -->
+<button id="helpBtn" aria-label="ヘルプを開く">❓</button>
+
+<!-- ヘルプオーバーレイ -->
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 BABEL6 HELP</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <!-- プロンプトコピーボタン（固定） -->
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <!-- スクロールエリア（JSが動的に生成） -->
+    <div id="helpBody"></div>
+  </div>
+</div>
+<script>
+(() => {
+  /* ================================================================
+     0. UTILS
+  ================================================================ */
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  const SRC_PH = ['話しかけ','Speak here','말씀해 주세요','请在这里说话','聴いています','Listening','듣고 있습니다','正在聆听','—'];
+  const TGT_PH = ['翻訳結果','翻訳中','Translation','Translating','번역 결과','번역 중','翻译结果','翻译中','—','...'];
+  const isSrcPH = t => SRC_PH.some(p => t.includes(p));
+  const isTgtPH = t => TGT_PH.some(p => t.includes(p));
+
+  /* ================================================================
+     1. DOM
+  ================================================================ */
+  const statusPill   = document.getElementById('statusPill');
+  const statusTxt    = document.getElementById('statusText');
+  const srcText      = document.getElementById('srcText');
+  const srcTextarea  = document.getElementById('srcTextarea');
+  const tgtText      = document.getElementById('tgtText');
+  const apiBadge     = document.getElementById('apiBadge');
+  const mainBtn      = document.getElementById('mainBtn');
+  const micIcon      = document.getElementById('micIcon');
+  const stopIcon     = document.getElementById('stopIcon');
+  const ocrIcon      = document.getElementById('ocrIcon');
+  const langSrc      = document.getElementById('langSrc');
+  const langTgt      = document.getElementById('langTgt');
+  const swapBtn      = document.getElementById('swapBtn');
+  const tabVoice     = document.getElementById('tabVoice');
+  const tabText      = document.getElementById('tabText');
+  const tabOcr       = document.getElementById('tabOcr');
+  const textTransBtn = document.getElementById('textTranslateBtn');
+  const ocrInput     = document.getElementById('ocrInput');
+  const ocrPreview   = document.getElementById('ocrPreview');
+  const ocrLoading   = document.getElementById('ocrLoading');
+  const vizCanvas    = document.getElementById('vizCanvas');
+  const vCtx         = vizCanvas.getContext('2d');
+  const btnPin       = document.getElementById('btnPin');
+  const btnSpeak     = document.getElementById('btnSpeak');
+  const btnCopy      = document.getElementById('btnCopy');
+  const btnSub       = document.getElementById('btnSub');
+  const btnHist      = document.getElementById('btnHist');
+  const btnFav       = document.getElementById('btnFav');
+  const btnDict      = document.getElementById('btnDict');
+  const histPanel    = document.getElementById('histPanel');
+  const histBody     = document.getElementById('histBody');
+  const histEmpty    = document.getElementById('histEmpty');
+  const histClear    = document.getElementById('histClear');
+  const histClose    = document.getElementById('histClose');
+  const favPanel     = document.getElementById('favPanel');
+  const favBody      = document.getElementById('favBody');
+  const favEmpty     = document.getElementById('favEmpty');
+  const favClose     = document.getElementById('favClose');
+  const dictPanel    = document.getElementById('dictPanel');
+  const dictBody     = document.getElementById('dictBody');
+  const dictClose    = document.getElementById('dictClose');
+  const dictFrom     = document.getElementById('dictFrom');
+  const dictTo       = document.getElementById('dictTo');
+  const dictAddBtn   = document.getElementById('dictAddBtn');
+  const subPanel     = document.getElementById('subPanel');
+  const subClose     = document.getElementById('subClose');
+  const subMicBtn    = document.getElementById('subMicBtn');
+  const subSrcText   = document.getElementById('subSrcText');
+  const subTgtText   = document.getElementById('subTgtText');
+  const subSrcLangEl = document.getElementById('subSrcLang');
+  const subTgtLangEl = document.getElementById('subTgtLang');
+  const langPicker   = document.getElementById('langPicker');
+  const langPickerInner = document.getElementById('langPickerInner');
+
+  /* ================================================================
+     2. STATE & CONSTANTS
+  ================================================================ */
+  const LANGS    = { 'en-US':'EN', 'ja-JP':'JA', 'ko-KR':'KO', 'zh-CN':'ZH' };
+  const LANG_KEYS = Object.keys(LANGS);
+  const OCR_LANG = { 'en-US':'eng', 'ja-JP':'jpn', 'ko-KR':'kor', 'zh-CN':'chi_sim' };
+  const FAVS_KEY = 'babel6_favs';
+  const HIST_KEY = 'babel6_hist';
+  const DICT_KEY = 'babel6_dict';
+  const MODE_KEY = 'babel6_mode';
+
+  const MIC = { IDLE:'IDLE', LISTENING:'LISTENING', TRANSLATING:'TRANSLATING' };
+  const TTS = { IDLE:'IDLE', SPEAKING:'SPEAKING' };
+  const OCR = { IDLE:'IDLE', PROCESSING:'PROCESSING' };
+  let micState = MIC.IDLE;
+  let ttsState = TTS.IDLE;
+  let ocrState = OCR.IDLE;
+
+  let srcLang = 'en-US', tgtLang = 'ja-JP';
+  let appMode = 'voice';
+  let pickerTarget = null;
+  let isListening = false;
+  let recognition = null;
+  let restartTimer = null;
+  let animFrame = null;
+  let translateTimer = null;
+  let lastTranscript = '';
+  let noSpeechCount = 0;
+  let isSpeaking = false;
+  let cachedVoices = [];
+  let myMemoryQuota = false;
+
+  const translateCache = new Map();
+  const CACHE_MAX = 50;
+
+  let userDict  = (() => { try { return JSON.parse(localStorage.getItem(DICT_KEY)||'[]'); } catch(_){ return []; } })();
+  let favorites = (() => { try { return JSON.parse(localStorage.getItem(FAVS_KEY)||'[]'); } catch(_){ return []; } })();
+  let histLog   = (() => {
+    try { return JSON.parse(localStorage.getItem(HIST_KEY)||'[]').map(e=>({...e,time:new Date(e.time)})); } catch(_){ return []; }
+  })();
+
+  /* ================================================================
+     3. 関数定義
+  ================================================================ */
+
+  /* --- Status --- */
+  function setStatus(state, label) {
+    statusPill.className = 'status-pill ' + (state||'');
+    statusTxt.textContent = label;
+  }
+
+  /* --- Error --- */
+  function showError(msg) {
+    tgtText.innerHTML = `<span class="placeholder" style="color:var(--danger)">⚠ ${esc(msg)}</span>`;
+    setStatus('', 'ERROR');
+  }
+
+  /* --- Visualizer --- */
+  function resizeViz() {
+    if (!vizCanvas.offsetWidth) return;
+    vizCanvas.width  = vizCanvas.offsetWidth  * devicePixelRatio;
+    vizCanvas.height = vizCanvas.offsetHeight * devicePixelRatio;
+    vCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+
+  function drawViz() {
+    const w = vizCanvas.width/devicePixelRatio, h = vizCanvas.height/devicePixelRatio;
+    vCtx.clearRect(0,0,w,h);
+    const t = Date.now()/500;
+    const color = isListening ? '#ff3860' : '#00ffe0';
+    const bars = 80;
+    for (let i=0;i<bars;i++) {
+      const x   = (i/bars)*w;
+      const val = (Math.sin(t*2+i*0.3)*0.5+0.5)*(isListening?0.7:0.15);
+      const bh  = val*h*0.6+2;
+      vCtx.fillStyle = color;
+      vCtx.globalAlpha = 0.15+val*0.7;
+      vCtx.fillRect(x, h/2-bh/2, (w/bars)*0.6, bh);
+    }
+    vCtx.globalAlpha = 1;
+    animFrame = requestAnimationFrame(drawViz);
+  }
+
+  function startViz() { if (!animFrame) { resizeViz(); drawViz(); } }
+  function stopViz()  { if (animFrame) { cancelAnimationFrame(animFrame); animFrame=null; } vCtx.clearRect(0,0,vizCanvas.width,vizCanvas.height); }
+
+  /* --- 辞書 --- */
+  function saveDict() { try { localStorage.setItem(DICT_KEY, JSON.stringify(userDict)); } catch(_){} }
+  function applyDict(text) { return userDict.reduce((t,{from,to}) => from ? t.split(from).join(to) : t, text); }
+  function renderDict() {
+    dictBody.innerHTML = '';
+    if (!userDict.length) { dictBody.innerHTML = '<div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:center;padding:12px;opacity:0.4">辞書が空です</div>'; return; }
+    userDict.forEach(({from,to},idx) => {
+      const el = document.createElement('div');
+      el.className = 'dict-item';
+      el.innerHTML = `<span class="dict-from">${esc(from)}</span><span style="color:var(--muted)">→</span><span class="dict-to">${esc(to)}</span><button class="dict-del" data-idx="${idx}">✕</button>`;
+      el.querySelector('.dict-del').addEventListener('click', e => {
+        userDict.splice(+e.currentTarget.dataset.idx,1); saveDict(); renderDict();
+      });
+      dictBody.appendChild(el);
+    });
+  }
+
+  /* --- 翻訳キャッシュ --- */
+  function getCached(text) { return translateCache.get(`${srcLang}|${tgtLang}|${text}`) ?? null; }
+  function setCached(text, result) {
+    const key = `${srcLang}|${tgtLang}|${text}`;
+    if (translateCache.size >= CACHE_MAX) translateCache.delete(translateCache.keys().next().value);
+    translateCache.set(key, result);
+  }
+
+  /* --- 翻訳API --- */
+  async function tryMyMemory(text, src, tgt) {
+    const res  = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src}|${tgt}`, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    if (data.responseStatus === 200) {
+      const r = data.responseData.translatedText;
+      if (r && r.includes('MYMEMORY WARNING')) throw new Error('QUOTA');
+      return r;
+    }
+    if (String(data.responseStatus)==='429') throw new Error('QUOTA');
+    throw new Error('MyMemory: '+data.responseDetails);
+  }
+
+  async function tryMyMemoryPlus(text, src, tgt) {
+    const res  = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src}|${tgt}&de=user@babel.app`, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    if (data.responseStatus===200) {
+      const r = data.responseData.translatedText;
+      if (r && !r.includes('MYMEMORY WARNING')) return r;
+    }
+    throw new Error('QUOTA');
+  }
+
+  async function translate(text) {
+    const src = srcLang.split('-')[0], tgt = tgtLang.split('-')[0];
+    if ('translation' in self) {
+      try {
+        const pair = { sourceLanguage:src, targetLanguage:tgt };
+        if (await self.translation.canTranslate(pair) !== 'no') {
+          const tr = await self.translation.createTranslator(pair);
+          const r  = await tr.translate(text);
+          if (r && r.trim()) return { text:r, engine:'CHROME' };
+        }
+      } catch(e) { console.warn('Chrome TL fallback:', e); }
+    }
+    if (!myMemoryQuota) {
+      try { return { text: await tryMyMemory(text,src,tgt), engine:'MYMEMORY' }; }
+      catch(e) {
+        if (e.message==='QUOTA') {
+          myMemoryQuota = true;
+          try {
+            const r = await tryMyMemoryPlus(text,src,tgt);
+            myMemoryQuota = false; // MyMemory+成功→フラグ解除
+            return { text: r, engine:'MYMEMORY+' };
+          }
+          catch(_) {}
+        } else {
+          let msg = e.message||'';
+          if (msg.includes('Failed to fetch')||msg.includes('network')) throw new Error('ネットワーク接続失敗（オフライン？）');
+          if (msg.includes('timeout')||msg.includes('Abort')) throw new Error('タイムアウト（8秒超過）');
+          throw new Error(msg||'翻訳API接続失敗');
+        }
+      }
+    }
+    throw new Error('翻訳API上限超過。時間をおいて再試行してください');
+  }
+
+  async function runTranslate(text) {
+    if (!text || !text.trim()) return;
+    const t = text.trim();
+    lastTranscript = ''; // B1: 翻訳開始時にリセット→2重出力防止
+    micState = MIC.TRANSLATING;
+    setStatus('translating', 'TRANSLATING');
+    const ph = {'ja-JP':'翻訳中…','ko-KR':'번역 중…','zh-CN':'翻译中…'}[tgtLang]||'Translating...';
+    tgtText.innerHTML = `<span class="placeholder">${ph}</span>`;
+    try {
+      const cached = getCached(t);
+      const result = cached ?? await translate(t);
+      if (!cached) setCached(t, result);
+      tgtText.textContent = result.text;
+      setStatus('done', 'DONE');
+      apiBadge.textContent = (cached?'⚡ ':'')+result.engine;
+      addHist(t, result.text);
+      updatePin();
+    } catch(e) {
+      showError(e.message||'翻訳失敗');
+    } finally {
+      if (micState===MIC.TRANSLATING) micState = MIC.IDLE;
+    }
+  }
+
+  /* --- TTS --- */
+  if ('speechSynthesis' in window) {
+    cachedVoices = window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => { cachedVoices = window.speechSynthesis.getVoices(); };
+  }
+
+  function speak(text, lang, allowRestart=false) {
+    if (!('speechSynthesis' in window)) return;
+    if (isSpeaking && !allowRestart) {
+      window.speechSynthesis.cancel(); isSpeaking=false; ttsState=TTS.IDLE; btnSpeak.classList.remove('active'); return;
+    }
+    window.speechSynthesis.cancel(); isSpeaking=false;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang; utter.rate = 0.95;
+    const match = cachedVoices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    if (match) utter.voice = match;
+    utter.onstart = () => { isSpeaking=true; ttsState=TTS.SPEAKING; btnSpeak.classList.add('active'); };
+    utter.onend = utter.onerror = () => { isSpeaking=false; ttsState=TTS.IDLE; btnSpeak.classList.remove('active'); };
+    window.speechSynthesis.speak(utter);
+  }
+
+  /* --- STT --- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  function buildRecognition() {
+    if (!SR) return null;
+    const r = new SR();
+    r.lang=srcLang; r.continuous=false; r.interimResults=true; r.maxAlternatives=1;
+
+    r.onstart = () => { noSpeechCount=0; setStatus('listening','LISTENING'); };
+
+    r.onresult = (e) => {
+      noSpeechCount=0;
+      let interim='', final='';
+      for (let i=e.resultIndex;i<e.results.length;i++) {
+        const t=e.results[i][0].transcript;
+        e.results[i].isFinal ? (final+=t) : (interim+=t);
+      }
+      if (final) {
+        lastTranscript += applyDict(final);
+        srcText.innerHTML = esc(lastTranscript)+(interim?`<span class="interim"> ${esc(interim)}</span>`:'');
+        clearTimeout(translateTimer);
+        translateTimer = setTimeout(() => runTranslate(lastTranscript), 800);
+      } else {
+        srcText.innerHTML = esc(lastTranscript)+(interim?`<span class="interim"> ${esc(interim)}</span>`:'');
+        if (interim) {
+          clearTimeout(translateTimer);
+          translateTimer = setTimeout(() => { if (!lastTranscript&&interim.trim()) runTranslate(applyDict(interim.trim())); }, 1500);
+        }
+      }
+    };
+
+    r.onerror = (e) => {
+      if (e.error==='no-speech')  { noSpeechCount++; if (noSpeechCount>=3) setStatus('listening','WAITING...'); return; }
+      if (e.error==='aborted')    return;
+      const msgs = { 'not-allowed':'マイク許可が必要です（ブラウザ設定を確認）','service-not-allowed':'マイク許可が必要です（HTTPS必須）','network':'音声認識: ネット接続エラー','audio-capture':'マイクが見つかりません','language-not-supported':'この言語は音声認識非対応' };
+      showError(msgs[e.error]||'音声エラー: '+e.error);
+    };
+
+    r.onend = () => {
+      if (!isListening) return;
+      clearTimeout(restartTimer);
+      const delay = lastTranscript.trim() ? 900 : 400;
+      restartTimer = setTimeout(() => {
+        if (!isListening) return;
+        try { r.start(); } catch(err) { if (err.name!=='InvalidStateError') console.warn(err); }
+      }, delay);
+    };
+    return r;
+  }
+
+  async function startListening() {
+    if (ttsState===TTS.SPEAKING) { showError('読み上げ中はマイクを使えません'); return; }
+    if (micState!==MIC.IDLE) return;
+    if (!SR) { showError('このブラウザは音声認識非対応。TEXTモードをお使いください'); return; }
+    if (isSpeaking) { window.speechSynthesis.cancel(); isSpeaking=false; await new Promise(r=>setTimeout(r,150)); }
+    isListening=true; noSpeechCount=0; lastTranscript='';
+    const hint    = {'ja-JP':'聴いています…','ko-KR':'듣고 있습니다…','zh-CN':'正在聆听…'}[srcLang]||'Listening...';
+    const tgtHint = {'ja-JP':'翻訳結果がここに表示されます','ko-KR':'번역 결과가 여기에 표시됩니다','zh-CN':'翻译结果将显示在这里'}[tgtLang]||'Translation appears here';
+    srcText.innerHTML = `<span class="placeholder">${hint}</span>`;
+    tgtText.innerHTML = `<span class="placeholder">${tgtHint}</span>`;
+    apiBadge.textContent = '— —';
+    mainBtn.classList.add('listening');
+    micIcon.style.display='none'; stopIcon.style.display='block';
+    startViz();
+    recognition = buildRecognition();
+    if (!recognition) { // B2: null チェック
+      micState=MIC.IDLE; isListening=false;
+      mainBtn.classList.remove('listening');
+      micIcon.style.display='block'; stopIcon.style.display='none';
+      showError('このブラウザは音声認識非対応。TEXTモードをお使いください');
+      return;
+    }
+    micState = MIC.LISTENING;
+    try { recognition.start(); }
+    catch(e) { micState=MIC.IDLE; showError('音声認識起動失敗: '+e.name); }
+  }
+
+  function stopListening() {
+    isListening=false; micState=MIC.IDLE;
+    clearTimeout(restartTimer); clearTimeout(translateTimer);
+    mainBtn.classList.remove('listening');
+    micIcon.style.display='block'; stopIcon.style.display='none';
+    if (recognition) { recognition.onend=null; try{recognition.stop();}catch(_){} recognition=null; }
+    stopViz();
+    const pending = lastTranscript.trim();
+    lastTranscript='';
+    const hint = {'ja-JP':'ここに話しかけてください…','ko-KR':'여기에 말씀해 주세요…','zh-CN':'请在这里说话…'}[srcLang]||'Speak here...';
+    if (pending) { runTranslate(pending); srcText.textContent=pending; }
+    else { setStatus('','READY'); srcText.innerHTML=`<span class="placeholder">${hint}</span>`; }
+  }
+
+  /* --- OCR --- */
+  async function runOcr(file) {
+    if (ocrState!==OCR.IDLE) return;
+    ocrState = OCR.PROCESSING;
+    ocrPreview.src = URL.createObjectURL(file);
+    ocrPreview.style.display='block';
+    vizCanvas.style.display='none';
+    ocrLoading.classList.add('show');
+    setStatus('translating','OCR SCANNING');
+    try {
+      const lang = OCR_LANG[srcLang]||'eng';
+      const { data:{text} } = await Tesseract.recognize(file, lang);
+      const cleaned = text.trim();
+      ocrLoading.classList.remove('show');
+      if (!cleaned) { showError('文字が読み取れませんでした。もう一度撮影してください。'); }
+      else { srcText.textContent=cleaned; runTranslate(cleaned); }
+    } catch(err) {
+      ocrLoading.classList.remove('show');
+      showError('OCRエラー: '+(err.message||'不明なエラー'));
+    } finally {
+      ocrState=OCR.IDLE;
+      URL.revokeObjectURL(ocrPreview.src);
+      ocrInput.value='';
+    }
+  }
+
+  /* --- モード --- */
+  function setMode(mode) {
+    appMode=mode;
+    if (isListening) stopListening(); // B3: stopListeningを先に呼ぶ
+    micState=MIC.IDLE; ttsState=TTS.IDLE; // その後で強制リセット
+    window.speechSynthesis&&window.speechSynthesis.cancel(); isSpeaking=false; btnSpeak.classList.remove('active');
+    lastTranscript=''; srcTextarea.value='';
+    try { localStorage.setItem(MODE_KEY,mode); } catch(_){}
+    [tabVoice,tabText,tabOcr].forEach(t=>t.classList.remove('active'));
+    srcText.style.display='block'; srcTextarea.style.display='none'; textTransBtn.style.display='none';
+    micIcon.style.display='block'; stopIcon.style.display='none'; ocrIcon.style.display='none';
+    mainBtn.classList.remove('ocr-mode');
+    ocrPreview.style.display='none'; vizCanvas.style.display='block'; ocrLoading.classList.remove('show');
+    const hint    = {'ja-JP':'ここに話しかけてください…','ko-KR':'여기에 말씀해 주세요…','zh-CN':'请在这里说话…'}[srcLang]||'Speak here...';
+    const tgtHint = {'ja-JP':'翻訳結果がここに表示されます','ko-KR':'번역 결과가 여기에 표시됩니다','zh-CN':'翻译结果将显示在这里'}[tgtLang]||'Translation appears here';
+    srcText.innerHTML=`<span class="placeholder">${hint}</span>`;
+    tgtText.innerHTML=`<span class="placeholder">${tgtHint}</span>`;
+    apiBadge.textContent='— —'; setStatus('','READY');
+    if (mode==='voice') { tabVoice.classList.add('active'); startViz(); }
+    else if (mode==='text') { tabText.classList.add('active'); stopViz(); srcText.style.display='none'; srcTextarea.style.display='block'; textTransBtn.style.display='block'; srcTextarea.focus(); }
+    else if (mode==='ocr')  { tabOcr.classList.add('active'); stopViz(); micIcon.style.display='none'; ocrIcon.style.display='block'; mainBtn.classList.add('ocr-mode'); }
+  }
+
+  /* --- 言語ピッカー --- */
+  function openLangPicker(target) {
+    pickerTarget=target;
+    langPickerInner.innerHTML='';
+    LANG_KEYS.forEach(code => {
+      const btn=document.createElement('button');
+      btn.className='lang-pick-btn';
+      btn.textContent=LANGS[code];
+      if (code===(target==='src'?srcLang:tgtLang)) btn.classList.add('active');
+      btn.addEventListener('click',()=>selectLang(code));
+      langPickerInner.appendChild(btn);
+    });
+    langPicker.style.display='';
+  }
+
+  function closeLangPicker() { langPicker.style.display='none'; pickerTarget=null; }
+
+  function selectLang(code) {
+    if (pickerTarget==='src') {
+      if (code===tgtLang) swapLang();
+      else { srcLang=code; langSrc.textContent=LANGS[srcLang]; langSrc.classList.add('active'); langTgt.classList.remove('active'); setMode(appMode); }
+    } else {
+      if (code===srcLang) swapLang();
+      else { tgtLang=code; langTgt.textContent=LANGS[tgtLang]; langTgt.classList.add('active'); langSrc.classList.remove('active'); setMode(appMode); }
+    }
+    closeLangPicker();
+  }
+
+  function swapLang() {
+    [srcLang,tgtLang]=[tgtLang,srcLang];
+    langSrc.textContent=LANGS[srcLang]; langTgt.textContent=LANGS[tgtLang];
+    langSrc.classList.add('active'); langTgt.classList.remove('active');
+    setMode(appMode);
+  }
+
+  /* --- お気に入り --- */
+  function saveFavs() { try { localStorage.setItem(FAVS_KEY,JSON.stringify(favorites)); } catch(_){} }
+  function updatePin() {
+    const src=srcText.textContent, tgt=tgtText.textContent;
+    btnPin.classList.toggle('active', favorites.some(f=>f.src===src&&f.tgt===tgt));
+  }
+
+  function renderFavs() {
+    if (favEmpty.parentNode) favEmpty.parentNode.removeChild(favEmpty); // B4: 先に退避
+    favBody.innerHTML='';
+    if (!favorites.length) { favBody.appendChild(favEmpty); return; }
+    favorites.forEach((fav,idx) => {
+      const item=document.createElement('div');
+      item.className='fav-item';
+      item.innerHTML=`<div class="fav-texts"><div class="fav-src">${esc(fav.src)}</div><div class="fav-tgt">${esc(fav.tgt)}</div></div><div class="fav-actions"><button class="fav-btn speak" data-idx="${idx}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><button class="fav-btn del" data-idx="${idx}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/></svg></button></div>`;
+      item.querySelector('.speak').addEventListener('click',e=>{e.stopPropagation();const f=favorites[+e.currentTarget.dataset.idx];speak(f.tgt,f.tLang||tgtLang,true);});
+      item.querySelector('.del').addEventListener('click',e=>{e.stopPropagation();favorites.splice(+e.currentTarget.dataset.idx,1);saveFavs();renderFavs();updatePin();});
+      item.addEventListener('click',()=>{srcText.textContent=fav.src;tgtText.textContent=fav.tgt;updatePin();favPanel.classList.remove('open');});
+      favBody.appendChild(item);
+    });
+  }
+
+  /* --- 履歴 --- */
+  function saveHist() { try { localStorage.setItem(HIST_KEY,JSON.stringify(histLog.slice(0,100))); } catch(_){} }
+
+  function addHist(src,tgt) {
+    histLog.unshift({src,tgt,sLang:srcLang,tLang:tgtLang,time:new Date()});
+    if (histLog.length>100) histLog.length=100;
+    saveHist(); renderHist();
+  }
+
+  function renderHist() {
+    if (histEmpty.parentNode) histEmpty.parentNode.removeChild(histEmpty); // B4: 先に退避
+    histBody.innerHTML='';
+    if (!histLog.length) { histBody.appendChild(histEmpty); return; }
+    histLog.forEach((entry,idx) => {
+      const hh=String(entry.time.getHours()).padStart(2,'0'), mm=String(entry.time.getMinutes()).padStart(2,'0');
+      const item=document.createElement('div');
+      item.className='hist-item';
+      item.innerHTML=`
+        <div class="hist-meta">
+          <span class="hist-langs">${entry.sLang.split('-')[0].toUpperCase()} → ${entry.tLang.split('-')[0].toUpperCase()}</span>
+          <span class="hist-time">${hh}:${mm}</span>
+          <button class="hist-del" data-idx="${idx}" title="削除">✕</button>
+        </div>
+        <div class="hist-src">${esc(entry.src)}</div>
+        <div class="hist-tgt">${esc(entry.tgt)}</div>`;
+      item.querySelector('.hist-del').addEventListener('click', e => {
+        e.stopPropagation();
+        histLog.splice(+e.currentTarget.dataset.idx, 1);
+        saveHist(); renderHist();
+      });
+      item.addEventListener('click',()=>{srcText.textContent=entry.src;tgtText.textContent=entry.tgt;updatePin();histPanel.classList.remove('open');});
+      histBody.appendChild(item);
+    });
+  }
+
+  /* --- 字幕 --- */
+  let subListening=false, subRec=null, subRestartTimer=null, subTransTimer=null, subTranscript='';
+
+  function startSubListening() {
+    if (!SR) return;
+    subListening=true; subTranscript=''; subMicBtn.classList.add('active');
+    subRec=new SR(); subRec.lang=srcLang; subRec.continuous=true; subRec.interimResults=true;
+    subRec.onresult=async(e)=>{
+      let interim='',final='';
+      for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;e.results[i].isFinal?(final+=t):(interim+=t);}
+      subSrcText.textContent=subTranscript+final+interim;
+      if(final){
+        subTranscript+=applyDict(final);
+        clearTimeout(subTransTimer);
+        subTransTimer=setTimeout(async()=>{
+          try{const r=await translate(subTranscript.trim());subTgtText.textContent=r.text;srcText.textContent=subTranscript.trim();tgtText.textContent=r.text;addHist(subTranscript.trim(),r.text);}
+          catch(e){subTgtText.textContent='⚠ '+(e.message||'翻訳失敗');}
+        },800);
+      }
+    };
+    subRec.onerror=(e)=>{if(e.error==='aborted'||e.error==='no-speech')return;};
+    subRec.onend=()=>{
+      if(!subListening)return;
+      clearTimeout(subRestartTimer);
+      subRestartTimer=setTimeout(()=>{if(!subListening)return;try{subRec.start();}catch(e){}},150);
+    };
+    try{subRec.start();}catch(e){}
+  }
+
+  function stopSubListening() {
+    subListening=false; clearTimeout(subRestartTimer); clearTimeout(subTransTimer);
+    subMicBtn.classList.remove('active');
+    if(subRec){subRec.onend=null;try{subRec.stop();}catch(_){}subRec=null;}
+  }
+
+  /* ================================================================
+     4. イベントリスナー
+  ================================================================ */
+  // HOMEボタン（B5: 全パネルを閉じる）
+  document.getElementById('btnHome').addEventListener('click',()=>{
+    closeAllPanels();
+    document.getElementById('btnHome').classList.add('active');
+    [btnHist,btnFav,btnDict].forEach(b=>b.classList.remove('active'));
+  });
+
+  // モード
+  tabVoice.addEventListener('click',()=>setMode('voice'));
+  tabText.addEventListener('click', ()=>setMode('text'));
+  tabOcr.addEventListener('click',  ()=>setMode('ocr'));
+
+  // メインボタン
+  mainBtn.addEventListener('click',()=>{
+    if(appMode==='voice') {
+      if(isListening) { stopListening(); return; }
+      if(micState!==MIC.IDLE) return; // 翻訳中は起動しない
+      startListening();
+    } else if(appMode==='ocr') { ocrInput.value=''; ocrInput.click(); }
+  });
+
+  // テキスト翻訳
+  textTransBtn.addEventListener('click',()=>{
+    if(appMode!=='text') return;
+    const text=srcTextarea.value.trim();
+    if(!text) return;
+    srcText.textContent=text; runTranslate(text);
+  });
+  srcTextarea.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();textTransBtn.click();}
+  });
+
+  // OCR
+  ocrInput.addEventListener('change',e=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    runOcr(file);
+  });
+
+  // 言語ピッカー
+  langSrc.addEventListener('click',e=>{e.stopPropagation();pickerTarget==='src'?closeLangPicker():openLangPicker('src');});
+  langTgt.addEventListener('click',e=>{e.stopPropagation();pickerTarget==='tgt'?closeLangPicker():openLangPicker('tgt');});
+  swapBtn.addEventListener('click',swapLang);
+  document.addEventListener('click',e=>{
+    if(!pickerTarget) return;
+    if(!e.target.closest('#langPicker')&&!e.target.closest('#langSrc')&&!e.target.closest('#langTgt')) closeLangPicker();
+  });
+
+  // サイドバー
+  btnPin.addEventListener('click',()=>{
+    const src=srcText.textContent,tgt=tgtText.textContent;
+    if(!src||!tgt||isSrcPH(src)||isTgtPH(tgt)) return;
+    const idx=favorites.findIndex(f=>f.src===src&&f.tgt===tgt);
+    if(idx>=0) {
+      favorites.splice(idx,1); // 解除
+    } else {
+      favorites.unshift({src,tgt,sLang:srcLang,tLang:tgtLang}); // 登録
+    }
+    saveFavs(); renderFavs(); updatePin();
+  });
+  btnSpeak.addEventListener('click',()=>{
+    const t=tgtText.textContent;
+    if(!t||isTgtPH(t)) return;
+    speak(t,tgtLang);
+  });
+  btnCopy.addEventListener('click',async()=>{
+    const t=tgtText.textContent;
+    if(!t||isTgtPH(t)) return;
+    try {
+      await navigator.clipboard.writeText(t);
+      btnCopy.classList.add('active'); setTimeout(()=>btnCopy.classList.remove('active'),1200);
+    } catch(e) {
+      btnCopy.style.color='var(--danger)'; setTimeout(()=>btnCopy.style.color='',1200);
+    }
+  });
+  btnSub.addEventListener('click',()=>{
+    const t=tgtText.textContent;
+    if(isTgtPH(t)) return;
+    subSrcLangEl.textContent=LANGS[srcLang]; subTgtLangEl.textContent=LANGS[tgtLang];
+    subSrcText.textContent=srcText.textContent; subTgtText.textContent=t;
+    subPanel.classList.add('open');
+  });
+  subClose.addEventListener('click',()=>{subPanel.classList.remove('open');stopSubListening();});
+  subMicBtn.addEventListener('click',()=>subListening?stopSubListening():startSubListening());
+
+  // パネル開閉
+  function closeAllPanels() { stopSubListening(); [histPanel,favPanel,dictPanel,subPanel].forEach(p=>p.classList.remove('open')); }
+  btnHist.addEventListener('click',()=>{const o=histPanel.classList.contains('open');closeAllPanels();if(!o)histPanel.classList.add('open');});
+  btnFav.addEventListener('click', ()=>{const o=favPanel.classList.contains('open');closeAllPanels();if(!o)favPanel.classList.add('open');});
+  btnDict.addEventListener('click',()=>{const o=dictPanel.classList.contains('open');closeAllPanels();if(!o){renderDict();dictPanel.classList.add('open');}});
+  histClose.addEventListener('click',()=>histPanel.classList.remove('open'));
+  favClose.addEventListener('click', ()=>favPanel.classList.remove('open'));
+  dictClose.addEventListener('click',()=>dictPanel.classList.remove('open'));
+  histClear.addEventListener('click',()=>{histLog=[];saveHist();renderHist();});
+
+  // 辞書追加
+  dictAddBtn.addEventListener('click',()=>{
+    const from=dictFrom.value.trim(),to=dictTo.value.trim();
+    if(!from||!to) return;
+    if(userDict.some(d=>d.from===from)){dictFrom.style.borderColor='var(--danger)';setTimeout(()=>dictFrom.style.borderColor='',1200);return;}
+    userDict.push({from,to}); saveDict(); renderDict();
+    dictFrom.value=''; dictTo.value=''; dictFrom.focus();
+  });
+  [dictFrom,dictTo].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')dictAddBtn.click();}));
+
+  // 横向き字幕
+  screen.orientation&&screen.orientation.addEventListener('change',()=>{
+    if(screen.orientation.type.startsWith('landscape')&&!subPanel.classList.contains('open'))
+      if(!isTgtPH(tgtText.textContent)) btnSub.click();
+  });
+
+  window.addEventListener('resize',resizeViz);
+
+  /* ================================================================
+     5. 初期実行
+  ================================================================ */
+  try {
+    resizeViz();
+    renderFavs(); renderHist();
+    const savedMode = localStorage.getItem(MODE_KEY)||'voice';
+    setMode(savedMode);
+  } catch(e) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="position:fixed;top:0;left:0;right:0;background:var(--danger);color:#fff;font-family:monospace;font-size:12px;padding:8px;z-index:9999">⚠ INIT ERROR: ${e.message}</div>`
+    );
+  }
+
+})();
+
+/* ============================================================
+   HELP MODAL JS
+   ============================================================ */
+const helpData = {
+  howto: [
+    {
+      title: "VOICE — 音声翻訳",
+      body: `
+        <strong>🎤 マイクボタンをタップ</strong>して話すと自動で翻訳されます。<br>
+        もう一度タップすると停止。話し終わりを検知して自動翻訳されます（0.8秒後）。<br><br>
+        <strong>無音が続く場合</strong>はステータスが <code>WAITING...</code> に変わります（3回 no-speech 後）。マイクは継続中。<br><br>
+        <strong>マイク許可エラー</strong>が出た場合はブラウザのサイト設定でマイクを「許可」に変更してください（HTTPS必須）。
+      `
+    },
+    {
+      title: "TEXT — テキスト翻訳",
+      body: `
+        テキストエリアに入力して <strong>Enterキー</strong> または <strong>「翻訳する」ボタン</strong> で翻訳。<br>
+        Shift+Enter で改行できます。
+      `
+    },
+    {
+      title: "OCR — 画像テキスト認識",
+      body: `
+        カメラボタンをタップすると画像選択ダイアログが開きます。<br>
+        撮影 or ギャラリーから選択すると Tesseract.js（完全ローカル処理）でテキストを読み取り、そのまま翻訳します。<br><br>
+        <strong>認識精度</strong>: 印刷物・看板など明瞭なテキストが得意。手書きは苦手。<br>
+        言語は「入力言語」の設定に従います（EN=英語OCR, JA=日本語OCR）。
+      `
+    },
+    {
+      title: "言語切り替え・スワップ",
+      body: `
+        下部バーの <code>EN</code> <code>JA</code> などをタップすると言語ピッカーが開きます。<br>
+        対応言語: <strong>EN / JA / KO / ZH</strong><br><br>
+        ⇄ ボタンで入力・出力言語を瞬時にスワップ。スワップ後はモードがリセットされます。
+      `
+    },
+    {
+      title: "PIN — お気に入り登録",
+      body: `
+        右サイドバーの <strong>PIN</strong> をタップすると現在の翻訳ペアをお気に入り登録。<br>
+        すでに登録済みの場合はタップで解除。<br>
+        登録した定型文は左サイドバーの <strong>FAV</strong> パネルで確認・再生・削除できます。
+      `
+    },
+    {
+      title: "SPEAK / COPY / SUB",
+      body: `
+        <strong>SPEAK</strong>: 翻訳結果を音声読み上げ（TTS）。もう一度タップで停止。<br>
+        <strong>COPY</strong>: 翻訳結果をクリップボードにコピー。<br>
+        <strong>SUB</strong>: 字幕モードを開く。横画面に最適化された大文字表示。字幕画面内でもマイク継続利用可。
+      `
+    },
+    {
+      title: "DICT — ユーザー辞書",
+      body: `
+        音声認識の誤変換を自動修正するルール辞書です。<br>
+        「認識される文字」→「正しい文字」の形式で登録。<br>
+        例: <code>バベル</code> → <code>BABEL</code><br><br>
+        登録済みの単語は翻訳前にテキストへ自動適用されます。固有名詞・専門用語の精度向上に有効。
+      `
+    },
+    {
+      title: "HIST — 翻訳履歴",
+      body: `
+        翻訳するたびに自動で保存（最大100件）。<br>
+        左サイドバーの <strong>HIST</strong> をタップで確認。アイテムをタップすると翻訳内容を復元します。<br>
+        個別削除 ✕ または <code>CLEAR</code> で全削除。
+      `
+    }
+  ],
+  lessons: [
+    {
+      title: "B1: 翻訳が2重に走る問題",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>runTranslate()</code> 開始時に <code>lastTranscript</code> をリセットしていなかったため、
+        onresult の setTimeout と stopListening の両方から翻訳が二重実行された。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>runTranslate()</code> の先頭で <code>lastTranscript = ''</code> を実行し、
+        二重トリガーを防ぐ。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        翻訳実行時は必ず <code>lastTranscript</code> をリセットしてから非同期処理へ入ること。
+      `
+    },
+    {
+      title: "B2: recognition が null のまま start() される",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>buildRecognition()</code> が非対応ブラウザで <code>null</code> を返すが、
+        null チェックなしで <code>recognition.start()</code> を呼んでエラーになった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>startListening()</code> 内で <code>recognition</code> が null の場合は
+        即座に状態を IDLE に戻してエラーメッセージを表示し <code>return</code>。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        SR（SpeechRecognition）使用前は必ず null チェックすること。
+        API非対応ブラウザでの graceful fallback を常に実装。
+      `
+    },
+    {
+      title: "B3: モード切替時に recognition が残存する",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>setMode()</code> で直接 <code>micState=MIC.IDLE</code> にリセットしていたが、
+        <code>recognition.onend</code> が残っていて再起動ループが続いた。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>setMode()</code> の先頭で必ず <code>stopListening()</code> を呼んでから
+        強制リセットするよう順序を保証。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        モード切替・言語切替では必ず <code>stopListening()</code> → 状態リセット の順で呼ぶこと。
+        <code>recognition.onend = null</code> を忘れずに。
+      `
+    },
+    {
+      title: "B4: innerHTML クリア時に empty-msg 要素が消える",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>favBody.innerHTML = ''</code> や <code>histBody.innerHTML = ''</code> で
+        DOM をクリアすると、その中にある <code>favEmpty</code> / <code>histEmpty</code> 要素も消え、
+        再表示できなくなった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        クリア前に <code>if (el.parentNode) el.parentNode.removeChild(el)</code> で
+        要素を親から切り離して退避させてからクリア。空なら再 appendChild。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        <code>innerHTML = ''</code> の前に再利用予定の子要素は必ず <code>removeChild</code> で退避すること。
+      `
+    },
+    {
+      title: "B5: HOMEボタンがパネルを閉じない",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        HOMEボタンのリスナーに <code>closeAllPanels()</code> が入っていなかったため、
+        パネルが開いたままHOMEを押しても閉じなかった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        HOMEボタンのハンドラ先頭で <code>closeAllPanels()</code> を呼ぶ。
+        また HOME 以外のサイドバーボタンから <code>.active</code> を除去する処理も追加。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        HOMEボタンは「全パネル閉じる＋自分だけアクティブ」の責務を持つ。
+        パネル追加時は <code>closeAllPanels()</code> のリストにも追加すること。
+      `
+    },
+    {
+      title: "B6: 言語ピッカーがパネルの下に隠れる",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>.panel</code> の <code>z-index: 50</code> に対して
+        <code>.lang-picker</code> の z-index が低く、パネルが開いているとき
+        言語ピッカーが隠れて操作できなかった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>.lang-picker</code> に <code>z-index: 60</code> を設定して
+        パネルより前面に表示されるようにした。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        z-index の積み順を設計時に決めておくこと。<br>
+        目安: base=10, panel=50, picker=60, overlay=910, toast=950
+      `
+    }
+  ]
+};
+
+const COMMON_PROMPT =
+`【前提条件（必ず守れ）】
+- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）
+- localStorage / IndexedDB 使用あり
+- モバイル前提（Android Brave、タップ操作）
+- 既存機能を削除するな
+- UIを破壊するな
+- 同期ロジックを勝手に変えるな
+- QR / LINE の外部API制約を考慮せよ
+`;
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
+function buildPrompt() {
+  var lines = [COMMON_PROMPT, '【このアプリの教訓（過去のバグ・制約）】'];
+  for (var i = 0; i < helpData.lessons.length; i++) {
+    var l = helpData.lessons[i];
+    lines.push('・' + l.title + '\n  ' + stripHtml(l.body));
+  }
+  return lines.join('\n');
+}
+
+function copyPrompt() {
+  var text = buildPrompt();
+  navigator.clipboard.writeText(text).then(function() {
+    alert('コピーしました！\nClaude にそのまま貼ってください。');
+  }).catch(function() {
+    alert('コピー失敗。手動でコピーしてください。');
+  });
+}
+
+(function initHelpModal() {
+  const overlay  = document.getElementById('helpOverlay');
+  const body     = document.getElementById('helpBody');
+  const openBtn  = document.getElementById('helpBtn');
+  const closeBtn = document.getElementById('helpCloseBtn');
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderHelp() {
+    body.innerHTML = '';
+    body.appendChild(makeSection('📖 使い方', helpData.howto, 'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓', helpData.lessons, 'lesson'));
+  }
+
+  function makeSection(label, items, prefix) {
+    const wrap = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'help-section-title';
+    title.textContent = label;
+    wrap.appendChild(title);
+    items.forEach(function(item, i) {
+      const id = prefix + '-' + i;
+      const row = document.createElement('div');
+      row.className = 'help-item';
+      const trigger = document.createElement('button');
+      trigger.className = 'help-item-trigger';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-controls', id);
+      trigger.innerHTML = '<span>' + escHtml(item.title) + '</span><span class="help-chevron">▼</span>';
+      const panel = document.createElement('div');
+      panel.className = 'help-item-body';
+      panel.id = id;
+      panel.innerHTML = item.body;
+      trigger.addEventListener('click', function() {
+        const isOpen = trigger.classList.contains('open');
+        wrap.querySelectorAll('.help-item-trigger.open').forEach(function(t) {
+          t.classList.remove('open');
+          t.setAttribute('aria-expanded','false');
+          document.getElementById(t.getAttribute('aria-controls')).classList.remove('open');
+        });
+        if (!isOpen) {
+          trigger.classList.add('open');
+          trigger.setAttribute('aria-expanded','true');
+          panel.classList.add('open');
+        }
+      });
+      row.appendChild(trigger);
+      row.appendChild(panel);
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  function openModal()  { renderHelp(); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+  function closeModal() { overlay.classList.remove('active'); document.body.style.overflow=''; }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  document.getElementById('helpCopyPromptBtn').addEventListener('click', copyPrompt);
+  overlay.addEventListener('click', function(e) { if (e.target===overlay) closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key==='Escape') closeModal(); });
+})();
+/* ============================================================
+   HELP MODAL JS ここまで
+   ============================================================ */
+</script>
+
+</body>
+</html>
