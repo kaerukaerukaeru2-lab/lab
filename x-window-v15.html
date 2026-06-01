@@ -617,8 +617,7 @@ async function init(){
 
 init();
 
-// ヘルプモーダル初期化
-buildHelpModal();
+// ヘルプモーダル初期化はhelpData定義後に実行
 
 function helpCopyPrompt(){
   const lessonsText=helpData.lessons.map(l=>`[${l.label}] ${l.text}`).join('\n');
@@ -731,6 +730,9 @@ function toggleHelpItem(btn){
 
 function openHelp(){document.getElementById('helpOverlay').classList.add('active');}
 function closeHelp(){document.getElementById('helpOverlay').classList.remove('active');}
+
+// helpData定義後にモーダルを構築
+buildHelpModal();
 
 /* Tab */
 function switchTab(name,btn){
