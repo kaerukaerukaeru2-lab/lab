@@ -246,7 +246,7 @@ textarea.inp{resize:none;line-height:1.5}
 
 <div class="app-header" style="display:flex;align-items:center;justify-content:space-between;">
   <div class="app-title">X Window</div>
-  <button id="helpBtn" aria-label="ヘルプを開く">❓</button>
+  <button id="helpBtn" aria-label="ヘルプを開く" onclick="openHelp()">❓</button>
 </div>
 
 <div class="scroll-area">
@@ -465,14 +465,14 @@ textarea.inp{resize:none;line-height:1.5}
 </nav>
 
 <!-- ヘルプモーダル -->
-<div id="helpOverlay">
+<div id="helpOverlay" onclick="if(event.target===this)closeHelp()">
   <div id="helpModal">
     <div class="help-header">
       <div class="help-header-title">❓ X Window ヘルプ</div>
-      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+      <button id="helpCloseBtn" aria-label="閉じる" onclick="closeHelp()">✕</button>
     </div>
     <div id="helpBody"></div>
-    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <button id="helpCopyPromptBtn" onclick="helpCopyPrompt()">📋 バグチェック用プロンプトをコピー</button>
   </div>
 </div>
 
@@ -619,12 +619,8 @@ init();
 
 // ヘルプモーダル初期化
 buildHelpModal();
-document.getElementById('helpBtn').addEventListener('click', openHelp);
-document.getElementById('helpCloseBtn').addEventListener('click', closeHelp);
-document.getElementById('helpOverlay').addEventListener('click', e=>{
-  if(e.target===document.getElementById('helpOverlay')) closeHelp();
-});
-document.getElementById('helpCopyPromptBtn').addEventListener('click', ()=>{
+
+function helpCopyPrompt(){
   const lessonsText=helpData.lessons.map(l=>`[${l.label}] ${l.text}`).join('\n');
   const text=COMMON_PROMPT+'\n\n【開発教訓】\n'+lessonsText;
   const btn=document.getElementById('helpCopyPromptBtn');
@@ -632,12 +628,12 @@ document.getElementById('helpCopyPromptBtn').addEventListener('click', ()=>{
   const fail=()=>alert('コピーに失敗しました');
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(ok).catch(()=>{
-      try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }catch{ fail(); }
+      try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }catch(e){ fail(); }
     });
   } else {
-    try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }catch{ fail(); }
+    try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }catch(e){ fail(); }
   }
-});
+}
 
 
 const COMMON_PROMPT = `【前提条件】
