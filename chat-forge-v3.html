@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CHAT FORGE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  :root {
+    --bg:         #0c0c0e;
+    --surface:    #161618;
+    --surface2:   #1f1f23;
+    --surface3:   #28282e;
+    --border:     #2a2a32;
+    --accent:     #ff6b35;
+    --accent2:    #ff9a6c;
+    --flow:       #a78bfa;
+    --flow2:      #c4b5fd;
+    --text:       #e8e8ec;
+    --text-muted: #6e6e80;
+    --user-bubble:#1b2a3a;
+    --ai-bubble:  #161618;
+    --success:    #3dd68c;
+    --gemini:     #4285f4;
+    --radius:     16px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ========== HEADER ========== */
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  #header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.12em; color: var(--accent);
+  }
+  #header h1 span {
+    color: var(--text-muted); font-size: 9px;
+    font-weight: 400; letter-spacing: 0.05em;
+  }
+
+  /* Geminiバッジ（シンプル・固定） */
+  #ai-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px;
+    background: rgba(66,133,244,0.1); border: 1px solid rgba(66,133,244,0.3);
+    font-size: 12px; font-weight: 600; color: var(--gemini);
+    user-select: none;
+  }
+  #ai-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gemini); }
+
+  #settings-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); padding: 4px; border-radius: 8px;
+    display: flex; align-items: center; transition: color 0.2s; font-size: 20px;
+  }
+  #settings-btn:active { color: var(--accent); }
+
+  /* ========== MAIN TABS ========== */
+  #main-tabs {
+    display: flex; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0; padding: 0 12px; gap: 2px;
+  }
+  .main-tab {
+    padding: 10px 18px; font-size: 12px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em;
+    cursor: pointer; color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s; user-select: none;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .main-tab:active { opacity: 0.7; }
+  .main-tab.active-chat { color: var(--accent); border-bottom-color: var(--accent); }
+  .main-tab.active-flow { color: var(--flow);  border-bottom-color: var(--flow); }
+  .flow-tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--flow); display: none; flex-shrink: 0; }
+  .flow-tab-dot.show { display: block; }
+
+  /* ========== SCREENS ========== */
+  #screen-chat { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  #screen-flow { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; background: var(--bg); padding: 14px 14px 0; }
+
+  /* ========== CHAT MESSAGES ========== */
+  #chat {
+    flex: 1; overflow-y: auto;
+    padding: 20px 14px;
+    display: flex; flex-direction: column; gap: 14px;
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  }
+  #chat::-webkit-scrollbar { display: none; }
+
+  .msg { display: flex; flex-direction: column; max-width: 84%; animation: fadeUp 0.22s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .msg.user { align-self: flex-end;  align-items: flex-end; }
+  .msg.ai   { align-self: flex-start; align-items: flex-start; }
+
+  .bubble {
+    padding: 11px 14px; border-radius: var(--radius);
+    font-size: 14px; line-height: 1.65;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .bubble.streaming { opacity: 0.92; }
+  .msg.user .bubble { background: var(--user-bubble); border: 1px solid #253445; border-bottom-right-radius: 4px; color: #c8dff0; }
+  .msg.ai   .bubble { background: var(--ai-bubble);   border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .bubble.error-bubble { color: #e07070; border-color: rgba(220,80,80,0.3); background: rgba(220,80,80,0.06); }
+
+  .msg-actions { display: flex; gap: 4px; margin-top: 4px; opacity: 0; transition: opacity 0.2s; }
+  .msg:hover .msg-actions, .msg.show-actions .msg-actions { opacity: 1; }
+  .p1-btn {
+    font-size: 10px; padding: 2px 7px; border-radius: 8px;
+    background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3);
+    color: var(--flow); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; transition: all 0.15s; user-select: none;
+  }
+  .p1-btn:active { background: rgba(167,139,250,0.25); transform: scale(0.94); }
+
+  .memory-used {
+    font-size: 10px; color: var(--accent2); padding: 2px 8px;
+    background: rgba(255,107,53,0.1); border-radius: 10px; margin-bottom: 4px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .thinking {
+    display: flex; align-items: center; gap: 5px; padding: 11px 14px;
+    background: var(--ai-bubble); border: 1px solid var(--border);
+    border-radius: var(--radius); border-bottom-left-radius: 4px;
+  }
+  .thinking span { width:6px; height:6px; border-radius:50%; background:var(--text-muted); animation:bounce 1.2s ease infinite; }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:scale(0.7);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+  /* ========== CHAT INPUT ========== */
+  #input-area {
+    padding: 10px 12px; padding-bottom: calc(10px + var(--safe-bottom));
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+  }
+  #user-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 22px; padding: 11px 16px; color: var(--text);
+    font-family: inherit; font-size: 15px; resize: none; outline: none;
+    max-height: 140px; min-height: 46px; line-height: 1.5;
+    transition: border-color 0.2s; -webkit-appearance: none;
+  }
+  #user-input:focus { border-color: var(--gemini); }
+  #user-input::placeholder { color: var(--text-muted); }
+
+  .input-btn {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.18s; user-select: none;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+  }
+  .input-btn:active { transform: scale(0.91); }
+  .input-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #mic-btn { font-size: 16px; font-family: inherit; font-weight: 400; }
+  #mic-btn.recording { background: rgba(220,50,50,0.12); border-color: #e06060; color: #e06060; animation: micPulse 1s ease-in-out infinite; }
+  @keyframes micPulse { 0%,100%{box-shadow:0 0 8px rgba(220,50,50,0.35)} 50%{box-shadow:0 0 18px rgba(220,50,50,0.65)} }
+  #json-btn { font-size: 10px; letter-spacing: -0.02em; }
+  #json-btn:active { background: rgba(255,107,53,0.1); border-color: var(--accent); color: var(--accent); }
+  #json-btn.copied { background: rgba(61,214,140,0.1); border-color: var(--success); color: var(--success); box-shadow: 0 0 10px rgba(61,214,140,0.25); }
+
+  #send-btn {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--gemini); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.2s; color: white;
+  }
+  #send-btn:active { transform: scale(0.9); opacity: 0.85; }
+  #send-btn:disabled { background: var(--border); cursor: not-allowed; opacity: 0.5; }
+  #send-btn svg { width: 19px; height: 19px; }
+
+  #scroll-fab {
+    position: fixed; bottom: 84px; right: 14px;
+    width: 34px; height: 34px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    z-index: 20; color: var(--text-muted); font-size: 13px;
+  }
+  #scroll-fab.show { opacity: 1; pointer-events: all; }
+
+  .memory-pin { background: none; border: none; font-size: 14px; cursor: pointer; padding: 0; flex-shrink: 0; opacity: 0.3; transition: opacity 0.15s, transform 0.15s; line-height: 1; }
+  .memory-pin.pinned { opacity: 1; }
+  .memory-pin:active { transform: scale(1.3); }
+  .memory-item.pinned-item { border-color: rgba(255,107,53,0.4); background: rgba(255,107,53,0.05); }
+
+  /* ========== FLOW SCREEN ========== */
+  .phase-nav { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; margin-bottom: 12px; flex-shrink: 0; }
+  .phase-nav-btn {
+    padding: 9px 4px; text-align: center; font-size: 10px;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    border-radius: 10px; cursor: pointer; color: var(--text-muted);
+    background: var(--surface2); border: 1px solid var(--border);
+    transition: all 0.18s; line-height: 1.3;
+  }
+  .phase-nav-btn .pnb-num   { font-size: 13px; display: block; margin-bottom: 2px; }
+  .phase-nav-btn .pnb-label { font-size: 8px; opacity: 0.7; display: block; }
+  .phase-nav-btn.active { background: rgba(167,139,250,0.15); border-color: var(--flow); color: var(--flow); box-shadow: 0 0 8px rgba(167,139,250,0.2); }
+  .phase-nav-btn.has-data::after { content:'●'; font-size:6px; color:var(--flow); display:block; margin-top:1px; }
+
+  .phase-focus { display: none; flex-direction: column; flex: 1; min-height: 0; }
+  .phase-focus.active { display: flex; }
+
+  .phase-focus-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-shrink: 0; }
+  .phase-focus-title {
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    color: var(--flow); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .phase-focus-title::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--flow); opacity:0.8; }
+  .phase-copy-btn {
+    font-size: 10px; padding: 3px 10px; border-radius: 8px;
+    background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3);
+    color: var(--flow); cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all 0.15s;
+  }
+  .phase-copy-btn:active { background: rgba(167,139,250,0.25); transform: scale(0.94); }
+
+  .phase-ta {
+    flex: 1; width: 100%; background: var(--surface2);
+    border: 1px solid rgba(167,139,250,0.2); border-radius: 12px; padding: 14px;
+    color: var(--text); font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px; line-height: 1.7; resize: none; outline: none;
+    transition: border-color 0.2s; -webkit-appearance: none; min-height: 120px;
+  }
+  .phase-ta:focus { border-color: var(--flow); box-shadow: 0 0 0 2px rgba(167,139,250,0.1); }
+  .phase-ta::placeholder { color: var(--text-muted); font-size: 12px; }
+
+  .flow-action-row {
+    display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;
+    flex-shrink: 0; flex-wrap: wrap;
+    padding-bottom: calc(0px + var(--safe-bottom));
+  }
+  .flow-macro-btn {
+    flex: 1; min-width: 130px; padding: 11px; background: var(--flow);
+    border: none; border-radius: 12px; color: white; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; line-height: 1.3;
+  }
+  .flow-macro-btn:active { transform: scale(0.97); opacity: 0.85; }
+  .flow-macro-btn.secondary { background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); color: var(--flow); }
+  .flow-macro-btn.secondary:active { background: rgba(167,139,250,0.28); }
+  .flow-macro-btn.danger { background: none; border: 1px solid var(--border); color: var(--text-muted); flex: none; width: 44px; min-width: auto; padding: 11px 0; font-size: 16px; }
+  .flow-macro-btn.danger:active { border-color: #e55; color: #e55; }
+
+  /* ========== SETTINGS MODAL ========== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(4px); z-index: 100;
+    display: flex; align-items: flex-end;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-sheet {
+    width: 100%; background: var(--surface); border-radius: 20px 20px 0 0;
+    padding: 20px 18px calc(20px + var(--safe-bottom));
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+    max-height: 88dvh; overflow-y: auto;
+  }
+  .modal-overlay.open .modal-sheet { transform: translateY(0); }
+
+  .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 14px; }
+  .sheet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .sheet-title  { font-size: 15px; font-weight: 700; color: var(--text); }
+  .sheet-close  {
+    width: 28px; height: 28px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-muted); transition: all 0.15s; flex-shrink: 0;
+  }
+  .sheet-close:active { background: var(--surface3); color: var(--text); transform: scale(0.9); }
+
+  .section-label { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; margin-top: 18px; }
+  .section-label:first-child { margin-top: 0; }
+
+  .tab-bar { display: flex; gap: 4px; background: var(--surface2); border-radius: 10px; padding: 3px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 7px; text-align: center; font-size: 11px; font-weight: 500; border-radius: 7px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+  .tab.active { background: var(--accent); color: white; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .field-group { margin-bottom: 10px; }
+  input[type="text"], input[type="password"], select, textarea.settings-ta {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    outline: none; transition: border-color 0.2s; -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea.settings-ta:focus { border-color: var(--accent); }
+  select { appearance: none; cursor: pointer; }
+  textarea.settings-ta { resize: vertical; min-height: 80px; font-family: 'Noto Sans JP', sans-serif; font-size: 13px; }
+
+  .btn-primary { width: 100%; padding: 13px; background: var(--accent); border: none; border-radius: 12px; color: white; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 14px; font-family: inherit; transition: all 0.2s; }
+  .btn-primary:active { transform: scale(0.98); background: var(--accent2); }
+  .btn-ghost { padding: 7px 12px; background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 12px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+  .btn-ghost:active { border-color: var(--accent); color: var(--accent); }
+  .btn-nuke { width: 100%; padding: 13px; background: rgba(220,50,50,0.08); border: 1.5px solid rgba(220,50,50,0.35); border-radius: 12px; color: #e06060; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; transition: all 0.2s; }
+  .btn-nuke:active { background: rgba(220,50,50,0.18); border-color: #e06060; transform: scale(0.98); }
+  .btn-fetch { width: 100%; padding: 12px; background: rgba(66,133,244,0.1); border: 1.5px solid rgba(66,133,244,0.35); border-radius: 12px; color: #6fa8f5; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 4px; font-family: inherit; transition: all 0.2s; }
+  .btn-fetch:active { background: rgba(66,133,244,0.2); transform: scale(0.98); }
+  .btn-fetch:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .memory-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+  .memory-item { padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; font-size: 12px; display: flex; align-items: flex-start; gap: 8px; }
+  .memory-item-text { flex: 1; color: var(--text); line-height: 1.5; }
+  .memory-item-time { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
+  .memory-del { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; font-size: 14px; flex-shrink: 0; }
+  .memory-del:hover { color: #e55; }
+  .empty-state { text-align: center; padding: 28px; color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+
+  .status-bar { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); padding: 4px 0; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .status-dot.ok { background: var(--success); }
+
+  /* ========== MUSIC PLAYER ========== */
+  .player-now-playing {
+    position: relative; overflow: hidden;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 16px 12px; margin-bottom: 12px;
+  }
+  .player-now-playing::before {
+    content:''; position:absolute; inset:0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(66,133,244,0.03) 3px,rgba(66,133,244,0.03) 4px);
+    pointer-events:none; border-radius:14px;
+  }
+  .pnp-label { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--gemini); letter-spacing:0.18em; text-transform:uppercase; margin-bottom:5px; opacity:0.8; }
+  .pnp-title { font-size:15px; font-weight:700; color:var(--text); letter-spacing:0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pnp-title.is-playing { color:var(--gemini); text-shadow:0 0 10px rgba(66,133,244,0.4); }
+  .pnp-status { display:flex; align-items:center; gap:5px; margin-top:6px; font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-muted); }
+  .pnp-dot { width:5px; height:5px; border-radius:50%; background:var(--border); flex-shrink:0; }
+  .pnp-dot.live { background:var(--gemini); box-shadow:0 0 5px rgba(66,133,244,0.7); animation:liveBlink 1.4s ease-in-out infinite; }
+  @keyframes liveBlink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* シークバー */
+  .player-seek-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .seek-time { font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-muted); white-space:nowrap; width:34px; }
+  .seek-time.right { text-align:right; }
+  .seek-slider {
+    -webkit-appearance:none; appearance:none; flex:1; height:4px;
+    border-radius:2px; background:var(--border); outline:none; cursor:pointer;
+  }
+  .seek-slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--gemini); cursor:pointer; box-shadow:0 0 6px rgba(66,133,244,0.5); }
+  .seek-slider::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:var(--gemini); border:none; cursor:pointer; }
+
+  /* トランスポート */
+  .player-transport {
+    display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:14px;
+  }
+  .tp-btn {
+    background:none; border:none; cursor:pointer; color:var(--text-muted);
+    font-size:20px; padding:6px; border-radius:50%; transition:all 0.18s;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tp-btn:active { transform:scale(0.88); color:var(--text); }
+  .tp-btn.active { color:var(--gemini); }
+  .tp-play {
+    width:56px; height:56px; border-radius:50%;
+    background:var(--surface3); border:1.5px solid var(--border);
+    color:var(--text-muted); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all 0.22s ease; flex-shrink:0;
+  }
+  .tp-play:active { transform:scale(0.91); }
+  .tp-play.playing { background:rgba(66,133,244,0.1); border-color:var(--gemini); color:var(--gemini); animation:playerGlow 2.2s ease-in-out infinite; }
+  @keyframes playerGlow { 0%,100%{box-shadow:0 0 12px rgba(66,133,244,0.3)} 50%{box-shadow:0 0 22px rgba(66,133,244,0.55)} }
+  .tp-play:disabled { opacity:0.3; cursor:not-allowed; animation:none !important; }
+
+  /* 音量 */
+  .player-vol-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .vol-icon { font-size:13px; color:var(--text-muted); flex-shrink:0; width:16px; text-align:center; }
+  .vol-slider {
+    -webkit-appearance:none; appearance:none; flex:1; height:4px;
+    border-radius:2px; background:var(--border); outline:none; cursor:pointer;
+  }
+  .vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:var(--accent); cursor:pointer; box-shadow:0 0 6px rgba(255,107,53,0.4); }
+  .vol-slider::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:var(--accent); border:none; cursor:pointer; }
+  .vol-pct { font-size:11px; color:var(--accent); width:32px; text-align:right; flex-shrink:0; font-family:'JetBrains Mono',monospace; font-weight:600; }
+
+  /* プレイリスト */
+  .playlist-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .playlist-label { font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; }
+  .playlist-count { font-size:11px; color:var(--text-muted); }
+  .playlist-add-btn {
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    width:100%; padding:12px; background:var(--surface2);
+    border:1.5px dashed var(--border); border-radius:12px;
+    color:var(--text-muted); font-size:13px; font-family:'JetBrains Mono',monospace;
+    font-weight:600; cursor:pointer; transition:all 0.18s ease; margin-bottom:10px;
+  }
+  .playlist-add-btn:active { background:rgba(66,133,244,0.06); border-color:var(--gemini); color:var(--gemini); transform:scale(0.98); }
+  .playlist-list { display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; }
+  .playlist-list::-webkit-scrollbar { display:none; }
+  .playlist-item {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 12px; border-radius:10px;
+    background:var(--surface2); border:1px solid var(--border);
+    cursor:pointer; transition:all 0.15s;
+  }
+  .playlist-item:active { background:var(--surface3); }
+  .playlist-item.playing { border-color:rgba(66,133,244,0.4); background:rgba(66,133,244,0.06); }
+  .playlist-idx { font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-muted); width:16px; flex-shrink:0; text-align:center; }
+  .playlist-idx.playing-icon { color:var(--gemini); }
+  .playlist-name { flex:1; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .playlist-item.playing .playlist-name { color:var(--gemini); }
+  .playlist-del-btn { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:15px; padding:2px; flex-shrink:0; line-height:1; transition:color 0.15s; }
+  .playlist-del-btn:hover, .playlist-del-btn:active { color:#e55; }
+
+  /* ========== CONFIRM DIALOG ========== */
+  .confirm-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    padding: 20px;
+  }
+  .confirm-overlay.open { opacity: 1; pointer-events: all; }
+  .confirm-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px 20px; width: 100%; max-width: 300px;
+    text-align: center; transform: scale(0.92);
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .confirm-overlay.open .confirm-box { transform: scale(1); }
+  .confirm-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .confirm-msg { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
+  .confirm-btns { display: flex; gap: 10px; }
+  .confirm-cancel { flex: 1; padding: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .confirm-cancel:active { background: var(--surface3); }
+  .confirm-ok { flex: 1; padding: 11px; border: none; border-radius: 12px; color: white; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .confirm-ok.danger { background: rgba(220,50,50,0.85); }
+  .confirm-ok.normal { background: var(--accent); }
+  .confirm-ok:active { opacity: 0.85; transform: scale(0.97); }
+
+  #toast {
+    position: fixed; top: 64px; left: 50%; transform: translateX(-50%) translateY(-10px);
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 20px; font-size: 13px; color: var(--text);
+    opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 300; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ============================================================
+     HELP MODAL CSS
+     ============================================================ */
+  :root {
+    --help-accent:      #ff6b35;
+    --help-accent-dim:  rgba(255, 107, 53, 0.22);
+    --help-bg:          rgba(12, 12, 14, 0.97);
+    --help-border:      rgba(255, 107, 53, 0.28);
+    --help-text:        #e8e8ec;
+    --help-text-dim:    #6e6e80;
+    --help-section-bg:  rgba(255, 107, 53, 0.1);
+    --help-item-bg:     rgba(255, 255, 255, 0.04);
+    --help-btn-size:    2.4rem;
+  }
+
+  #helpBtn {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 900;
+    width: var(--help-btn-size);
+    height: var(--help-btn-size);
+    border-radius: 50%;
+    border: 1.5px solid var(--help-border);
+    background: var(--help-bg);
+    color: var(--help-accent);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s, transform .15s;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 10px rgba(255, 107, 53, 0.2);
+  }
+  #helpBtn:hover { background: var(--help-accent-dim); transform: scale(1.08); }
+  #helpBtn:active { transform: scale(.95); }
+
+  #helpOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 910;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  #helpOverlay.active { display: flex; }
+
+  #helpModal {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    background: var(--help-bg);
+    border: 1px solid var(--help-border);
+    border-radius: 1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,.6), 0 0 0 1px var(--help-accent-dim);
+  }
+
+  #helpModal .help-header {
+    padding: .9rem 1.2rem;
+    border-bottom: 1px solid var(--help-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #helpModal .help-header-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--help-accent);
+    letter-spacing: .05em;
+  }
+  #helpCloseBtn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 1px solid var(--help-border);
+    background: transparent;
+    color: var(--help-text-dim);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #helpCloseBtn:hover { color: #fff; background: rgba(255,255,255,.08); }
+
+  #helpBody {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: .8rem .8rem 1.2rem;
+    flex: 1;
+  }
+
+  .help-section-title {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: var(--help-accent);
+    text-transform: uppercase;
+    background: var(--help-section-bg);
+    border-radius: .45rem;
+    padding: .45rem .7rem;
+    margin-bottom: .4rem;
+    margin-top: .6rem;
+  }
+  .help-section-title:first-child { margin-top: 0; }
+
+  .help-item {
+    border-radius: .5rem;
+    overflow: hidden;
+    margin-bottom: .3rem;
+  }
+  .help-item-trigger {
+    width: 100%;
+    text-align: left;
+    background: var(--help-item-bg);
+    border: 1px solid transparent;
+    border-radius: .5rem;
+    color: var(--help-text);
+    font-size: .88rem;
+    font-weight: 600;
+    padding: .6rem .8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    transition: border-color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .help-item-trigger:hover { border-color: var(--help-border); }
+  .help-item-trigger.open {
+    border-color: var(--help-accent-dim);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    background: rgba(255, 107, 53, 0.07);
+  }
+  .help-item-trigger .help-chevron {
+    font-size: .7rem;
+    color: var(--help-text-dim);
+    transition: transform .2s;
+    flex-shrink: 0;
+  }
+  .help-item-trigger.open .help-chevron { transform: rotate(180deg); }
+
+  .help-item-body {
+    display: none;
+    background: rgba(255,255,255,.025);
+    border: 1px solid var(--help-accent-dim);
+    border-top: none;
+    border-bottom-left-radius: .5rem;
+    border-bottom-right-radius: .5rem;
+    padding: .65rem .85rem .75rem;
+    font-size: .83rem;
+    color: var(--help-text);
+    line-height: 1.65;
+  }
+  .help-item-body.open { display: block; }
+
+  .help-item-body .lesson-label {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--help-text-dim);
+    text-transform: uppercase;
+    margin-top: .5rem;
+    margin-bottom: .15rem;
+  }
+  .help-item-body .lesson-label:first-child { margin-top: 0; }
+  .help-item-body strong { color: #fff; font-weight: 700; }
+  .help-item-body code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .78rem;
+    background: rgba(0,0,0,.35);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: .25rem;
+    padding: .05em .35em;
+    color: #a0e0ff;
+  }
+
+  #helpCopyPromptBtn {
+    display: block;
+    width: calc(100% - 1.6rem);
+    margin: .6rem .8rem .2rem;
+    padding: .65rem;
+    background: var(--help-accent-dim);
+    border: 1px solid var(--help-border);
+    border-radius: .5rem;
+    color: var(--help-accent);
+    font-size: .85rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    letter-spacing: .04em;
+    transition: background .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  #helpCopyPromptBtn:hover  { background: rgba(255,107,53,.35); }
+  #helpCopyPromptBtn:active { transform: scale(.97); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <h1>CHAT FORGE <span>v2.0</span></h1>
+  <div id="ai-badge">
+    <div class="dot"></div>
+    <span id="ai-name">Gemini</span>
+  </div>
+  <button id="settings-btn" onclick="openSettingsAt('api')">⚙️</button>
+</div>
+
+<!-- MAIN TABS -->
+<div id="main-tabs">
+  <div class="main-tab active-chat" id="tab-chat" onclick="switchScreen('chat')">💬 CHAT</div>
+  <div class="main-tab" id="tab-flow" onclick="switchScreen('flow')">
+    ⚡ FLOW
+    <div class="flow-tab-dot" id="flow-tab-dot"></div>
+  </div>
+</div>
+
+<!-- SCREEN: CHAT -->
+<div id="screen-chat">
+  <div id="chat">
+    <div class="msg ai">
+      <div class="bubble">CHAT FORGE へようこそ。⚙️ からGemini APIキーを設定してスタートできます。<br>会話をFLOWタブに転送するには、メッセージをタップして <strong>▷P1</strong> を押してください。</div>
+    </div>
+  </div>
+  <div id="scroll-fab" onclick="scrollToBottom()">▼</div>
+  <div id="input-area">
+    <textarea id="user-input" placeholder="メッセージを入力..." rows="1"></textarea>
+    <button class="input-btn" id="mic-btn" onclick="toggleSpeech()" title="音声入力">🎤</button>
+    <button class="input-btn" id="json-btn" onclick="convertToJson()" title="入力テキストをJSON形式に変換してクリップボードにコピー">JSON</button>
+    <button id="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- SCREEN: FLOW -->
+<div id="screen-flow">
+  <div class="phase-nav">
+    <button class="phase-nav-btn active" data-phase="p1" onclick="switchPhase('p1')"><span class="pnb-num">P1</span><span class="pnb-label">設計図</span></button>
+    <button class="phase-nav-btn" data-phase="p2" onclick="switchPhase('p2')"><span class="pnb-num">P2</span><span class="pnb-label">UIコード</span></button>
+    <button class="phase-nav-btn" data-phase="p3" onclick="switchPhase('p3')"><span class="pnb-num">P3</span><span class="pnb-label">清書指示</span></button>
+    <button class="phase-nav-btn" data-phase="p4" onclick="switchPhase('p4')"><span class="pnb-num">P4</span><span class="pnb-label">実装</span></button>
+    <button class="phase-nav-btn" data-phase="p5" onclick="switchPhase('p5')"><span class="pnb-num">P5</span><span class="pnb-label">最終確認</span></button>
+  </div>
+  <div class="phase-focus active" id="phase-p1">
+    <div class="phase-focus-header"><div class="phase-focus-title">Phase 1 · 設計図・要件定義</div><button class="phase-copy-btn" onclick="copyPhase('p1')">📋 コピー</button></div>
+    <textarea class="phase-ta" id="flow-p1" placeholder="設計図・要件定義・仕様メモ&#10;&#10;CHATのメッセージから ▷P1 で転送できます" oninput="onPhaseInput('p1')"></textarea>
+  </div>
+  <div class="phase-focus" id="phase-p2">
+    <div class="phase-focus-header"><div class="phase-focus-title">Phase 2 · UIコード・画面仕様</div><button class="phase-copy-btn" onclick="copyPhase('p2')">📋 コピー</button></div>
+    <textarea class="phase-ta" id="flow-p2" placeholder="参考UIコード・コンポーネント定義・画面仕様" oninput="onPhaseInput('p2')"></textarea>
+  </div>
+  <div class="phase-focus" id="phase-p3">
+    <div class="phase-focus-header"><div class="phase-focus-title">Phase 3 · 清書指示</div><button class="phase-copy-btn" onclick="copyPhase('p3')">📋 コピー</button></div>
+    <textarea class="phase-ta" id="flow-p3" placeholder="清書・リファクタ指示・整理内容" oninput="onPhaseInput('p3')"></textarea>
+  </div>
+  <div class="phase-focus" id="phase-p4">
+    <div class="phase-focus-header"><div class="phase-focus-title">Phase 4 · 実装コード</div><button class="phase-copy-btn" onclick="copyPhase('p4')">📋 コピー</button></div>
+    <textarea class="phase-ta" id="flow-p4" placeholder="実装済みコード・スニペット&#10;&#10;「🧠 Claude変換」でP3から自動生成できます" oninput="onPhaseInput('p4')"></textarea>
+  </div>
+  <div class="phase-focus" id="phase-p5">
+    <div class="phase-focus-header"><div class="phase-focus-title">Phase 5 · 最終確認</div><button class="phase-copy-btn" onclick="copyPhase('p5')">📋 コピー</button></div>
+    <textarea class="phase-ta" id="flow-p5" placeholder="最終確認・レビューメモ・デプロイ手順" oninput="onPhaseInput('p5')"></textarea>
+  </div>
+  <div class="flow-action-row">
+    <button class="flow-macro-btn" onclick="flowP1P2Copy()">🚀 P1+P2 合成コピー</button>
+    <button class="flow-macro-btn secondary" onclick="flowP3ToP4()">🧠 P3→P4変換</button>
+    <button class="flow-macro-btn secondary" onclick="flowAllMarkdownCopy()">📋 全MD</button>
+    <button class="flow-macro-btn danger" onclick="confirmClearAllFlow()" title="全フェーズをクリア">🗑</button>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal" onclick="closeIfOverlay(event,'settings-modal')">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">設定</div>
+      <button class="sheet-close" onclick="document.getElementById('settings-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" data-tab="api"    onclick="switchSettingsTab('api')">API</div>
+      <div class="tab" data-tab="memory" onclick="switchSettingsTab('memory')">記憶</div>
+      <div class="tab" data-tab="prompt" onclick="switchSettingsTab('prompt')">プロンプト</div>
+      <div class="tab" data-tab="audio"  onclick="switchSettingsTab('audio')">🎵</div>
+    </div>
+
+    <!-- API -->
+    <div class="tab-content active" id="stab-api">
+      <div class="section-label">Google Gemini APIキー</div>
+      <div class="field-group"><input type="password" id="key-gemini" placeholder="AIza..."></div>
+      <div class="section-label">モデル選択</div>
+      <div class="field-group">
+        <select id="model-select" onchange="saveModelSelection()">
+          <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+          <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+          <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+          <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+        </select>
+      </div>
+      <div class="status-bar"><div class="status-dot" id="status-dot"></div><span id="status-text">APIキー未設定</span></div>
+      <button class="btn-primary" onclick="saveApiSettings()">💾 保存</button>
+      <button class="btn-nuke" onclick="confirmNukeKey()">🔑 キーを消去してリロード</button>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.6;">⚠️ キーはこのブラウザの localStorage のみに保存されます。</p>
+      <div class="section-label">🌐 URLからテキスト取得（RAG入力）</div>
+      <div class="field-group"><input type="text" id="fetch-url-input" placeholder="https://example.com/article" autocomplete="off" autocapitalize="none"></div>
+      <div class="field-group">
+        <select id="fetch-proxy-select">
+          <option value="https://corsproxy.io/?">corsproxy.io（推奨）</option>
+          <option value="https://api.allorigins.win/raw?url=">allorigins.win</option>
+          <option value="https://cors-anywhere.herokuapp.com/">cors-anywhere（要許可）</option>
+          <option value="">プロキシなし</option>
+        </select>
+      </div>
+      <button class="btn-fetch" id="fetch-btn" onclick="fetchUrlContent()">
+        <span id="fetch-btn-label">📥 テキスト取得して入力欄へ</span>
+      </button>
+    </div>
+
+    <!-- 記憶 -->
+    <div class="tab-content" id="stab-memory">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--text-muted)" id="memory-count">0件</span>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-ghost" onclick="addManualMemory()">＋ 追加</button>
+          <button class="btn-ghost" onclick="confirmClearAllMemory()">🗑 全削除</button>
+        </div>
+      </div>
+      <div style="position:relative;margin-bottom:8px;">
+        <input type="text" id="memory-search" placeholder="🔍 検索..." oninput="renderMemoryList()" style="padding-right:28px;">
+        <span id="memory-search-clear" onclick="clearMemorySearch()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);cursor:pointer;font-size:14px;">✕</span>
+      </div>
+      <div id="pin-badge" style="display:none;font-size:11px;color:var(--accent);margin-bottom:8px;padding:4px 8px;background:rgba(255,107,53,0.08);border-radius:8px;">
+        📌 <span id="pin-count">0</span>件がピン止め中
+      </div>
+      <div class="memory-list" id="memory-list"></div>
+    </div>
+
+    <!-- プロンプト -->
+    <div class="tab-content" id="stab-prompt">
+      <div class="section-label">システムプロンプト</div>
+      <div class="field-group"><textarea class="settings-ta" id="system-prompt" rows="5" placeholder="例: あなたは開発支援AIです。"></textarea></div>
+      <div class="section-label">記憶の自動保存</div>
+      <div class="field-group" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="auto-memory" style="width:auto;accent-color:var(--accent)">
+        <label for="auto-memory" style="font-size:13px;color:var(--text);cursor:pointer;">会話から自動的に記憶を抽出</label>
+      </div>
+      <div class="section-label">RAG: 参照記憶の最大件数</div>
+      <div class="field-group">
+        <select id="rag-count">
+          <option value="3">3件</option>
+          <option value="5" selected>5件</option>
+          <option value="8">8件</option>
+          <option value="10">10件</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="savePromptSettings()">💾 保存</button>
+      <div class="section-label" style="margin-top:24px">会話履歴</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="btn-ghost" style="flex:1" onclick="exportHistory('text')">📄 テキスト出力</button>
+        <button class="btn-ghost" style="flex:1" onclick="exportHistory('json')">🗂 JSON出力</button>
+      </div>
+      <button class="btn-nuke" style="margin-top:0" onclick="confirmClearChatHistory()">🗑 会話履歴をクリア</button>
+    </div>
+
+    <!-- 音楽 -->
+    <div class="tab-content" id="stab-audio">
+      <!-- Now Playing -->
+      <div class="player-now-playing">
+        <div class="pnp-label">◈ NOW PLAYING</div>
+        <div class="pnp-title" id="pnp-title">— ファイル未選択 —</div>
+        <div class="pnp-status"><div class="pnp-dot" id="pnp-dot"></div><span id="pnp-status-text">STANDBY</span></div>
+      </div>
+      <!-- シークバー -->
+      <div class="player-seek-row">
+        <span class="seek-time" id="seek-current">0:00</span>
+        <input type="range" class="seek-slider" id="seek-slider" min="0" max="100" value="0" oninput="onSeekInput(this.value)" onchange="onSeekChange(this.value)">
+        <span class="seek-time right" id="seek-total">0:00</span>
+      </div>
+      <!-- トランスポート -->
+      <div class="player-transport">
+        <button class="tp-btn" id="btn-prev" onclick="playPrev()" title="前の曲">⏮</button>
+        <button class="tp-play" id="btn-play" onclick="togglePlay()" disabled>▶</button>
+        <button class="tp-btn" id="btn-next" onclick="playNext()" title="次の曲">⏭</button>
+        <button class="tp-btn" id="btn-repeat" onclick="toggleRepeat()" title="リピート">🔁</button>
+        <button class="tp-btn" id="btn-shuffle" onclick="toggleShuffle()" title="シャッフル">🔀</button>
+      </div>
+      <!-- 音量 -->
+      <div class="player-vol-row">
+        <span class="vol-icon">🔈</span>
+        <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="60" oninput="setVolume(this.value)">
+        <span class="vol-icon">🔊</span>
+        <span class="vol-pct" id="vol-val">60%</span>
+      </div>
+      <!-- プレイリスト -->
+      <div class="playlist-header">
+        <span class="playlist-label">Playlist</span>
+        <span class="playlist-count" id="playlist-count">0曲</span>
+      </div>
+      <button class="playlist-add-btn" onclick="document.getElementById('audio-file-input').click()">
+        <span style="font-size:16px">＋</span> ファイルを追加
+      </button>
+      <input type="file" id="audio-file-input" accept="audio/*" multiple style="display:none" onchange="addAudioFiles(this)">
+      <div class="playlist-list" id="playlist-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">確認</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">キャンセル</button>
+      <button class="confirm-ok" id="confirm-ok-btn" onclick="execConfirm()">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- HELP MODAL -->
+<button id="helpBtn" aria-label="ヘルプを開く">❓</button>
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+// STATE
+// ============================================================
+const GEMINI_MODELS = ['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash','gemini-1.5-flash'];
+
+let state = {
+  model: 'gemini-2.5-flash',
+  geminiKey: '',
+  systemPrompt: '', autoMemory: true, ragCount: 5,
+  memories: [], history: [], flowPhases: {}
+};
+let currentPhase = 'p1', currentScreen = 'chat';
+
+// ============================================================
+// PERSISTENCE
+// ============================================================
+function loadState() {
+  const saved = localStorage.getItem('chatforge_state');
+  if (!saved) return;
+  try {
+    const p = JSON.parse(saved);
+    // 旧stateからの移行
+    if (p.keys?.gemini && !p.geminiKey) p.geminiKey = p.keys.gemini;
+    if (!p.model || !GEMINI_MODELS.includes(p.model)) p.model = GEMINI_MODELS[0];
+    Object.assign(state, p);
+    if (!Array.isArray(state.memories)) state.memories = [];
+    if (!Array.isArray(state.history))  state.history  = [];
+    state.history = state.history.slice(-50);
+    if (!state.flowPhases || typeof state.flowPhases !== 'object') state.flowPhases = {};
+    if (typeof state.systemPrompt !== 'string') state.systemPrompt = '';
+  } catch(e) { console.warn('State load failed:', e); }
+}
+function saveState() {
+  localStorage.setItem('chatforge_state', JSON.stringify({ ...state, history: state.history.slice(-50) }));
+}
+
+// ============================================================
+// SCREEN SWITCH
+// ============================================================
+function switchScreen(screen) {
+  currentScreen = screen;
+  const isFlow = screen === 'flow';
+  document.getElementById('screen-chat').style.display = isFlow ? 'none' : 'flex';
+  document.getElementById('screen-flow').style.display = isFlow ? 'flex' : 'none';
+  document.getElementById('tab-chat').className = 'main-tab' + (!isFlow ? ' active-chat' : '');
+  document.getElementById('tab-flow').className = 'main-tab' + ( isFlow ? ' active-flow' : '');
+  if (isFlow) loadFlowPhases();
+}
+
+// ============================================================
+// キーワード抽出
+// ============================================================
+function extractKeywords(text) {
+  const jpStop = new Set(['です','ます','した','ない','いる','ある','する','この','その','から','まで','について','もの','こと','ため','よう','場合','として','という','ところ','すごく','とても']);
+  const enStop = new Set(['the','and','or','is','in','it','to','of','a','an','for','on','at','by','with','that','this','are','was','be','have','has','had','but','not','from','they','we','you','he','she','do','did','can','will','would','should','could','its','my','your','our']);
+  const jpTokens = text
+    .replace(/[。、！？!?,.\s]/g,' ').split(/[\s　]+/)
+    .map(w => w.trim())
+    .filter(w => /[\u3040-\u9FFF]/.test(w) && w.length >= 2 && !jpStop.has(w));
+  const enTokens = (text.match(/[a-zA-Z]{2,}/g) || [])
+    .map(w => w.toLowerCase()).filter(w => !enStop.has(w));
+  return [...new Set([...jpTokens, ...enTokens])].slice(0, 12);
+}
+
+// ============================================================
+// MEMORY ENGINE
+// ============================================================
+function addMemory(text) {
+  const mem = {
+    id: Date.now() + Math.random(),
+    text: text.slice(0, 200),
+    keywords: extractKeywords(text),
+    ts: new Date().toLocaleDateString('ja-JP',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+  };
+  state.memories.unshift(mem);
+  if (state.memories.length > 200) state.memories = state.memories.slice(0, 200);
+  saveState(); return mem;
+}
+
+function searchMemory(query, topK=5, pool=null) {
+  const source = pool ?? state.memories;
+  if (!source.length) return [];
+  const qkws = extractKeywords(query);
+  if (!qkws.length) return source.slice(0, topK);
+  return source.map(mem => {
+    let score = 0;
+    for (const qw of qkws) {
+      if (mem.keywords.includes(qw)) score += 2;
+      else if (mem.keywords.some(mw => mw.includes(qw)||qw.includes(mw))) score += 1;
+      if (mem.text.includes(qw)) score += 0.5;
+    }
+    return { mem, score };
+  }).filter(s => s.score > 0).sort((a,b) => b.score - a.score).slice(0, topK).map(s => s.mem);
+}
+
+function buildPromptWithMemory(userMessage) {
+  const pinned   = state.memories.filter(m => m.pinned);
+  const unpinned = state.memories.filter(m => !m.pinned);
+  const relevant = searchMemory(userMessage, state.ragCount, unpinned);
+  const allMems  = [...pinned, ...relevant.filter(r => !pinned.find(p => p.id === r.id))];
+  const memBlock = allMems.length
+    ? '【過去の記憶・文脈】\n' + allMems.map((m,i) => `${i+1}. ${m.pinned?'📌 ':''}${m.text}`).join('\n') + '\n\n'
+    : '';
+  return { prompt: memBlock + userMessage, memoryUsed: allMems };
+}
+
+async function tryAutoExtractMemory(userMsg) {
+  if (!state.autoMemory) return;
+  const patterns = [
+    /好き|嫌い|苦手|得意|おすすめ|いつも|よく使|毎[日週月]|習慣/,
+    /\d+[万円人席時間月年代歳]/,
+    /決め|目標|方針|ルール|ポリシー|設計思想|前提/,
+    /覚え|メモ|忘れ|重要|必ず|絶対|ポイント/,
+    /使ってる|使用|環境|仕事|担当|職種|スタック|フレームワーク/,
+    /[\u30A0-\u30FF]{4,}/,
+  ];
+  const sentences = userMsg.split(/[。！？\n]/).map(s => s.trim()).filter(s => s.length > 6);
+  const toSave = sentences.filter(s => patterns.some(p => p.test(s)));
+  if (toSave.length > 0) {
+    const candidate = toSave.slice(0, 2).join(' / ');
+    const isDup = state.memories.some(m => m.text.length > 0 && candidate.includes(m.text.slice(0, 20)));
+    if (!isDup) addMemory(candidate);
+  }
+}
+
+// ============================================================
+// API: Gemini のみ
+// ============================================================
+async function callGemini(messages, onChunk, signal) {
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] }));
+  const sysMsg = messages.find(m => m.role === 'system');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:streamGenerateContent?alt=sse&key=${state.geminiKey}`;
+  const body = { contents };
+  if (sysMsg) body.systemInstruction = { parts: [{ text: sysMsg.content }] };
+  const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal });
+  if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${resp.status}`); }
+  const reader = resp.body.getReader(), dec = new TextDecoder();
+  let full = '', leftover = '';
+  while (true) {
+    const { done, value } = await reader.read(); if (done) break;
+    const chunk = leftover + dec.decode(value, { stream: true });
+    const lines = chunk.split('\n'); leftover = lines.pop() ?? '';
+    for (const line of lines) {
+      const t = line.replace(/^data: /, '').trim(); if (!t) continue;
+      try { const d = JSON.parse(t).candidates?.[0]?.content?.parts?.[0]?.text; if (d) { full += d; onChunk(full); } } catch (_) {}
+    }
+  }
+  return full || '（返答なし）';
+}
+
+// ============================================================
+// CHAT UI
+// ============================================================
+const chatEl = document.getElementById('chat');
+
+function appendMessage(role, text, meta='') {
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  if (meta) {
+    const badge = document.createElement('div');
+    badge.className = 'memory-used';
+    badge.innerHTML = `💡 記憶参照 ${meta}`;
+    div.appendChild(badge);
+  }
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  div.appendChild(bubble);
+
+  if (role === 'user') {
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+    ['p1','p2','p3','p4','p5'].forEach(phase => {
+      const btn = document.createElement('button');
+      btn.className = 'p1-btn';
+      btn.textContent = '▷ P' + phase.slice(1);
+      btn.addEventListener('click', () => { appendToPhase(phase, text); div.classList.remove('show-actions'); });
+      actions.appendChild(btn);
+    });
+    div.appendChild(actions);
+    bubble.addEventListener('click', () => div.classList.toggle('show-actions'));
+    let pt = null;
+    bubble.addEventListener('pointerdown', () => { pt = setTimeout(() => div.classList.add('show-actions'), 500); });
+    bubble.addEventListener('pointerup',    () => clearTimeout(pt));
+    bubble.addEventListener('pointerleave', () => clearTimeout(pt));
+  }
+
+  chatEl.appendChild(div); scrollToBottom(); return bubble;
+}
+
+function createStreamingBubble(meta='') {
+  const div = document.createElement('div'); div.className = 'msg ai';
+  if (meta) { const b = document.createElement('div'); b.className = 'memory-used'; b.innerHTML = `💡 記憶参照 ${meta}`; div.appendChild(b); }
+  const bubble = document.createElement('div'); bubble.className = 'bubble streaming'; bubble.textContent = '▍';
+  div.appendChild(bubble); chatEl.appendChild(div); scrollToBottom(); return bubble;
+}
+
+function appendThinking() {
+  const div = document.createElement('div'); div.className = 'msg ai'; div.id = 'thinking-msg';
+  div.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+  chatEl.appendChild(div); scrollToBottom();
+}
+function removeThinking() { document.getElementById('thinking-msg')?.remove(); }
+function scrollToBottom() { chatEl.scrollTo({ top: chatEl.scrollHeight, behavior: 'smooth' }); }
+
+chatEl.addEventListener('scroll', () => {
+  document.getElementById('scroll-fab').classList.toggle('show',
+    chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight > 120);
+});
+
+function restoreHistoryToChat() {
+  if (!state.history.length) return;
+  document.getElementById('chat').innerHTML = '';
+  for (const m of state.history) {
+    if (m.role === 'user')           appendMessage('user', m.content);
+    else if (m.role === 'assistant') appendMessage('ai',   m.content);
+  }
+  scrollToBottom();
+}
+
+
+// ============================================================
+// SEND MESSAGE
+// ============================================================
+let currentAbortController = null;
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim(); if (!text) return;
+
+  if (!state.geminiKey) {
+    showToast('⚠️ APIキーを設定してください'); openSettingsAt('api'); return;
+  }
+
+  // 前のストリームをキャンセル
+  if (currentAbortController) { currentAbortController.abort(); }
+  currentAbortController = new AbortController();
+  const signal = currentAbortController.signal;
+
+  input.value = ''; autoResizeTextarea();
+  appendMessage('user', text);
+  const { prompt: augmented, memoryUsed } = buildPromptWithMemory(text);
+  const memMeta = memoryUsed.length ? `${memoryUsed.length}件` : '';
+
+  appendThinking();
+  const sendBtn = document.getElementById('send-btn'), micBtn = document.getElementById('mic-btn');
+  sendBtn.disabled = true; micBtn.disabled = true;
+
+  const messages = [];
+  if (state.systemPrompt) messages.push({ role: 'system', content: state.systemPrompt });
+  messages.push(...state.history.slice(-20));
+  messages.push({ role: 'user', content: augmented });
+
+  let bubble = null;
+  try {
+    const reply = await callGemini(messages, (partial) => {
+      if (!bubble) { removeThinking(); bubble = createStreamingBubble(memMeta); }
+      bubble.textContent = partial + ' ▍'; scrollToBottom();
+    }, signal);
+    removeThinking();
+    if (!bubble) bubble = createStreamingBubble(memMeta);
+    const finalText = reply.trim() || '（返答がありませんでした）';
+    bubble.textContent = finalText;
+    if (!reply.trim()) bubble.classList.add('error-bubble');
+    bubble.classList.remove('streaming');
+    state.history.push({ role: 'user', content: text });
+    state.history.push({ role: 'assistant', content: finalText });
+    saveState();
+    await tryAutoExtractMemory(text);
+  } catch (err) {
+    if (err.name === 'AbortError') return; // キャンセルは正常終了
+    removeThinking();
+    bubble?.parentElement?.remove();
+    const eb = appendMessage('ai', `エラー: ${err.message}`);
+    eb.classList.add('error-bubble');
+    showToast(`❌ ${err.message.slice(0, 50)}`);
+  } finally {
+    currentAbortController = null;
+    sendBtn.disabled = false; micBtn.disabled = false;
+    input.focus();
+  }
+}
+
+// ============================================================
+// TEXTAREA
+// ============================================================
+const textarea = document.getElementById('user-input');
+textarea.addEventListener('input', autoResizeTextarea);
+textarea.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+function autoResizeTextarea() {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 140) + 'px';
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function openSettingsAt(tab) {
+  document.getElementById('settings-modal').classList.add('open');
+  switchSettingsTab(tab || 'api'); loadFormValues(); renderMemoryList(); updateApiStatus();
+}
+function closeIfOverlay(e, id) { if (e.target === document.getElementById(id)) document.getElementById(id).classList.remove('open'); }
+function switchSettingsTab(tab) {
+  document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `stab-${tab}`));
+  if (tab === 'memory') renderMemoryList();
+}
+function loadFormValues() {
+  document.getElementById('key-gemini').value     = state.geminiKey;
+  document.getElementById('system-prompt').value  = state.systemPrompt;
+  document.getElementById('auto-memory').checked  = state.autoMemory;
+  document.getElementById('rag-count').value       = state.ragCount;
+  document.getElementById('model-select').value   = state.model;
+}
+
+function saveApiSettings() {
+  state.geminiKey = document.getElementById('key-gemini').value.trim();
+  state.model = document.getElementById('model-select').value;
+  saveState(); updateApiStatus(); updateBadge(); showToast('✅ 保存しました');
+}
+function saveModelSelection() {
+  state.model = document.getElementById('model-select').value;
+  updateBadge(); saveState();
+}
+function updateBadge() {
+  document.getElementById('ai-name').textContent = state.model.length > 14 ? 'Gemini' : state.model;
+}
+function updateApiStatus() {
+  const ok = !!state.geminiKey;
+  document.getElementById('status-dot').className = 'status-dot' + (ok ? ' ok' : '');
+  document.getElementById('status-text').textContent = ok ? 'APIキー設定済み' : 'APIキー未設定';
+}
+function confirmNukeKey() {
+  showConfirm('APIキーを消去', 'APIキーを完全に削除してリロードします。', 'danger', () => {
+    state.geminiKey = ''; saveState();
+    showToast('🔑 削除しました'); setTimeout(() => location.reload(), 900);
+  });
+}
+function savePromptSettings() {
+  state.systemPrompt = document.getElementById('system-prompt').value;
+  state.autoMemory   = document.getElementById('auto-memory').checked;
+  state.ragCount     = parseInt(document.getElementById('rag-count').value);
+  saveState(); showToast('✅ 設定を保存しました');
+}
+function confirmClearChatHistory() {
+  showConfirm('会話履歴をクリア', '会話履歴を全て削除しますか？\n記憶・フェーズデータは保持されます。', 'danger', () => {
+    state.history = []; saveState();
+    document.getElementById('chat').innerHTML =
+      '<div class="msg ai"><div class="bubble">会話履歴をクリアしました。</div></div>';
+    showToast('🗑 会話履歴をクリアしました');
+  });
+}
+
+// ============================================================
+// MEMORY UI
+// ============================================================
+function renderMemoryList() {
+  const list = document.getElementById('memory-list');
+  const count = document.getElementById('memory-count');
+  const badge = document.getElementById('pin-badge');
+  const pinCt = document.getElementById('pin-count');
+  const searchEl = document.getElementById('memory-search');
+  const clearBtn = document.getElementById('memory-search-clear');
+
+  const query = searchEl?.value.trim() || '';
+  if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+  let pool = state.memories;
+  if (query) { const q = query.toLowerCase(); pool = pool.filter(m => m.text.toLowerCase().includes(q)); }
+  count.textContent = query ? `${pool.length} / ${state.memories.length}件` : `${state.memories.length}件の記憶`;
+  const pc = state.memories.filter(m => m.pinned).length;
+  badge.style.display = pc > 0 ? 'block' : 'none'; if (pc > 0) pinCt.textContent = pc;
+
+  if (!pool.length) {
+    list.innerHTML = `<div class="empty-state">${query ? '検索結果なし' : 'まだ記憶がありません。<br>会話すると自動的に記憶されます。'}</div>`;
+    return;
+  }
+  const sorted = [...pool].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+  function hl(text) {
+    if (!query) return escHtml(text);
+    const reEscaped = query.replace(/[-[\]^$.|?*+(){}]/g, '\\$&');
+    return escHtml(text).replace(new RegExp(reEscaped.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'), 'gi'), m => `<mark style="background:rgba(255,107,53,0.3);color:inherit;border-radius:2px;">${m}</mark>`);
+  }
+  list.innerHTML = sorted.map(m => `
+    <div class="memory-item${m.pinned ? ' pinned-item' : ''}">
+      <button class="memory-pin${m.pinned ? ' pinned' : ''}" onclick="togglePin('${m.id}')" title="${m.pinned ? 'ピン解除' : 'ピン止め'}">📌</button>
+      <div class="memory-item-text">${hl(m.text)}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <span class="memory-item-time">${m.ts}</span>
+        <button class="memory-del" onclick="deleteMemory('${m.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+function clearMemorySearch() { const el = document.getElementById('memory-search'); if (el) { el.value = ''; renderMemoryList(); } }
+function togglePin(id) {
+  const m = state.memories.find(m => String(m.id) === String(id)); if (!m) return;
+  m.pinned = !m.pinned; saveState(); renderMemoryList();
+  showToast(m.pinned ? '📌 ピン止めしました' : '📌 ピンを解除しました');
+}
+function deleteMemory(id) { state.memories = state.memories.filter(m => String(m.id) !== String(id)); saveState(); renderMemoryList(); showToast('🗑 記憶を削除しました'); }
+function confirmClearAllMemory() {
+  showConfirm('全記憶を削除', '全ての記憶を削除しますか？', 'danger', () => {
+    state.memories = []; saveState(); renderMemoryList(); showToast('🗑 全記憶を削除しました');
+  });
+}
+function addManualMemory() {
+  showMemoryInput();
+}
+function showMemoryInput() {
+  // confirm overlayを流用してinput用に切り替え
+  const overlay = document.getElementById('confirm-overlay');
+  document.getElementById('confirm-title').textContent = '記憶を追加';
+  document.getElementById('confirm-msg').innerHTML = '<textarea id="manual-memory-input" class="settings-ta" placeholder="記憶として保存するテキスト..." rows="3" style="margin-top:4px;width:100%;"></textarea>';
+  document.getElementById('confirm-ok-btn').className = 'confirm-ok normal';
+  document.getElementById('confirm-ok-btn').textContent = '保存';
+  document.getElementById('confirm-cancel').textContent = 'キャンセル';
+  confirmCallback = () => {
+    const t = document.getElementById('manual-memory-input')?.value?.trim();
+    if (t) { addMemory(t); renderMemoryList(); showToast('💡 記憶を追加しました'); }
+  };
+  overlay.classList.add('open');
+  setTimeout(() => document.getElementById('manual-memory-input')?.focus(), 300);
+}
+
+// ============================================================
+// URL FETCH
+// ============================================================
+async function fetchUrlContent() {
+  const urlInput  = document.getElementById('fetch-url-input');
+  const proxyEl   = document.getElementById('fetch-proxy-select');
+  const btn       = document.getElementById('fetch-btn');
+  const labelEl   = document.getElementById('fetch-btn-label');
+  const targetUrl = urlInput.value.trim();
+  if (!targetUrl || !targetUrl.startsWith('http')) { showToast('⚠️ 有効なURLを入力してください'); return; }
+  const proxy    = proxyEl.value;
+  const finalUrl = proxy ? (proxy === 'https://cors-anywhere.herokuapp.com/' ? proxy + targetUrl : proxy + encodeURIComponent(targetUrl)) : targetUrl;
+  btn.disabled = true; labelEl.textContent = '⏳ 取得中...';
+  try {
+    const resp = await fetch(finalUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const html = await resp.text();
+    const doc  = new DOMParser().parseFromString(html, 'text/html');
+    ['script','style','nav','footer','header','aside','noscript','iframe'].forEach(tag => doc.querySelectorAll(tag).forEach(el => el.remove()));
+    const bodyEl  = doc.querySelector('main,article,[role="main"]') || doc.body;
+    const cleaned = (bodyEl?.innerText || bodyEl?.textContent || '').replace(/\t/g,' ').replace(/[ \u3000]{2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0, 3000);
+    if (!cleaned) throw new Error('テキストを抽出できませんでした');
+    document.getElementById('user-input').value = `[参考URLの内容]: ${targetUrl}\n\n${cleaned}`;
+    autoResizeTextarea();
+    document.getElementById('settings-modal').classList.remove('open');
+    document.getElementById('user-input').focus();
+    showToast(`✅ ${cleaned.length}文字を取得しました`);
+  } catch (err) { showToast(`❌ ${err.message.slice(0, 40)}`); }
+  finally { btn.disabled = false; labelEl.textContent = '📥 テキスト取得して入力欄へ'; }
+}
+
+// ============================================================
+// JSON CONVERTER
+// ============================================================
+function convertToJson() {
+  const raw = document.getElementById('user-input').value.trim();
+  if (!raw) { showToast('⚠️ テキストを入力してください'); return; }
+  const now = new Date(), pad = n => String(n).padStart(2, '0');
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const lines = raw.split(/\n+/).filter(l => l.trim().length > 0);
+  const json  = { "タイプ": "汎用コンテキスト", "生成日時": dateStr, "内容": lines.map((l, i) => ({ "項目": i+1, "テキスト": l.trim() })), "生成元": "CHAT FORGE v2.0" };
+  copyToClipboard(JSON.stringify(json, null, 2)).then(() => flashJsonBtn()).catch(() => showToast('⚠️ コピー失敗'));
+}
+function flashJsonBtn() {
+  const btn = document.getElementById('json-btn');
+  btn.classList.add('copied'); showToast('✅ JSONをコピーしました');
+  setTimeout(() => btn.classList.remove('copied'), 1600);
+}
+
+// ============================================================
+// FLOW ENGINE
+// ============================================================
+const FLOW_KEYS = ['p1','p2','p3','p4','p5'];
+function switchPhase(key) {
+  currentPhase = key;
+  document.querySelectorAll('.phase-nav-btn').forEach(b => b.classList.toggle('active', b.dataset.phase === key));
+  document.querySelectorAll('.phase-focus').forEach(e => e.classList.toggle('active', e.id === `phase-${key}`));
+}
+function onPhaseInput(key) { saveFlowPhases(); updatePhaseNavBadges(); }
+function saveFlowPhases() {
+  const phases = {};
+  FLOW_KEYS.forEach(k => { const el = document.getElementById('flow-'+k); if (el) phases[k] = el.value; });
+  state.flowPhases = phases; saveState(); updateFlowTabDot();
+}
+function loadFlowPhases() {
+  const phases = state.flowPhases || {};
+  FLOW_KEYS.forEach(k => { const el = document.getElementById('flow-'+k); if (el) el.value = phases[k] || ''; });
+  updatePhaseNavBadges(); switchPhase(currentPhase);
+}
+function updatePhaseNavBadges() {
+  FLOW_KEYS.forEach(k => {
+    const btn = document.querySelector(`.phase-nav-btn[data-phase="${k}"]`); if (!btn) return;
+    btn.classList.toggle('has-data', (document.getElementById('flow-'+k)?.value || '').trim().length > 0);
+  });
+}
+function updateFlowTabDot() {
+  document.getElementById('flow-tab-dot').classList.toggle('show', FLOW_KEYS.some(k => (state.flowPhases?.[k] || '').trim().length > 0));
+}
+function appendToPhase(phase, text) {
+  switchScreen('flow'); switchPhase(phase);
+  const el = document.getElementById('flow-' + phase); if (!el) return;
+  el.value += (el.value.length > 0 ? '\n\n---\n' : '') + text;
+  if (!state.flowPhases) state.flowPhases = {};
+  state.flowPhases[phase] = el.value;
+  saveState(); updatePhaseNavBadges(); updateFlowTabDot();
+  showToast('▷ Phase ' + phase.slice(1) + ' に転送しました');
+}
+async function copyPhase(key) {
+  const text = document.getElementById('flow-'+key)?.value?.trim();
+  if (!text) { showToast('⚠️ 内容がありません'); return; }
+  try { await copyToClipboard(text); showToast(`📋 P${key.slice(1)} をコピーしました`); }
+  catch (e) { showToast('⚠️ コピーに失敗しました'); }
+}
+async function flowP1P2Copy() {
+  const p1 = (document.getElementById('flow-p1')?.value || '').trim();
+  const p2 = (document.getElementById('flow-p2')?.value || '').trim();
+  if (!p1 && !p2) { showToast('⚠️ Phase1 または Phase2 に内容を入力してください'); return; }
+  let text = '以下の設計とUIをもとに、最適な実装プロンプトを生成してください。\n\n';
+  if (p1) text += `【要件定義】\n${p1}\n\n`;
+  if (p2) text += `【UI仕様】\n${p2}\n\n`;
+  text += '上記を踏まえて実装計画を提案してください。';
+  try { await copyToClipboard(text); showToast('🚀 P1+P2 合成プロンプトをコピーしました'); }
+  catch (e) { showToast('⚠️ コピーに失敗しました'); }
+}
+async function flowP3ToP4() {
+  const p3 = (document.getElementById('flow-p3')?.value || '').trim();
+  if (!p3) { showToast('⚠️ Phase3 に清書指示を入力してください'); return; }
+  const converted = `以下を実装プロンプトに変換してください：\n\n${p3}\n\n【出力形式】\n- 実装手順を明確に\n- コード例を含める\n- 日本語で回答`;
+  try {
+    await copyToClipboard(converted);
+    const p4El = document.getElementById('flow-p4');
+    if (p4El) { p4El.value = p4El.value.trim().length > 0 ? p4El.value + '\n\n---\n【P3からの変換プロンプト】\n' + converted : converted; saveFlowPhases(); updatePhaseNavBadges(); updateFlowTabDot(); }
+    showToast('🧠 変換プロンプトを P4 に反映 ＆ コピー');
+  } catch (e) { showToast('⚠️ コピーに失敗しました'); }
+}
+function confirmClearAllFlow() {
+  showConfirm('全フェーズをクリア', '全フェーズの内容を削除しますか？', 'danger', () => {
+    FLOW_KEYS.forEach(k => { const el = document.getElementById('flow-'+k); if (el) el.value = ''; });
+    state.flowPhases = {}; saveState(); updateFlowTabDot(); updatePhaseNavBadges();
+    showToast('🗑 全フェーズをクリアしました');
+  });
+}
+
+// ============================================================
+// CLIPBOARD
+// ============================================================
+async function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); }
+  else {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta);
+    if (!ok) throw new Error('コピーに失敗しました');
+  }
+}
+
+// ============================================================
+// SPEECH
+// ============================================================
+let recognition = null, isRecording = false;
+function toggleSpeech() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('⚠️ このブラウザは音声入力非対応です'); return; }
+  if (isRecording) { recognition?.abort(); return; }
+  recognition = new SR();
+  recognition.lang = 'ja-JP'; recognition.interimResults = true; recognition.continuous = false;
+  const btn = document.getElementById('mic-btn'), inputEl = document.getElementById('user-input');
+  const orig = inputEl.placeholder; let ft = '';
+  recognition.onstart = () => { isRecording = true; btn.classList.add('recording'); btn.textContent = '⏹'; inputEl.placeholder = '🎤 話してください...'; };
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) ft += t; else interim = t; }
+    inputEl.value = ft; if (interim) inputEl.placeholder = interim; autoResizeTextarea();
+  };
+  recognition.onend = () => { isRecording = false; recognition = null; btn.classList.remove('recording'); btn.textContent = '🎤'; inputEl.placeholder = orig; if (ft.trim()) showToast('🎤 認識完了'); };
+  recognition.onerror = (e) => { isRecording = false; recognition = null; btn.classList.remove('recording'); btn.textContent = '🎤'; inputEl.placeholder = orig; showToast({ 'not-allowed': '⚠️ マイクの許可が必要です', 'no-speech': '🎤 音声が検出されませんでした', 'network': '⚠️ ネットワークエラー' }[e.error] || '⚠️ 音声エラー'); };
+  recognition.start();
+}
+
+// ============================================================
+// MUSIC PLAYER（プレイリスト・リピート・削除）
+// ============================================================
+let player = {
+  audio: null,
+  playlist: [],
+  currentIdx: -1,
+  playing: false,
+  repeat: false,
+  shuffle: false,
+  volume: 0.6,
+  seeking: false,
+};
+
+function initAudio() {
+  if (player.audio) return;
+  player.audio = new Audio();
+  player.audio.volume = player.volume;
+  player.audio.ontimeupdate = () => { if (!player.seeking) syncSeek(); };
+  player.audio.onloadedmetadata = () => { syncSeek(); };
+  player.audio.onended = () => { onTrackEnded(); };
+  player.audio.onerror = () => { showToast('⚠️ 再生エラー'); player.playing = false; syncPlayerUI(); };
+}
+
+function addAudioFiles(input) {
+  initAudio();
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const url = URL.createObjectURL(file);
+    const name = file.name.replace(/\.[^.]+$/, '');
+    player.playlist.push({ name, url });
+  });
+  renderPlaylist();
+  updatePlaylistCount();
+  if (player.currentIdx < 0 && player.playlist.length > 0) {
+    loadTrack(0);
+  }
+  input.value = '';
+  showToast(`➕ ${files.length}曲追加しました`);
+}
+
+function loadTrack(idx, forcePlay) {
+  if (idx < 0 || idx >= player.playlist.length) return;
+  initAudio();
+  const shouldPlay = forcePlay !== undefined ? forcePlay : player.playing;
+  player.audio.pause();
+  player.playing = false;
+  player.currentIdx = idx;
+  player.audio.src = player.playlist[idx].url;
+  player.audio.load();
+  document.getElementById('pnp-title').textContent = player.playlist[idx].name;
+  document.getElementById('btn-play').disabled = false;
+  renderPlaylist();
+  if (shouldPlay) {
+    player.audio.play().then(() => { player.playing = true; syncPlayerUI(); }).catch(() => { player.playing = false; syncPlayerUI(); });
+  } else {
+    syncPlayerUI();
+  }
+}
+
+function togglePlay() {
+  if (!player.audio || player.currentIdx < 0) { showToast('📂 先にファイルを追加してください'); return; }
+  if (player.playing) {
+    player.audio.pause(); player.playing = false; showToast('⏸ PAUSED'); syncPlayerUI();
+  } else {
+    player.audio.play().then(() => { player.playing = true; showToast('▶ PLAYING'); syncPlayerUI(); }).catch(err => { showToast('⚠️ 再生できませんでした'); player.playing = false; syncPlayerUI(); });
+  }
+}
+
+function playPrev() {
+  if (player.playlist.length === 0) return;
+  const wasPlaying = player.playing;
+  const idx = player.currentIdx <= 0 ? player.playlist.length - 1 : player.currentIdx - 1;
+  loadTrack(idx, wasPlaying);
+}
+
+function getNextIdx() {
+  if (player.playlist.length <= 1) return 0;
+  if (player.shuffle) {
+    let idx;
+    do { idx = Math.floor(Math.random() * player.playlist.length); } while (idx === player.currentIdx);
+    return idx;
+  }
+  return player.currentIdx >= player.playlist.length - 1 ? 0 : player.currentIdx + 1;
+}
+
+function playNext() {
+  if (player.playlist.length === 0) return;
+  const wasPlaying = player.playing;
+  loadTrack(getNextIdx(), wasPlaying);
+}
+
+function onTrackEnded() {
+  if (player.repeat) {
+    player.audio.currentTime = 0;
+    player.audio.play().then(() => { player.playing = true; syncPlayerUI(); }).catch(() => { player.playing = false; syncPlayerUI(); });
+  } else if (player.playlist.length > 1) {
+    loadTrack(getNextIdx(), true);
+  } else {
+    player.playing = false; syncPlayerUI();
+  }
+}
+
+function toggleRepeat() {
+  player.repeat = !player.repeat;
+  document.getElementById('btn-repeat').classList.toggle('active', player.repeat);
+  showToast(player.repeat ? '🔁 リピートON' : '🔁 リピートOFF');
+}
+
+function removeTrack(idx) {
+  const wasCurrentAndPlaying = idx === player.currentIdx && player.playing;
+  // URLを解放
+  URL.revokeObjectURL(player.playlist[idx].url);
+  player.playlist.splice(idx, 1);
+  if (player.playlist.length === 0) {
+    if (player.audio) { player.audio.pause(); player.audio.src = ''; }
+    player.currentIdx = -1; player.playing = false;
+    document.getElementById('pnp-title').textContent = '— ファイル未選択 —';
+    document.getElementById('btn-play').disabled = true;
+    syncSeek();
+  } else if (idx < player.currentIdx) {
+    player.currentIdx--;
+  } else if (idx === player.currentIdx) {
+    player.currentIdx = Math.min(player.currentIdx, player.playlist.length - 1);
+    loadTrack(player.currentIdx, wasCurrentAndPlaying);
+    updatePlaylistCount();
+    showToast('🗑 曲を削除しました');
+    return;
+  }
+  renderPlaylist(); updatePlaylistCount(); syncPlayerUI();
+  showToast('🗑 曲を削除しました');
+}
+
+function renderPlaylist() {
+  const list = document.getElementById('playlist-list');
+  if (player.playlist.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:16px;">プレイリストは空です</div>';
+    return;
+  }
+  list.innerHTML = player.playlist.map((track, i) => `
+    <div class="playlist-item${i === player.currentIdx ? ' playing' : ''}" onclick="onPlaylistItemTap(${i})">
+      <span class="playlist-idx${i === player.currentIdx ? ' playing-icon' : ''}">${i === player.currentIdx && player.playing ? '▶' : i+1}</span>
+      <span class="playlist-name">${escHtml(track.name)}</span>
+      <button class="playlist-del-btn" onclick="event.stopPropagation();removeTrack(${i})" title="削除">✕</button>
+    </div>`).join('');
+}
+
+function onPlaylistItemTap(idx) {
+  if (idx === player.currentIdx) {
+    togglePlay();
+  } else {
+    loadTrack(idx, true);
+  }
+}
+
+function updatePlaylistCount() {
+  document.getElementById('playlist-count').textContent = `${player.playlist.length}曲`;
+}
+
+function syncPlayerUI() {
+  const btn = document.getElementById('btn-play');
+  if (btn) { btn.textContent = player.playing ? '⏸' : '▶'; btn.classList.toggle('playing', player.playing); }
+  const title = document.getElementById('pnp-title');
+  if (title) title.classList.toggle('is-playing', player.playing);
+  const dot  = document.getElementById('pnp-dot'), txt = document.getElementById('pnp-status-text');
+  if (dot && txt) { dot.classList.toggle('live', player.playing); txt.textContent = player.playing ? 'PLAYING' : (player.currentIdx >= 0 ? 'READY' : 'STANDBY'); }
+  renderPlaylist();
+}
+
+function syncSeek() {
+  const audio = player.audio;
+  const slider = document.getElementById('seek-slider');
+  const cur    = document.getElementById('seek-current');
+  const tot    = document.getElementById('seek-total');
+  if (!audio || !slider) return;
+  const duration = isFinite(audio.duration) ? audio.duration : 0;
+  const current  = audio.currentTime || 0;
+  slider.max   = Math.floor(duration) || 100;
+  slider.value = Math.floor(current);
+  if (cur) cur.textContent = fmtTime(current);
+  if (tot) tot.textContent = fmtTime(duration);
+}
+
+function fmtTime(sec) {
+  if (!sec || !isFinite(sec)) return '0:00';
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function onSeekInput(val) {
+  player.seeking = true;
+  const cur = document.getElementById('seek-current');
+  if (cur) cur.textContent = fmtTime(Number(val));
+}
+function onSeekChange(val) {
+  player.seeking = false;
+  if (player.audio) player.audio.currentTime = Number(val);
+}
+
+function setVolume(val) {
+  player.volume = val / 100;
+  const pct = document.getElementById('vol-val'); if (pct) pct.textContent = val + '%';
+  if (player.audio) player.audio.volume = player.volume;
+}
+
+// ボリュームスライダーのfill
+(function initVolFill() {
+  const s = document.getElementById('vol-slider'); if (!s) return;
+  const style = document.createElement('style');
+  style.textContent = `.vol-slider{background:linear-gradient(to right,var(--accent) 0%,var(--accent) var(--vol-fill,60%),var(--border) var(--vol-fill,60%),var(--border) 100%)!important}`;
+  document.head.appendChild(style);
+  s.addEventListener('input', () => s.style.setProperty('--vol-fill', s.value + '%'));
+  s.style.setProperty('--vol-fill', s.value + '%');
+})();
+
+// ============================================================
+// EXPORT HISTORY
+// ============================================================
+function exportHistory(format) {
+  if (!state.history.length) { showToast('⚠️ 会話履歴がありません'); return; }
+  let content, filename, type;
+  if (format === 'json') {
+    content = JSON.stringify({ exportedAt: new Date().toISOString(), model: state.model, messages: state.history }, null, 2);
+    filename = `chat-forge-${Date.now()}.json`;
+    type = 'application/json';
+  } else {
+    const lines = state.history.map(m => `【${m.role === 'user' ? 'あなた' : 'Gemini'}】\n${m.content}`);
+    content = `# CHAT FORGE 会話履歴\n日時: ${new Date().toLocaleString('ja-JP')}\nモデル: ${state.model}\n\n---\n\n` + lines.join('\n\n---\n\n');
+    filename = `chat-forge-${Date.now()}.txt`;
+    type = 'text/plain';
+  }
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(`✅ ${format.toUpperCase()} でエクスポートしました`);
+}
+
+// ============================================================
+// FLOW: 全フェーズ Markdown まとめコピー
+// ============================================================
+async function flowAllMarkdownCopy() {
+  const labels = { p1:'設計図・要件定義', p2:'UIコード・画面仕様', p3:'清書指示', p4:'実装コード', p5:'最終確認' };
+  const parts = FLOW_KEYS.map(k => {
+    const text = (document.getElementById('flow-'+k)?.value || '').trim();
+    if (!text) return null;
+    return `## Phase ${k.slice(1)}: ${labels[k]}\n\n${text}`;
+  }).filter(Boolean);
+  if (!parts.length) { showToast('⚠️ 全フェーズが空です'); return; }
+  const md = `# CHAT FORGE FLOW\n日時: ${new Date().toLocaleString('ja-JP')}\n\n---\n\n` + parts.join('\n\n---\n\n');
+  try { await copyToClipboard(md); showToast(`📋 全${parts.length}フェーズをMarkdownでコピーしました`); }
+  catch (e) { showToast('⚠️ コピーに失敗しました'); }
+}
+
+// ============================================================
+// SHUFFLE
+// ============================================================
+function toggleShuffle() {
+  player.shuffle = !player.shuffle;
+  document.getElementById('btn-shuffle').classList.toggle('active', player.shuffle);
+  showToast(player.shuffle ? '🔀 シャッフルON' : '🔀 シャッフルOFF');
+}
+
+
+let confirmCallback = null;
+function showConfirm(title, msg, type='normal', cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  document.getElementById('confirm-ok-btn').className  = `confirm-ok ${type}`;
+  confirmCallback = cb;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.textContent = 'OK';
+  okBtn.className = 'confirm-ok normal';
+  confirmCallback = null;
+}
+function execConfirm() {
+  closeConfirm();
+  if (confirmCallback) confirmCallback();
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function escHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+updateBadge();
+updateFlowTabDot();
+restoreHistoryToChat();
+
+// モデルselect初期値
+(function() {
+  const sel = document.getElementById('model-select');
+  if (sel) sel.value = state.model;
+})();
+
+// ============================================================
+// HELP MODAL JS
+// ============================================================
+const helpData = {
+  howto: [
+    {
+      title: "💬 CHAT — 基本的な使い方",
+      body: `
+        <strong>メッセージ送信</strong><br>
+        テキストエリアに入力して ▶ ボタン（またはEnter）で送信。複数行は Shift+Enter。
+        <br><br>
+        <strong>🎤 音声入力</strong><br>
+        マイクボタンを押すと音声認識が起動。もう一度押すか自動停止で認識終了。
+        <br><br>
+        <strong>JSON変換</strong><br>
+        入力テキストを <code>JSON</code> ボタンでGemini API形式のJSONに変換してクリップボードへコピー。
+      `
+    },
+    {
+      title: "▷P1 — FLOWへの転送",
+      body: `
+        <strong>メッセージをタップ</strong>するとアクションボタンが表示される。<br>
+        <strong>▷P1〜▷P5</strong> ボタンで、該当フェーズのFLOWテキストエリアにコピー転送。
+        <br><br>
+        FLOWタブに未保存データがあるときはタブに <code>●</code> ドットが表示される。
+      `
+    },
+    {
+      title: "⚡ FLOW — 5フェーズ開発ノート",
+      body: `
+        <strong>P1 設計図・要件定義</strong> → <strong>P2 UIコード</strong> → <strong>P3 清書指示</strong> → <strong>P4 実装コード</strong> → <strong>P5 最終確認</strong><br><br>
+        各フェーズのテキストは自動保存。<br>
+        <code>📋 コピー</code> で個別フェーズをコピー、<code>全フェーズ MD</code> で全体をMarkdown形式でコピーできる。
+      `
+    },
+    {
+      title: "⚙️ 設定 — APIキー・メモリ・音楽",
+      body: `
+        <strong>APIタブ</strong><br>
+        Gemini APIキーとモデルを設定。変更後は「保存」を押す。
+        <br><br>
+        <strong>メモリタブ</strong><br>
+        固定コンテキスト（システムプロンプト的な使い方）とメモリアイテムを管理。📌 でピン留めした項目は常に先頭に挿入される。
+        <br><br>
+        <strong>音楽タブ</strong><br>
+        ローカル音楽ファイルをプレイリストに追加して再生。シャッフル・シーク対応。
+      `
+    },
+    {
+      title: "📤 履歴のエクスポート",
+      body: `
+        設定 → APIタブ下部の <strong>JSON</strong> / <strong>TXT</strong> ボタンで会話履歴をダウンロード。<br>
+        <code>JSON</code> はGemini API形式、<code>TXT</code> は読みやすいテキスト形式。
+      `
+    }
+  ],
+  lessons: [
+    {
+      title: "textarea の自動高さ調整と iOS の挙動",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>scrollHeight</code> ベースで高さを動的に変えると、iOS Safari でキーボード表示時に
+        レイアウトが崩れてスクロール位置が飛ぶことがある。
+        <div class="lesson-label">② どう解決したか</div>
+        <code>max-height</code> を固定し、内部スクロールで吸収。高さ変更はユーザー操作時のみ行う。
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        iOS での textarea 動的リサイズは慎重に。<code>dvh</code> 単位と <code>safe-area-inset-bottom</code> を必ず使うこと。
+      `
+    },
+    {
+      title: "streaming レスポンスの途中キャンセル",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        ストリーミング中に別のメッセージを送ると、前のストリームが残り続けてUIが混線した。
+        <div class="lesson-label">② どう解決したか</div>
+        <code>AbortController</code> を送信のたびに新規生成し、前のリクエストを <code>abort()</code> してから新規送信。
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        fetchストリームは必ず <code>AbortController</code> で管理し、送信前に前のコントローラーをabortすること。
+      `
+    },
+    {
+      title: "localStorage の容量制限と履歴肥大化",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        会話が長くなると localStorage が 5MB 制限に引っかかり保存エラーが発生。
+        <div class="lesson-label">② どう解決したか</div>
+        保存前にサイズをチェックし、上限を超えそうなら古い履歴を自動トリミング。
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        localStorage への保存は try/catch を必ず使い、QuotaExceededError を明示的にハンドルすること。
+      `
+    }
+  ]
+};
+
+(function initHelpModal() {
+  const overlay  = document.getElementById('helpOverlay');
+  const body     = document.getElementById('helpBody');
+  const openBtn  = document.getElementById('helpBtn');
+  const closeBtn = document.getElementById('helpCloseBtn');
+
+  function renderHelp() {
+    body.innerHTML = '';
+    body.appendChild(makeSection('📖 使い方', helpData.howto, 'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓', helpData.lessons, 'lesson'));
+  }
+
+  function makeSection(label, items, prefix) {
+    const wrap = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'help-section-title';
+    title.textContent = label;
+    wrap.appendChild(title);
+
+    items.forEach(function(item, i) {
+      const id = prefix + '-' + i;
+      const row = document.createElement('div');
+      row.className = 'help-item';
+
+      const trigger = document.createElement('button');
+      trigger.className = 'help-item-trigger';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-controls', id);
+      trigger.innerHTML =
+        '<span>' + escHtmlHelp(item.title) + '</span>' +
+        '<span class="help-chevron">▼</span>';
+
+      const panel = document.createElement('div');
+      panel.className = 'help-item-body';
+      panel.id = id;
+      panel.innerHTML = item.body;
+
+      trigger.addEventListener('click', function() {
+        const isOpen = trigger.classList.contains('open');
+        wrap.querySelectorAll('.help-item-trigger.open').forEach(function(t) {
+          t.classList.remove('open');
+          t.setAttribute('aria-expanded', 'false');
+          document.getElementById(t.getAttribute('aria-controls')).classList.remove('open');
+        });
+        if (!isOpen) {
+          trigger.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+          panel.classList.add('open');
+        }
+      });
+
+      row.appendChild(trigger);
+      row.appendChild(panel);
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  function escHtmlHelp(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function openModal() {
+    renderHelp();
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function stripHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+  }
+
+  const COMMON_PROMPT =
+`【前提条件（必ず守れ）】
+- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）
+- localStorage / IndexedDB 使用あり
+- モバイル前提（Android Brave、タップ操作）
+- 既存機能を削除するな
+- UIを破壊するな
+- 同期ロジックを勝手に変えるな
+- QR / LINE の外部API制約を考慮せよ
+`;
+
+  function buildPrompt() {
+    var lines = [COMMON_PROMPT, '【このアプリの教訓（過去のバグ・制約）】'];
+    for (var i = 0; i < helpData.lessons.length; i++) {
+      var l = helpData.lessons[i];
+      lines.push('・' + l.title + '\n  ' + stripHtml(l.body));
+    }
+    return lines.join('\n');
+  }
+
+  function copyPrompt() {
+    var text = buildPrompt();
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('📋 プロンプトをコピーしました');
+    }).catch(function() {
+      showToast('⚠️ コピーに失敗しました');
+    });
+  }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  document.getElementById('helpCopyPromptBtn').addEventListener('click', copyPrompt);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+})();
+</script>
+</body>
+</html>
