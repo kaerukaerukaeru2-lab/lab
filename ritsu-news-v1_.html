@@ -389,32 +389,15 @@
 <footer>律ニュースチャンネル · RSS配信</footer>
 
 <script>
-// ── RSS フィード設定 ──
+// ── RSS フィード設定（Google News RSS / CORS不要）──
+const BASE = 'https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=';
 const FEEDS = {
-  general: [
-    { url: 'https://www3.nhk.or.jp/rss/news/cat0.xml', name: 'NHK' },
-    { url: 'https://feeds.asahi.com/asahi/newsheadlines.rss', name: '朝日新聞' },
-  ],
-  tech: [
-    { url: 'https://feeds.feedburner.com/gizmodo/japan', name: 'Gizmodo JP' },
-    { url: 'https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml', name: 'ITmedia' },
-  ],
-  entertainment: [
-    { url: 'https://www.oricon.co.jp/rss/news/', name: 'ORICON' },
-    { url: 'https://natalie.mu/music/feed/news', name: 'ナタリー' },
-  ],
-  sports: [
-    { url: 'https://www.sponichi.co.jp/rss/news/baseball/flash/', name: 'スポニチ' },
-    { url: 'https://hochi.news/rss/sports', name: 'スポーツ報知' },
-  ],
-  business: [
-    { url: 'https://feeds.japan.cnet.com/rss/cnet/all.rdf', name: 'CNET Japan' },
-    { url: 'https://itpro.nikkeibp.co.jp/rss/itpro.rdf', name: '日経XTECH' },
-  ],
+  general:       BASE + encodeURIComponent('日本 ニュース'),
+  tech:          BASE + encodeURIComponent('テクノロジー IT'),
+  entertainment: BASE + encodeURIComponent('エンタメ 芸能'),
+  sports:        BASE + encodeURIComponent('スポーツ'),
+  business:      BASE + encodeURIComponent('経済 ビジネス'),
 };
-
-// allorigins CORSプロキシ経由でXMLをfetch→DOMParserで解析
-const CORS_PROXY = 'https://api.allorigins.win/get?url=';
 const WMO_CODES = {
   0:'☀️晴れ',1:'🌤うす曇',2:'⛅曇り',3:'☁️曇り',
   45:'🌫霧',48:'🌫霧',
@@ -467,113 +450,57 @@ async function fetchWeather() {
 }
 fetchWeather();
 
-// ── ニュース取得（allorigins + DOMParser方式）──
-async function fetchFeed(feedObj) {
-  try {
-    const proxyUrl = CORS_PROXY + encodeURIComponent(feedObj.url);
-    console.log('[' + feedObj.name + '] fetch開始:', proxyUrl);
-
-    const r = await fetch(proxyUrl, { cache: 'no-store' });
-    if (!r.ok) {
-      const msg = 'HTTP ' + r.status;
-      console.warn('[' + feedObj.name + ']', msg);
-      window._debugLog = (window._debugLog || []);
-      window._debugLog.push(feedObj.name + ': ' + msg);
-      return [];
-    }
-
-    const json = await r.json();
-    const xmlStr = json.contents;
-    if (!xmlStr) {
-      console.warn('[' + feedObj.name + '] contentsが空');
-      window._debugLog = (window._debugLog || []);
-      window._debugLog.push(feedObj.name + ': alloriginsレスポンスにcontentsなし');
-      return [];
-    }
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlStr, 'text/xml');
-
-    // パースエラーチェック
-    const parseErr = doc.querySelector('parsererror');
-    if (parseErr) {
-      console.warn('[' + feedObj.name + '] XML parse error');
-      window._debugLog = (window._debugLog || []);
-      window._debugLog.push(feedObj.name + ': XMLパースエラー');
-      return [];
-    }
-
-    // RSS2.0 or Atom どちらにも対応
-    const isAtom = doc.querySelector('feed') !== null;
-    const items = [];
-
-    if (isAtom) {
-      // Atom形式
-      const entries = doc.querySelectorAll('entry');
-      var limit = Math.min(entries.length, 6);
-      for (var i = 0; i < limit; i++) {
-        var entry = entries[i];
-        var linkEl = entry.querySelector('link[rel="alternate"]') || entry.querySelector('link');
-        items.push({
-          title: getText(entry, 'title'),
-          link: linkEl ? (linkEl.getAttribute('href') || linkEl.textContent.trim()) : '',
-          desc: getText(entry, 'summary') || getText(entry, 'content'),
-          source: feedObj.name,
-          thumb: null,
-          pubDate: getText(entry, 'updated') || getText(entry, 'published'),
-        });
-      }
-    } else {
-      // RSS 2.0形式
-      var nodeList = doc.querySelectorAll('item');
-      var limit2 = Math.min(nodeList.length, 6);
-      for (var j = 0; j < limit2; j++) {
-        var node = nodeList[j];
-        // サムネ抽出（media:thumbnail / enclosure）
-        var thumb = null;
-        var mt = node.querySelector('thumbnail') || node.getElementsByTagNameNS('*','thumbnail')[0];
-        if (mt) thumb = mt.getAttribute('url') || null;
-        if (!thumb) {
-          var enc = node.querySelector('enclosure');
-          if (enc && (enc.getAttribute('type') || '').indexOf('image') !== -1) {
-            thumb = enc.getAttribute('url') || null;
-          }
-        }
-        items.push({
-          title: getText(node, 'title'),
-          link: getText(node, 'link') || (node.querySelector('guid') ? node.querySelector('guid').textContent.trim() : ''),
-          desc: (getText(node, 'description') || getText(node, 'summary')).replace(/<[^>]*>/g, '').trim(),
-          source: feedObj.name,
-          thumb: thumb,
-          pubDate: getText(node, 'pubDate') || getText(node, 'updated'),
-        });
-      }
-    }
-
-    console.log('[' + feedObj.name + '] 取得成功:', items.length + '件');
-    return items;
-
-  } catch(e) {
-    console.error('[' + feedObj.name + '] fetchエラー:', e.message);
-    window._debugLog = (window._debugLog || []);
-    window._debugLog.push(feedObj.name + ': fetchエラー → ' + e.message);
-    return [];
-  }
-}
-
-// XMLノードのテキスト取得ヘルパー
+// ── ニュース取得（Google News RSS / DOMParser）──
 function getText(node, tag) {
   var el = node.querySelector(tag);
   return el ? el.textContent.trim() : '';
 }
 
+async function fetchFeed(url) {
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) {
+      window._debugLog = (window._debugLog || []);
+      window._debugLog.push('HTTP ' + r.status);
+      return [];
+    }
+    const xml = await r.text();
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    if (doc.querySelector('parsererror')) {
+      window._debugLog = (window._debugLog || []);
+      window._debugLog.push('XMLパースエラー');
+      return [];
+    }
+    var nodes = doc.querySelectorAll('item');
+    var items = [];
+    var limit = Math.min(nodes.length, 15);
+    for (var i = 0; i < limit; i++) {
+      var node = nodes[i];
+      var srcEl = node.querySelector('source');
+      items.push({
+        title:   getText(node, 'title'),
+        link:    getText(node, 'link') || getText(node, 'guid'),
+        desc:    getText(node, 'description').replace(/<[^>]*>/g, '').trim(),
+        source:  srcEl ? srcEl.textContent.trim() : 'Google News',
+        thumb:   null,
+        pubDate: getText(node, 'pubDate'),
+      });
+    }
+    return items;
+  } catch(e) {
+    console.error('fetchFeed error:', e.message);
+    window._debugLog = (window._debugLog || []);
+    window._debugLog.push('fetchエラー: ' + e.message);
+    return [];
+  }
+}
+
 async function loadNews(genre) {
   const container = document.getElementById('news-container');
-  container.innerHTML = `<div class="loading-wrap"><div class="spinner"></div><div class="loading-text">ニュース取得中...</div></div>`;
+  container.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><div class="loading-text">ニュース取得中...</div></div>';
 
-  const feeds = FEEDS[genre] || [];
-  const results = await Promise.all(feeds.map(fetchFeed));
-  const items = results.flat();
+  const url = FEEDS[genre];
+  const items = url ? await fetchFeed(url) : [];
 
   if (!items.length) {
     const logs = (window._debugLog||[]).join('<br>');
