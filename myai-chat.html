@@ -25,6 +25,16 @@
     --flow: #a78bfa;
     --radius: 16px;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    /* ヘルプモーダル */
+    --help-accent:       #ff6b35;
+    --help-accent-dim:   rgba(255, 107, 53, 0.22);
+    --help-bg:           rgba(15, 15, 16, 0.97);
+    --help-border:       rgba(255, 107, 53, 0.28);
+    --help-text:         #e8e8ec;
+    --help-text-dim:     #7a7a88;
+    --help-section-bg:   rgba(255, 107, 53, 0.1);
+    --help-item-bg:      rgba(255, 255, 255, 0.04);
+    --help-btn-size:     2rem;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -690,6 +700,161 @@
     margin-top: 8px;
     flex-shrink: 0;
   }
+
+  /* ========== HELP MODAL ========== */
+  /* ❓ボタン: ヘッダー内フロー配置 */
+  #helpBtn {
+    width: var(--help-btn-size);
+    height: var(--help-btn-size);
+    border-radius: 50%;
+    border: 1.5px solid var(--help-border);
+    background: transparent;
+    color: var(--help-accent);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s, transform .15s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  #helpBtn:active { background: var(--help-accent-dim); transform: scale(.94); }
+
+  #helpOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 910;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  #helpOverlay.active { display: flex; }
+
+  #helpModal {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85dvh;
+    background: var(--help-bg);
+    border: 1px solid var(--help-border);
+    border-radius: 1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,.6), 0 0 0 1px var(--help-accent-dim);
+  }
+  #helpModal .help-header {
+    padding: .9rem 1.2rem;
+    border-bottom: 1px solid var(--help-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #helpModal .help-header-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--help-accent);
+    letter-spacing: .05em;
+  }
+  #helpCloseBtn {
+    width: 2rem; height: 2rem;
+    border-radius: 50%;
+    border: 1px solid var(--help-border);
+    background: transparent;
+    color: var(--help-text-dim);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #helpCloseBtn:active { color: #fff; background: rgba(255,255,255,.08); }
+  #helpBody {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: .8rem .8rem 1.2rem;
+    flex: 1;
+  }
+  .help-section-title {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .75rem; font-weight: 700; letter-spacing: .12em;
+    color: var(--help-accent); text-transform: uppercase;
+    background: var(--help-section-bg);
+    border-radius: .45rem; padding: .45rem .7rem;
+    margin-bottom: .4rem; margin-top: .6rem;
+  }
+  .help-section-title:first-child { margin-top: 0; }
+  .help-item { border-radius: .5rem; overflow: hidden; margin-bottom: .3rem; }
+  .help-item-trigger {
+    width: 100%; text-align: left;
+    background: var(--help-item-bg);
+    border: 1px solid transparent;
+    border-radius: .5rem;
+    color: var(--help-text);
+    font-size: .88rem; font-weight: 600;
+    padding: .6rem .8rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    transition: border-color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-item-trigger.open {
+    border-color: var(--help-accent-dim);
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+    background: rgba(255, 107, 53, 0.07);
+  }
+  .help-item-trigger .help-chevron {
+    font-size: .7rem; color: var(--help-text-dim);
+    transition: transform .2s; flex-shrink: 0;
+  }
+  .help-item-trigger.open .help-chevron { transform: rotate(180deg); }
+  .help-item-body {
+    display: none;
+    background: rgba(255,255,255,.025);
+    border: 1px solid var(--help-accent-dim);
+    border-top: none;
+    border-bottom-left-radius: .5rem; border-bottom-right-radius: .5rem;
+    padding: .65rem .85rem .75rem;
+    font-size: .83rem; color: var(--help-text); line-height: 1.65;
+  }
+  .help-item-body.open { display: block; }
+  .help-item-body .lesson-label {
+    font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+    color: var(--help-text-dim); text-transform: uppercase;
+    margin-top: .5rem; margin-bottom: .15rem;
+  }
+  .help-item-body .lesson-label:first-child { margin-top: 0; }
+  .help-item-body strong { color: #fff; font-weight: 700; }
+  .help-item-body code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .78rem;
+    background: rgba(0,0,0,.35);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: .25rem; padding: .05em .35em; color: #a0e0ff;
+  }
+  #helpCopyPromptBtn {
+    display: block;
+    width: calc(100% - 1.6rem);
+    margin: .6rem .8rem .2rem;
+    padding: .65rem;
+    background: var(--help-accent-dim);
+    border: 1px solid var(--help-border);
+    border-radius: .5rem;
+    color: var(--help-accent);
+    font-size: .85rem; font-weight: 700;
+    cursor: pointer; text-align: center; letter-spacing: .04em;
+    transition: background .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  #helpCopyPromptBtn:active { transform: scale(.97); background: rgba(255,107,53,.35); }
 </style>
 </head>
 <body>
@@ -703,6 +868,7 @@
     <span style="color:var(--text-muted);font-size:10px">⇄</span>
   </div>
   <button id="settings-btn" onclick="openSettingsAt('chat')">⚙️</button>
+  <button id="helpBtn" aria-label="ヘルプを開く">❓</button>
 </div>
 
 <!-- CHAT: 思考ログ / 作業メモ -->
@@ -933,6 +1099,18 @@
 
     </div><!-- /panel-flow -->
 
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 AI HUB ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
   </div>
 </div>
 
@@ -1614,6 +1792,244 @@ function syncAudioUI() {
   const style = document.createElement('style');
   style.textContent = `.volume-slider{background:linear-gradient(to right,var(--accent) 0%,var(--accent) var(--fill,60%),var(--border) var(--fill,60%),var(--border) 100%)!important}`;
   document.head.appendChild(style);
+})();
+
+// ============================================================
+// HELP MODAL
+// ============================================================
+const helpData = {
+  howto: [
+    {
+      title: "基本フロー：思考ログ → AI転送",
+      body: `
+        <strong>① メッセージを入力して送信</strong><br>
+        テキストエリアに思考・作業メモを書いて ▷ ボタンを押す。<br>
+        テキストがクリップボードにコピーされ、選択中のAIが新タブで開く。
+        <br><br>
+        <strong>② AIをバッジで切替</strong><br>
+        ヘッダーの <code>⇄バッジ</code> をタップで ChatGPT → Gemini → Claude と循環。<br>
+        ⚙️ → AI切替タブからも選択可能。
+        <br><br>
+        <strong>③ 会話ログからP1に転送</strong><br>
+        AIの返答バブルをタップ → <code>▷P1</code> ボタンで FLOW の Phase1 に転送できる。
+      `
+    },
+    {
+      title: "FLOW：フェーズ分業管理",
+      body: `
+        <strong>FLOWとは</strong><br>
+        P1〜P5 の5フェーズでAI分業を管理するメモ帳。全データはlocalStorageに即時保存。
+        <br><br>
+        <strong>各フェーズの役割</strong><br>
+        <code>P1</code> 設計図・要件定義（Gemini向け）<br>
+        <code>P2</code> UIコード・画面仕様（v0向け）<br>
+        <code>P3</code> 清書指示（ChatGPT向け）<br>
+        <code>P4</code> 実装コード（Claude向け）<br>
+        <code>P5</code> 最終確認・デプロイメモ
+        <br><br>
+        <strong>マクロボタン</strong><br>
+        🚀 <code>P1+P2→ChatGPT用</code>: 2フェーズを合成してプロンプトをコピー<br>
+        🧠 <code>P3→Claude変換</code>: P3をClaude用に変換してP4に自動反映
+      `
+    },
+    {
+      title: "記憶・プロンプト・オーディオ",
+      body: `
+        <strong>記憶タブ</strong><br>
+        手動でメモを追加。チャットログの重要事項を蓄積できる。<br>
+        💾 出力 でJSONエクスポート（LocalStorage肥大化防止に定期実行推奨）。
+        <br><br>
+        <strong>プロンプトタブ</strong><br>
+        作業背景・プロジェクト概要など常時参照するメモを保存。
+        <br><br>
+        <strong>🎵 オーディオタブ</strong><br>
+        ローカルの音楽ファイルをBGMとして再生。設定を閉じても継続再生。<br>
+        リロードするとリセットされるため、長時間作業時は注意。
+      `
+    },
+    {
+      title: "{ } ボタンと JSON コピー",
+      body: `
+        <strong>{ } ボタン（入力欄左）</strong><br>
+        P1/P2 に内容があれば合成プロンプトをコピー。<br>
+        P1/P2 が空のとき → 入力欄のテキストをそのままコピー。
+        <br><br>
+        <strong>FL ボタン</strong><br>
+        FLOWパネルを直接開く。データが入っているとき紫のドットが点灯。
+      `
+    }
+  ],
+  lessons: [
+    {
+      title: "contextmenu グローバルpreventDefault でペーストが死ぬ",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>contextmenu</code> の <code>preventDefault()</code> をグローバルにかけると、
+        Android Brave でテキストエリアへのペーストが完全に無効化された。
+
+        <div class="lesson-label">② どう解決したか</div>
+        パネル開閉状態をフラグ管理し、パネルが閉じているときのみ
+        <code>preventDefault()</code> を呼ぶよう条件分岐。
+        <code>INPUT</code>/<code>TEXTAREA</code> 内は <code>stopPropagation()</code> も免除。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        <code>contextmenu</code> をグローバルで殺さない。
+        INPUTとTEXTAREA内では必ず除外すること。
+      `
+    },
+    {
+      title: "innerHTML で textarea の値を代入すると & が &amp; 化けする",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>textarea.innerHTML = text</code> で値を代入すると、
+        <code>&amp;</code> などがHTMLエンティティに化けて保存される。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>textarea.value = text</code> で代入する。
+        <code>escHtml()</code> 不要。textareaの値は <code>.value</code> で読み書きするのが原則。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        textareaの値の代入は必ず <code>.value</code> を使うこと。
+        <code>innerHTML</code> は使用禁止。
+      `
+    },
+    {
+      title: "Object.assign で state ロード / インデックスループ統一",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>for...of</code> や <code>forEach</code> がAndroid Braveの古いエンジンで
+        クラッシュするケースがあった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>Object.assign(state, parsed)</code> でstateをロード。
+        配列ループは <code>for (var i = 0; i &lt; arr.length; i++)</code> に統一。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        Android Brave対応として <code>Object.assign</code> とインデックスループを標準化すること。
+      `
+    },
+    {
+      title: "LocalStorage は file:// では動作しない",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        ローカルファイルとして開いた場合（<code>file://</code>）、
+        <code>localStorage</code> が使えずデータが保存されない。
+
+        <div class="lesson-label">② どう解決したか</div>
+        GitHub Pages（<code>https://</code>）でホスティングして開く。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        localStorageを使うアプリは必ずHTTPSで開くこと。
+        file://環境での動作は保証しない。
+      `
+    }
+  ]
+};
+
+const COMMON_PROMPT =
+`【前提条件（必ず守れ）】
+- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）
+- localStorage 使用あり
+- モバイル前提（Android Brave、タップ操作）
+- 既存機能を削除するな
+- UIを破壊するな
+- 同期ロジックを勝手に変えるな
+`;
+
+function helpStripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
+function helpBuildPrompt() {
+  var lines = [COMMON_PROMPT, '【このアプリの教訓（過去のバグ・制約）】'];
+  for (var i = 0; i < helpData.lessons.length; i++) {
+    var l = helpData.lessons[i];
+    lines.push('・' + l.title + '\n  ' + helpStripHtml(l.body));
+  }
+  return lines.join('\n');
+}
+
+(function initHelpModal() {
+  var overlay  = document.getElementById('helpOverlay');
+  var body     = document.getElementById('helpBody');
+  var openBtn  = document.getElementById('helpBtn');
+  var closeBtn = document.getElementById('helpCloseBtn');
+  var copyBtn  = document.getElementById('helpCopyPromptBtn');
+
+  function escHelpHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function makeSection(label, items, prefix) {
+    var wrap = document.createElement('div');
+    var title = document.createElement('div');
+    title.className = 'help-section-title';
+    title.textContent = label;
+    wrap.appendChild(title);
+    for (var i = 0; i < items.length; i++) {
+      (function(item, idx) {
+        var id = prefix + '-' + idx;
+        var row = document.createElement('div');
+        row.className = 'help-item';
+        var trigger = document.createElement('button');
+        trigger.className = 'help-item-trigger';
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-controls', id);
+        trigger.innerHTML = '<span>' + escHelpHtml(item.title) + '</span><span class="help-chevron">▼</span>';
+        var panel = document.createElement('div');
+        panel.className = 'help-item-body';
+        panel.id = id;
+        panel.innerHTML = item.body;
+        trigger.addEventListener('click', function() {
+          var isOpen = trigger.classList.contains('open');
+          var triggers = wrap.querySelectorAll('.help-item-trigger.open');
+          for (var j = 0; j < triggers.length; j++) {
+            triggers[j].classList.remove('open');
+            triggers[j].setAttribute('aria-expanded', 'false');
+            document.getElementById(triggers[j].getAttribute('aria-controls')).classList.remove('open');
+          }
+          if (!isOpen) {
+            trigger.classList.add('open');
+            trigger.setAttribute('aria-expanded', 'true');
+            panel.classList.add('open');
+          }
+        });
+        row.appendChild(trigger);
+        row.appendChild(panel);
+        wrap.appendChild(row);
+      })(items[i], i);
+    }
+    return wrap;
+  }
+
+  function renderHelp() {
+    body.innerHTML = '';
+    body.appendChild(makeSection('📖 使い方', helpData.howto, 'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓', helpData.lessons, 'lesson'));
+  }
+
+  function openModal() {
+    renderHelp();
+    overlay.classList.add('active');
+  }
+  function closeModal() {
+    overlay.classList.remove('active');
+  }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+  copyBtn.addEventListener('click', function() {
+    var text = helpBuildPrompt();
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('📋 プロンプトをコピーしました');
+    }).catch(function() {
+      showToast('⚠️ コピー失敗');
+    });
+  });
 })();
 </script>
 </body>
