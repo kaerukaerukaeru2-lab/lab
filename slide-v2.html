@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>コマ送りくん</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0c10;
+  --surface:#12151c;
+  --surface2:#1a1e28;
+  --surface3:#242a38;
+  --accent:#00e5ff;
+  --accent2:#00b8d4;
+  --accent-glow:rgba(0,229,255,.25);
+  --warning:#ff6b35;
+  --danger:#ff3b5c;
+  --success:#00e676;
+  --text:#e8eaed;
+  --text2:#8892a0;
+  --border:#2a3040;
+  --border-glow:rgba(0,229,255,.15);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'SF Pro Display','Segoe UI',system-ui,sans-serif;overflow:hidden}
+
+/* ===== TOP SCREEN ===== */
+#topScreen{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:20px;padding:24px;
+  background:linear-gradient(145deg,#0d1018 0%,#0a0c10 50%,#080a0e 100%);
+  position:relative;
+}
+#topScreen::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(0,229,255,.06),transparent);
+  pointer-events:none;
+}
+#logoBox{
+  position:relative;
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border:1px solid var(--border);
+  border-radius:20px;padding:24px 32px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+}
+#logoBox::after{
+  content:'';position:absolute;inset:-1px;border-radius:20px;
+  background:linear-gradient(180deg,rgba(0,229,255,.2),transparent 50%);
+  pointer-events:none;z-index:-1;
+}
+#topScreen h1{font-size:32px;color:var(--text);font-weight:700;letter-spacing:4px;text-shadow:0 0 20px var(--accent-glow)}
+.ver{font-size:11px;color:var(--accent);letter-spacing:4px;font-family:'SF Mono','Fira Code',monospace;margin-top:4px}
+.topBtn{
+  position:relative;
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border:1px solid var(--border);color:var(--text);border-radius:12px;
+  padding:16px 36px;font-size:16px;font-weight:600;cursor:pointer;
+  width:100%;max-width:340px;
+  box-shadow:0 4px 16px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05);
+  transition:all .2s;
+}
+.topBtn:active{transform:scale(.98)}
+.topBtn.primary{background:linear-gradient(180deg,var(--accent2) 0%,#0097a7 100%);border-color:var(--accent);color:#000;font-weight:700}
+#topHint{font-size:11px;color:var(--text2);text-align:center;line-height:2;letter-spacing:.5px}
+#startFileInput{display:none}
+
+/* ===== VIEWER ===== */
+#viewer{display:none;flex-direction:column;height:100%;position:relative;background:var(--bg)}
+
+#slideWrap{
+  flex:1;overflow:hidden;position:relative;
+  background:linear-gradient(180deg,#000 0%,#050608 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+#slideImg{max-width:100%;max-height:100%;object-fit:contain;position:absolute;transition:none}
+#slideImg.fade{animation:fadeIn .4s ease}
+#slideImg.fadeS{animation:fadeIn .25s ease}
+#slideImg.fadeL{animation:fadeIn .7s ease}
+#slideImg.slideX{animation:slideInX .4s ease}
+#slideImg.slideXS{animation:slideInX .25s ease}
+#slideImg.slideXL{animation:slideInX .7s ease}
+#slideImg.slideY{animation:slideInY .4s ease}
+#slideImg.slideYS{animation:slideInY .25s ease}
+#slideImg.slideYL{animation:slideInY .7s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideInX{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideInY{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+#flashOverlay{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .05s;z-index:5}
+
+/* 上部ナビ（TOPボタンのみ・最小限） */
+#topNav{
+  position:absolute;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;
+  padding:10px 12px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(10,12,16,.85) 0%,transparent 100%);
+}
+#topNav>*{pointer-events:auto}
+.navBtn{
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border:1px solid var(--border);
+  color:var(--text2);border-radius:8px;padding:8px 14px;
+  font-size:12px;font-weight:600;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);transition:all .15s;
+}
+#addImgInput{display:none}
+
+/* ===== TACTICAL CONSOLE ===== */
+#console{
+  background:linear-gradient(180deg,var(--surface) 0%,#0d0f14 100%);
+  border-top:1px solid var(--border);padding:12px;
+  display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;
+  box-shadow:0 -4px 24px rgba(0,0,0,.5);
+}
+.panelLeft{display:flex;flex-direction:column;gap:6px}
+.panelLabel{font-size:9px;color:var(--accent);letter-spacing:3px;font-family:'SF Mono',monospace;text-align:center}
+.speedWrap{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;box-shadow:inset 0 2px 6px rgba(0,0,0,.4);
+}
+.speedSlider{
+  width:100%;height:6px;-webkit-appearance:none;appearance:none;
+  background:linear-gradient(90deg,var(--border) 0%,var(--accent2) 100%);
+  border-radius:3px;cursor:pointer;
+}
+.speedSlider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;
+  background:linear-gradient(180deg,var(--accent) 0%,var(--accent2) 100%);
+  border-radius:50%;cursor:pointer;box-shadow:0 0 10px var(--accent-glow);
+}
+.speedVal{font-size:13px;color:var(--accent);text-align:center;font-family:'SF Mono',monospace;margin-top:6px;font-weight:600}
+
+/* 中央コア */
+.coreNav{display:flex;flex-direction:column;align-items:center;gap:8px}
+.coreRow{display:flex;align-items:center;gap:8px}
+.coreBtn{
+  position:relative;width:56px;height:56px;
+  background:linear-gradient(145deg,var(--surface3) 0%,var(--surface) 100%);
+  border:2px solid var(--border);border-radius:14px;
+  color:var(--text);font-size:22px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08);
+  transition:all .15s;
+}
+.coreBtn:active{transform:scale(.95)}
+.pageDisplay{
+  background:linear-gradient(180deg,#000 0%,var(--surface) 100%);
+  border:2px solid var(--border);border-radius:12px;padding:10px 20px;
+  min-width:90px;text-align:center;box-shadow:inset 0 2px 8px rgba(0,0,0,.6);
+}
+.pageNum{font-size:22px;font-weight:800;color:var(--accent);font-family:'SF Mono',monospace;text-shadow:0 0 10px var(--accent-glow)}
+.pageTotal{font-size:11px;color:var(--text2);margin-top:2px}
+.subRow{display:flex;gap:6px;margin-top:4px}
+.subBtn{
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border:1px solid var(--border);border-radius:8px;padding:6px 14px;
+  font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;
+}
+.subBtn.active{background:linear-gradient(180deg,var(--accent2) 0%,#0097a7 100%);border-color:var(--accent);color:#000}
+
+/* 右パネル：BGM */
+.panelRight{display:flex;flex-direction:column;gap:8px;align-items:center}
+.bgmBigBtn{
+  width:100%;
+  background:linear-gradient(145deg,var(--surface3) 0%,var(--surface) 100%);
+  border:1px solid var(--border);border-radius:12px;
+  color:var(--text2);font-size:11px;font-weight:700;letter-spacing:1px;
+  cursor:pointer;transition:all .15s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;padding:8px 4px;min-height:56px;
+}
+.bgmBigBtn.playing{
+  background:linear-gradient(145deg,#1a3a2a 0%,#0d2018 100%);
+  border-color:var(--success);color:var(--success);
+  box-shadow:0 0 16px rgba(0,230,118,.2);
+}
+.bgmBigBtn.noSrc{opacity:.45;cursor:default}
+.bgmIcon{font-size:20px;line-height:1}
+.bgmLabel{font-size:9px;letter-spacing:1px}
+
+/* FXトグル（⚙️メニュー内で使用） */
+.fxRow{display:flex;gap:8px;justify-content:center}
+.fxToggle{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;cursor:pointer;transition:all .15s;flex:1;
+}
+.fxToggle.on{
+  background:linear-gradient(180deg,var(--surface3) 0%,var(--surface2) 100%);
+  border-color:var(--warning);box-shadow:0 0 12px rgba(255,107,53,.25);
+}
+.fxIcon{font-size:18px}
+.fxLabel{font-size:9px;color:var(--text2);letter-spacing:1px}
+.fxToggle.on .fxLabel{color:var(--warning)}
+
+/* プログレスバー（通常フロー・consoleの真上に配置） */
+#progressWrap{
+  height:4px;background:var(--surface2);cursor:pointer;flex-shrink:0;
+}
+#progressBar{
+  height:100%;width:0;
+  background:linear-gradient(90deg,var(--accent2),var(--accent));
+  box-shadow:0 0 8px var(--accent-glow);transition:width .2s;
+}/* ===== MENU ===== */
+#menuOverlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.8);backdrop-filter:blur(8px);
+  z-index:100;align-items:flex-end;
+}
+#menuOverlay.open{display:flex}
+#menuPanel{
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border-radius:24px 24px 0 0;border:1px solid var(--border);border-bottom:none;
+  width:100%;max-height:85vh;overflow-y:auto;padding:16px 16px 32px;
+  display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 -8px 32px rgba(0,0,0,.5);
+}
+.mClose{
+  align-self:flex-end;background:var(--surface3);border:1px solid var(--border);
+  color:var(--text2);border-radius:8px;padding:6px 16px;font-size:12px;cursor:pointer;transition:all .15s;
+}
+.mSec{font-size:10px;color:var(--accent);letter-spacing:3px;text-align:center;margin-top:4px;font-family:'SF Mono',monospace}
+.mRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.mBtn{
+  flex:1;min-width:90px;
+  background:linear-gradient(180deg,var(--surface3) 0%,var(--surface2) 100%);
+  border:1px solid var(--border);color:var(--text);border-radius:10px;
+  padding:10px 8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;
+}
+.mBtn.on{background:linear-gradient(180deg,var(--accent2) 0%,#0097a7 100%);border-color:var(--accent);color:#000}
+.mBtn.teal{background:linear-gradient(180deg,#26a69a 0%,#00897b 100%);border-color:#4db6ac;color:#fff}
+.mBtn.sm{min-width:70px;font-size:11px;padding:8px 6px}
+.mBtn.dangerBtn{background:linear-gradient(180deg,#c62828 0%,#8b1a1a 100%);border-color:var(--danger);color:#fff}
+.volRow{display:flex;align-items:center;gap:10px;padding:0 8px}
+.volRow label{font-size:11px;color:var(--text2);white-space:nowrap}
+.volRow input[type=range]{flex:1;accent-color:var(--accent)}
+.volRow span{font-size:12px;color:var(--accent);min-width:36px;text-align:right;font-family:monospace}
+#storageInfo{font-size:10px;color:var(--text2);text-align:center}
+
+/* ===== GALLERY ===== */
+#galleryOverlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;flex-direction:column}
+#galleryOverlay.open{display:flex}
+#galleryHeader{
+  padding:12px 16px;display:flex;align-items:center;gap:12px;
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+#galleryHeader h2{flex:1;font-size:15px;font-weight:600}
+#galleryEditBtn{
+  background:var(--surface3);border:1px solid var(--border);
+  color:var(--text2);border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;transition:all .15s;
+}
+#galleryEditBtn.on{background:linear-gradient(180deg,#c62828 0%,#8b1a1a 100%);border-color:var(--danger);color:#fff}
+#galleryClose{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:0 4px}
+#galleryGrid{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+
+.thumbItem{
+  aspect-ratio:1;border-radius:10px;overflow:hidden;position:relative;
+  border:2px solid transparent;cursor:pointer;background:var(--surface2);transition:all .15s;
+}
+.thumbItem:hover{border-color:var(--text2)}
+.thumbItem.current{border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow)}
+.thumbItem img{width:100%;height:100%;object-fit:cover}
+.thumbNum{position:absolute;bottom:4px;left:6px;font-size:10px;color:#fff;font-weight:600;text-shadow:0 1px 3px #000;pointer-events:none}
+.thumbVoice{position:absolute;top:4px;right:6px;font-size:10px;pointer-events:none}
+.thumbSpin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)}
+.thumbDel{
+  position:absolute;top:4px;left:4px;display:none;
+  background:var(--danger);border:none;color:#fff;
+  border-radius:50%;width:24px;height:24px;font-size:12px;
+  cursor:pointer;padding:0;z-index:10;
+}
+.thumbItem.editMode .thumbDel{display:flex;align-items:center;justify-content:center}
+
+#voiceFileInput{display:none}
+
+/* ===== TOAST ===== */
+#toast{
+  position:fixed;bottom:140px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
+  border:1px solid var(--border);color:var(--text);border-radius:12px;
+  padding:10px 20px;font-size:12px;font-weight:500;pointer-events:none;opacity:0;
+  transition:opacity .3s;z-index:999;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+#toast.show{opacity:1}
+
+@media(min-width:480px){
+  #console{padding:16px 24px;gap:20px}
+  .coreBtn{width:64px;height:64px;font-size:26px}
+  .pageDisplay{padding:12px 28px;min-width:110px}
+  .pageNum{font-size:26px}
+}
+
+/* ============================================================
+   HELP MODAL CSS
+   ============================================================ */
+:root {
+  --help-accent:       #00e5ff;
+  --help-accent-dim:   rgba(0,229,255,.2);
+  --help-bg:           rgba(10,12,16,.97);
+  --help-border:       rgba(0,229,255,.2);
+  --help-text:         #c8d0dc;
+  --help-text-dim:     #5a6880;
+  --help-section-bg:   rgba(0,229,255,.08);
+  --help-item-bg:      rgba(255,255,255,.04);
+  --help-btn-size:     2.2rem;
+}
+#helpBtn {
+  position:fixed;bottom:1rem;right:1rem;z-index:900;
+  width:var(--help-btn-size);height:var(--help-btn-size);
+  border-radius:50%;border:1.5px solid var(--help-border);
+  background:var(--help-bg);color:var(--help-accent);
+  font-size:1rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,transform .15s;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 0 10px rgba(0,229,255,.2);
+}
+#helpBtn:hover{background:var(--help-accent-dim);transform:scale(1.08)}
+#helpBtn:active{transform:scale(.95)}
+#helpOverlay{
+  display:none;position:fixed;inset:0;z-index:910;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:1rem;
+}
+#helpOverlay.active{display:flex}
+#helpModal{
+  position:relative;width:100%;max-width:480px;max-height:85vh;
+  background:var(--help-bg);border:1px solid var(--help-border);
+  border-radius:1rem;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px var(--help-accent-dim);
+}
+#helpModal .help-header{
+  padding:.9rem 1.2rem;border-bottom:1px solid var(--help-border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#helpModal .help-header-title{font-size:1rem;font-weight:700;color:var(--help-accent);letter-spacing:.05em}
+#helpCloseBtn{
+  width:2rem;height:2rem;border-radius:50%;border:1px solid var(--help-border);
+  background:transparent;color:var(--help-text-dim);font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:color .15s,background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+#helpCloseBtn:hover{color:#fff;background:rgba(255,255,255,.08)}
+#helpBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem .8rem 1.2rem;flex:1}
+.help-section-title{
+  display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700;
+  letter-spacing:.12em;color:var(--help-accent);text-transform:uppercase;
+  background:var(--help-section-bg);border-radius:.45rem;
+  padding:.45rem .7rem;margin-bottom:.4rem;margin-top:.6rem;
+}
+.help-section-title:first-child{margin-top:0}
+.help-item{border-radius:.5rem;overflow:hidden;margin-bottom:.3rem}
+.help-item-trigger{
+  width:100%;text-align:left;background:var(--help-item-bg);border:1px solid transparent;
+  border-radius:.5rem;color:var(--help-text);font-size:.88rem;font-weight:600;
+  padding:.6rem .8rem;cursor:pointer;display:flex;align-items:center;
+  justify-content:space-between;gap:.5rem;transition:border-color .15s,background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.help-item-trigger:hover{border-color:var(--help-border)}
+.help-item-trigger.open{
+  border-color:var(--help-accent-dim);border-bottom-left-radius:0;border-bottom-right-radius:0;
+  background:rgba(0,229,255,.06);
+}
+.help-item-trigger .help-chevron{font-size:.7rem;color:var(--help-text-dim);transition:transform .2s;flex-shrink:0}
+.help-item-trigger.open .help-chevron{transform:rotate(180deg)}
+.help-item-body{
+  display:none;background:rgba(255,255,255,.025);
+  border:1px solid var(--help-accent-dim);border-top:none;
+  border-bottom-left-radius:.5rem;border-bottom-right-radius:.5rem;
+  padding:.65rem .85rem .75rem;font-size:.83rem;color:var(--help-text);line-height:1.65;
+}
+.help-item-body.open{display:block}
+.help-item-body .lesson-label{
+  font-size:.7rem;font-weight:700;letter-spacing:.08em;color:var(--help-text-dim);
+  text-transform:uppercase;margin-top:.5rem;margin-bottom:.15rem;
+}
+.help-item-body .lesson-label:first-child{margin-top:0}
+.help-item-body strong{color:#fff;font-weight:700}
+.help-item-body code{
+  font-family:'Courier New',monospace;font-size:.78rem;
+  background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);
+  border-radius:.25rem;padding:.05em .35em;color:#a0e0ff;
+}
+/* ============================================================
+   HELP MODAL CSS ここまで
+   ============================================================ */
+</style>
+</head>
+<body>
+
+<!-- TOP SCREEN -->
+<div id="topScreen">
+  <div id="logoBox">
+    <h1>コマ送りくん</h1>
+    <div class="ver">TACTICAL CONSOLE v4.4</div>
+  </div>
+  <button class="topBtn primary" onclick="document.getElementById('startFileInput').click()">📂 フォルダから画像を選択</button>
+  <button class="topBtn" onclick="tryRestore()">🔄 前回の続きを再開</button>
+  <button class="topBtn" id="topBgmBtn" style="display:none" onclick="toggleTopBgm()">🎵 BGM再生</button>
+  <div id="topHint">JPG・PNG・GIF・WebP対応<br>複数選択でまとめて読み込み<br>IndexedDB永続保存対応</div>
+  <input type="file" id="startFileInput" accept="image/*" multiple>
+</div>
+
+<!-- VIEWER -->
+<div id="viewer">
+  <div id="slideWrap">
+    <img id="slideImg" src="" alt="">
+    <div id="flashOverlay"></div>
+    <div id="topNav">
+      <button class="navBtn" id="topBackBtn">◀ TOP</button>
+    </div>
+  </div>
+  <input type="file" id="addImgInput" accept="image/*" multiple>
+
+  <!-- Progress Bar（通常フロー：slideWrapとconsoleの間） -->
+  <div id="progressWrap"><div id="progressBar"></div></div>
+
+  <!-- TACTICAL CONSOLE -->
+  <div id="console">
+    <!-- LEFT: SPEED -->
+    <div class="panelLeft">
+      <div class="panelLabel">SPEED</div>
+      <div class="speedWrap">
+        <input type="range" class="speedSlider" id="speedSlider" min="0.5" max="2.8" step="0.1" value="1">
+        <div class="speedVal" id="speedVal">1.0x</div>
+      </div>
+    </div>
+
+    <!-- CENTER: CORE NAV -->
+    <div class="coreNav">
+      <div class="coreRow">
+        <button class="coreBtn" id="prevBtn">◀</button>
+        <div class="pageDisplay">
+          <div class="pageNum" id="pageNum">1</div>
+          <div class="pageTotal" id="pageTotal">/ 1</div>
+        </div>
+        <button class="coreBtn" id="nextBtn">▶</button>
+      </div>
+      <div class="subRow">
+        <button class="subBtn" id="autoBtn">▷ AUTO</button>
+        <button class="subBtn" id="menuBtn">☰ MENU</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: BGM -->
+    <div class="panelRight">
+      <div class="panelLabel">BGM</div>
+      <button class="bgmBigBtn noSrc" id="bgmPlayBtn" onclick="toggleConsoleBgm()">
+        <span class="bgmIcon" id="bgmPlayIcon">🎵</span>
+        <span class="bgmLabel" id="bgmPlayLabel">NO BGM</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MENU OVERLAY -->
+<div id="menuOverlay">
+  <div id="menuPanel">
+    <button class="mClose" id="menuClose">✕ 閉じる</button>
+
+    <div class="mSec">── よく使う ──</div>
+    <div class="mRow">
+      <button class="mBtn teal" onclick="openGallery()">🖼 一覧</button>
+      <button class="mBtn" onclick="goFirst();closeMenu()">🏠 最初へ</button>
+      <button class="mBtn" onclick="toggleFullscreen()">⛶ 全画面</button>
+    </div>
+    <div class="mRow">
+      <button class="mBtn" id="addImgBtn">＋ 画像を追加</button>
+      <button class="mBtn dangerBtn" onclick="clearAll()">🗑 全削除してTOP</button>
+    </div>
+
+    <div class="mSec">── AUTO INTERVAL ──</div>
+    <div class="mRow" id="autoSpeedRow"></div>
+
+    <div class="mSec">── 設定 ──</div>
+    <div class="mRow">
+      <button class="mBtn" id="modeH" onclick="setMode('h')">↔ 横送り</button>
+      <button class="mBtn" id="modeV" onclick="setMode('v')">↕ 縦送り</button>
+    </div>
+    <div class="mRow">
+      <button class="mBtn sm" id="trFade" onclick="setTr('fade')">▣ フェード</button>
+      <button class="mBtn sm" id="trX" onclick="setTr('slideX')">→ 横スライド</button>
+      <button class="mBtn sm" id="trY" onclick="setTr('slideY')">↓ 縦スライド</button>
+    </div>
+    <div class="mRow">
+      <button class="mBtn sm" id="spFast" onclick="setSpeed('fast')">⚡ 速い</button>
+      <button class="mBtn sm" id="spNorm" onclick="setSpeed('normal')">▶ 普通</button>
+      <button class="mBtn sm" id="spSlow" onclick="setSpeed('slow')">■ ゆっくり</button>
+    </div>
+
+    <div class="mSec">── FX ──</div>
+    <div class="fxRow">
+      <div class="fxToggle" id="fxFlash" onclick="toggleFx('flash')">
+        <span class="fxIcon">⬛</span><span class="fxLabel">暗転</span>
+      </div>
+      <div class="fxToggle" id="fxSound" onclick="toggleFx('sound')">
+        <span class="fxIcon">🔔</span><span class="fxLabel">効果音</span>
+      </div>
+      <div class="fxToggle" id="fxVib" onclick="toggleFx('vib')">
+        <span class="fxIcon">📳</span><span class="fxLabel">振動</span>
+      </div>
+    </div>
+
+    <div class="mSec">── AUDIO ──</div>
+    <div class="mRow">
+      <button class="mBtn" id="bgmBtn" onclick="document.getElementById('bgmFileInput').click()">🎵 BGMを選択</button>
+      <button class="mBtn" id="loopBtn" onclick="toggleLoop()">🔁 ループOFF</button>
+    </div>
+    <div class="volRow">
+      <label>音量</label>
+      <input type="range" id="volSlider" min="0" max="100" value="80" oninput="setVol(this.value)">
+      <span id="volLabel">80%</span>
+    </div>
+    <input type="file" id="bgmFileInput" accept="audio/*">
+
+    <div class="mSec">── VOICE PER SLIDE ──</div>
+    <button class="mBtn teal" style="width:100%;padding:12px" onclick="openGallery()">🎤 コマ音声を設定（一覧から長押し）</button>
+
+    <div class="mSec">── データ ──</div>
+    <div id="storageInfo">読み込み中...</div>
+    <div class="mRow" style="margin-top:6px">
+      <button class="mBtn" onclick="exportMeta()">💾 設定エクスポート</button>
+    </div>
+  </div>
+</div>
+
+<!-- GALLERY -->
+<div id="galleryOverlay">
+  <div id="galleryHeader">
+    <h2>📋 コマ一覧</h2>
+    <button id="galleryEditBtn" onclick="toggleGalleryEdit()">✎ 削除モード</button>
+    <button id="galleryClose">✕</button>
+  </div>
+  <div id="galleryGrid"></div>
+</div>
+<input type="file" id="voiceFileInput" accept="audio/*">
+
+<div id="toast"></div>
+<audio id="bgmAudio"></audio>
+<audio id="voiceAudio"></audio>
+
+<!-- ❓ヘルプボタン -->
+<button id="helpBtn" aria-label="ヘルプを開く">❓</button>
+
+<!-- ヘルプオーバーレイ -->
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div id="helpBody"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ============================================================
+// IndexedDB — 2ストア構成 (META / BIN)
+// ============================================================
+const DB_NAME    = 'KomaDB';
+const DB_VER     = 1;
+const META_STORE = 'meta';
+const BIN_STORE  = 'binary';
+let db = null;
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains(META_STORE)) d.createObjectStore(META_STORE,{keyPath:'key'});
+      if(!d.objectStoreNames.contains(BIN_STORE))  d.createObjectStore(BIN_STORE, {keyPath:'key'});
+    };
+    req.onsuccess=e=>{db=e.target.result;res(db)};
+    req.onerror=e=>rej(e);
+  });
+}
+const dbTx=(store,mode,fn)=>new Promise((res,rej)=>{
+  const tx=db.transaction(store,mode);
+  tx.oncomplete=()=>res(); tx.onerror=e=>rej(e);
+  fn(tx.objectStore(store));
+});
+function dbPut(store,key,value){ return dbTx(store,'readwrite',s=>s.put({key,value})); }
+function dbDel(store,key){ return dbTx(store,'readwrite',s=>s.delete(key)); }
+function dbClear(store){ return dbTx(store,'readwrite',s=>s.clear()); }
+function dbGet(store,key){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readonly');
+    const req=tx.objectStore(store).get(key);
+    req.onsuccess=e=>res(e.target.result?.value); req.onerror=e=>rej(e);
+  });
+}
+function dbGetAll(store){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readonly');
+    const req=tx.objectStore(store).getAll();
+    req.onsuccess=e=>res(e.target.result); req.onerror=e=>rej(e);
+  });
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let slides       = [];
+let current      = 0;
+let autoTimer    = null;
+let settings     = {
+  mode:'v', fx:{flash:false,sound:false,vib:false},
+  tr:'fade', speed:'normal', autoSec:5, vol:80, loop:false,
+  playbackSpeed:1.0
+};
+let bgmUrl       = null;
+let urlCache     = {};
+let thumbCache   = {};
+let gestureBound = false;
+
+// ============================================================
+// THUMBNAIL — OffscreenCanvas 120×120 JPEG
+// ============================================================
+const THUMB_SIZE = 120;
+const thumbKey   = id=>'thumb_'+id;
+
+async function makeThumbnail(blob,id){
+  try{
+    const bmp=await createImageBitmap(blob);
+    const oc=new OffscreenCanvas(THUMB_SIZE,THUMB_SIZE);
+    const ctx=oc.getContext('2d');
+    const scale=Math.max(THUMB_SIZE/bmp.width,THUMB_SIZE/bmp.height);
+    const sw=THUMB_SIZE/scale, sh=THUMB_SIZE/scale;
+    ctx.drawImage(bmp,(bmp.width-sw)/2,(bmp.height-sh)/2,sw,sh,0,0,THUMB_SIZE,THUMB_SIZE);
+    bmp.close();
+    const tb=await oc.convertToBlob({type:'image/jpeg',quality:0.6});
+    await dbPut(BIN_STORE,thumbKey(id),tb);
+    return tb;
+  }catch{ return blob; }
+}
+
+async function getThumbUrl(id){
+  if(thumbCache[id]) return thumbCache[id];
+  let blob=await dbGet(BIN_STORE,thumbKey(id));
+  if(!blob) blob=await dbGet(BIN_STORE,id);
+  if(!blob) return '';
+  const url=URL.createObjectURL(blob);
+  thumbCache[id]=url; return url;
+}
+
+// ============================================================
+// OBJECT URL CACHE（メイン表示：前後2枚のみ保持）
+// ============================================================
+async function getImgUrl(id){
+  if(urlCache[id]) return urlCache[id];
+  const blob=await dbGet(BIN_STORE,id);
+  if(!blob) return '';
+  const url=URL.createObjectURL(blob);
+  urlCache[id]=url; return url;
+}
+function evictUrlCache(keepIds){
+  for(const id in urlCache){
+    if(!keepIds.includes(id)){ URL.revokeObjectURL(urlCache[id]); delete urlCache[id]; }
+  }
+}
+function releaseAllUrls(){
+  Object.values(urlCache).forEach(u=>URL.revokeObjectURL(u)); urlCache={};
+  Object.values(thumbCache).forEach(u=>URL.revokeObjectURL(u)); thumbCache={};
+  const va=document.getElementById('voiceAudio');
+  if(va&&va.src){URL.revokeObjectURL(va.src);va.src='';}
+}
+function releaseAllUrlsAndBgm(){
+  releaseAllUrls();
+  if(bgmUrl){URL.revokeObjectURL(bgmUrl);bgmUrl=null;}
+  const ba=document.getElementById('bgmAudio');
+  if(ba){ba.pause();ba.src='';}
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init(){
+  await openDB();
+  buildAutoSpeedBtns();
+  applySettings();
+  loadBgmFromDB();
+  setupSpeedSlider();
+}
+init();
+
+// ============================================================
+// SPEED SLIDER（再生速度 × AUTO間隔）
+// ============================================================
+function setupSpeedSlider(){
+  const slider=document.getElementById('speedSlider');
+  const val   =document.getElementById('speedVal');
+  // 保存値を復元
+  slider.value=settings.playbackSpeed;
+  val.textContent=settings.playbackSpeed.toFixed(1)+'x';
+  slider.oninput=function(){
+    settings.playbackSpeed=parseFloat(this.value);
+    val.textContent=settings.playbackSpeed.toFixed(1)+'x';
+    saveSettings();
+    // AUTO再生中ならインターバルを即リセット
+    if(autoTimer){ stopAuto(); toggleAuto(); }
+  };
+}
+
+// ============================================================
+// TOP — 新規選択（DB完全クリア → 新規保存）
+// ============================================================
+document.getElementById('startFileInput').onchange=async function(e){
+  const files=[...e.target.files].filter(f=>f.type.startsWith('image/'));
+  if(!files.length){e.target.value='';return;}
+  files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  showToast('📥 保存中...');
+  stopAuto(); releaseAllUrls(); // BGMは維持
+  await dbClear(META_STORE);
+  // BIN_STOREから画像・サムネ・音声のみ消す（BGMは残す）
+  const allBins=await dbGetAll(BIN_STORE);
+  for(const r of allBins){
+    if(r.key!=='bgm') await dbDel(BIN_STORE,r.key);
+  }
+  slides=[]; current=0; gestureBound=false;
+  for(const f of files){
+    const id='img_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    await dbPut(BIN_STORE,id,f);
+    makeThumbnail(f,id).catch(()=>{});
+    slides.push({id,name:f.name,voiceKey:null});
+  }
+  await saveMeta();
+  e.target.value='';
+  enterViewer(0);
+  showToast('✅ '+files.length+'枚読み込み完了');
+};
+
+// ============================================================
+// TOP — 前回再開
+// ============================================================
+async function tryRestore(){
+  const saved=await dbGet(META_STORE,'slides');
+  if(!saved||!saved.length){showToast('保存データなし');return;}
+  slides=saved;
+  current=(await dbGet(META_STORE,'position'))||0;
+  const s=await dbGet(META_STORE,'settings');
+  if(s) settings={...settings,...s};
+  applySettings(); loadBgmFromDB();
+  enterViewer(current);
+  showToast('🔄 前回の続きから再開');
+}
+
+// ============================================================
+// META SAVE
+// ============================================================
+async function saveMeta(){
+  await dbPut(META_STORE,'slides',  slides);
+  await dbPut(META_STORE,'position',current);
+  await dbPut(META_STORE,'settings',settings);
+}
+async function saveSettings(){ await dbPut(META_STORE,'settings',settings); }
+
+// ============================================================
+// SCREEN TRANSITIONS
+// ============================================================
+function enterViewer(idx){
+  current=idx;
+  document.getElementById('topScreen').style.display='none';
+  document.getElementById('viewer').style.display='flex';
+  showSlide(current);
+  if(!gestureBound){ setupSwipe(); setupProgress(); gestureBound=true; }
+}
+
+// TOPへ戻る（DBは維持・RAM解放のみ）
+function goTop(){
+  stopAuto(); closeMenu(); closeGallery();
+  evictUrlCache([]);
+  document.getElementById('slideImg').src='';
+  document.getElementById('viewer').style.display='none';
+  document.getElementById('topScreen').style.display='flex';
+  updateBgmBtns(); // TOP画面のBGMボタン状態を最新に
+}
+
+// ============================================================
+// ＋ ADD（末尾追記）
+// ============================================================
+document.getElementById('addImgBtn').onclick=()=>{
+  closeMenu();
+  document.getElementById('addImgInput').click();
+};
+document.getElementById('addImgInput').onchange=async function(e){
+  const files=[...e.target.files].filter(f=>f.type.startsWith('image/'));
+  if(!files.length){e.target.value='';return;}
+  files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  showToast('📥 追加中...');
+  for(const f of files){
+    const id='img_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    await dbPut(BIN_STORE,id,f);
+    makeThumbnail(f,id).catch(()=>{});
+    slides.push({id,name:f.name,voiceKey:null});
+  }
+  await saveMeta();
+  updateCounter();
+  showToast('✅ '+files.length+'枚追加（計'+slides.length+'枚）');
+  e.target.value='';
+};
+
+// ============================================================
+// CLEAR ALL（DB完全クリア → TOP）
+// ============================================================
+async function clearAll(){
+  if(!confirm('全データを削除してTOPへ戻りますか？')) return;
+  stopAuto(); closeMenu(); closeGallery(); releaseAllUrlsAndBgm();
+  await dbClear(META_STORE); await dbClear(BIN_STORE);
+  slides=[]; current=0; gestureBound=false;
+  document.getElementById('slideImg').src='';
+  document.getElementById('viewer').style.display='none';
+  document.getElementById('topScreen').style.display='flex';
+  // BGMボタンも非表示に
+  updateBgmBtns();
+  showToast('🗑 全データを削除しました');
+}
+
+// ============================================================
+// SHOW SLIDE
+// ============================================================
+async function showSlide(idx){
+  if(!slides.length) return;
+  current=Math.max(0,Math.min(idx,slides.length-1));
+  const s=slides[current];
+  const url=await getImgUrl(s.id);
+  if(!url){ showToast('⚠️ 画像を読み込めませんでした'); return; }
+  evictUrlCache([slides[current-1]?.id,slides[current]?.id,slides[current+1]?.id].filter(Boolean));
+  if(slides[current+1]) getImgUrl(slides[current+1].id);
+  const img=document.getElementById('slideImg');
+  img.className=''; void img.offsetWidth;
+  img.src=url; img.className=getTransClass();
+  updateCounter();
+  if(settings.fx.flash)                   doFlash();
+  if(settings.fx.sound)                   doFxSound();
+  if(settings.fx.vib&&navigator.vibrate)  navigator.vibrate(30);
+  playVoice(s);
+  saveMeta();
+}
+function getTransClass(){
+  const sfx = settings.speed==='fast' ? 'S' : settings.speed==='slow' ? 'L' : '';
+  return settings.tr + sfx;
+}
+function updateCounter(){
+  document.getElementById('pageNum').textContent=current+1;
+  document.getElementById('pageTotal').textContent='/ '+slides.length;
+  const pct=slides.length>1?(current/(slides.length-1))*100:0;
+  document.getElementById('progressBar').style.width=pct+'%';
+}
+function goNext(){ if(current<slides.length-1) showSlide(current+1); else if(settings.loop) showSlide(0); }
+function goPrev(){ if(current>0) showSlide(current-1); }
+function goFirst(){ showSlide(0); }
+document.getElementById('prevBtn').onclick=goPrev;
+document.getElementById('nextBtn').onclick=goNext;
+document.getElementById('topBackBtn').onclick=goTop;
+
+// ============================================================
+// AUTO PLAY（playbackSpeed でインターバル調整）
+// ============================================================
+function buildAutoSpeedBtns(){
+  const row=document.getElementById('autoSpeedRow'); row.innerHTML='';
+  [2,5,8,15].forEach(sec=>{
+    const b=document.createElement('button');
+    b.className='mBtn sm'; b.id='as'+sec; b.textContent=sec+'秒';
+    b.onclick=()=>{settings.autoSec=sec;buildAutoSpeedBtns();saveSettings();};
+    if(settings.autoSec===sec) b.classList.add('on');
+    row.appendChild(b);
+  });
+}
+function stopAuto(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  const btn=document.getElementById('autoBtn');
+  if(btn){btn.textContent='▷ AUTO';btn.classList.remove('active');}
+}
+function toggleAuto(){
+  const btn=document.getElementById('autoBtn');
+  if(autoTimer){ stopAuto(); }
+  else{
+    const interval=(settings.autoSec*1000)/settings.playbackSpeed;
+    autoTimer=setInterval(()=>{
+      if(current<slides.length-1) goNext();
+      else if(settings.loop)      showSlide(0);
+      else                        stopAuto();
+    },interval);
+    btn.textContent='⏸ STOP'; btn.classList.add('active');
+  }
+}
+document.getElementById('autoBtn').onclick=toggleAuto;
+
+// ============================================================
+// SWIPE
+// ============================================================
+function setupSwipe(){
+  const wrap=document.getElementById('slideWrap');
+  let sx=0,sy=0,moved=false;
+  wrap.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;moved=false;},{passive:true});
+  wrap.addEventListener('touchmove',e=>{if(Math.abs(e.touches[0].clientX-sx)>8||Math.abs(e.touches[0].clientY-sy)>8)moved=true;},{passive:true});
+  wrap.addEventListener('touchend',e=>{
+    if(!moved) return;
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(settings.mode==='h'){if(Math.abs(dx)>40)dx<0?goNext():goPrev();}
+    else{if(Math.abs(dy)>40)dy<0?goNext():goPrev();}
+  });
+}
+
+// ============================================================
+// PROGRESS BAR タップ
+// ============================================================
+function setupProgress(){
+  document.getElementById('progressWrap').onclick=e=>{
+    const r=e.currentTarget.getBoundingClientRect();
+    showSlide(Math.round(((e.clientX-r.left)/r.width)*(slides.length-1)));
+  };
+}
+
+// ============================================================
+// FX
+// ============================================================
+function doFlash(){const o=document.getElementById('flashOverlay');o.style.opacity='0.5';setTimeout(()=>o.style.opacity='0',80);}
+let fxCtx=null;
+function doFxSound(){
+  try{
+    if(!fxCtx) fxCtx=new AudioContext();
+    const buf=fxCtx.createBuffer(1,fxCtx.sampleRate*.05,fxCtx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/300);
+    const src=fxCtx.createBufferSource(); src.buffer=buf; src.connect(fxCtx.destination); src.start();
+  }catch(e){}
+}
+
+// ============================================================
+// BGM コンソールボタン & TOP画面ボタン 状態同期
+// ============================================================
+function updateBgmBtns(){
+  const audio   = document.getElementById('bgmAudio');
+  const hasSrc  = !!audio.getAttribute('src'); // src未設定時はnull、設定済みならblob URL文字列
+  const playing = !audio.paused && hasSrc;
+
+  // コンソール右パネル
+  const playBtn   = document.getElementById('bgmPlayBtn');
+  const playIcon  = document.getElementById('bgmPlayIcon');
+  const playLabel = document.getElementById('bgmPlayLabel');
+  if(playBtn){
+    playBtn.classList.toggle('noSrc',   !hasSrc);
+    playBtn.classList.toggle('playing',  playing);
+    playIcon.textContent  = playing ? '⏸' : '🎵';
+    playLabel.textContent = !hasSrc ? 'NO BGM' : playing ? 'PLAYING' : 'PAUSED';
+  }
+
+  // TOP画面ボタン
+  const topBtn = document.getElementById('topBgmBtn');
+  if(topBtn){
+    topBtn.style.display = hasSrc ? '' : 'none';
+    topBtn.textContent   = playing ? '⏸ BGM停止' : '🎵 BGM再生';
+    topBtn.classList.toggle('primary', playing);
+  }
+}
+
+function toggleConsoleBgm(){
+  const audio = document.getElementById('bgmAudio');
+  if(!audio.getAttribute('src')) return;
+  if(audio.paused){ audio.play().catch(()=>{}); } else { audio.pause(); }
+  updateBgmBtns();
+}
+// TOP画面・コンソール共通
+function toggleTopBgm(){ toggleConsoleBgm(); }
+
+// ============================================================
+// AUDIO
+// ============================================================
+document.getElementById('bgmFileInput').onchange=async function(e){
+  const f=e.target.files[0]; if(!f) return;
+  await dbPut(BIN_STORE,'bgm',f); loadBgmFromDB();
+  document.getElementById('bgmBtn').textContent='🎵 '+f.name.slice(0,12);
+  e.target.value=''; showToast('BGM保存完了');
+};
+async function loadBgmFromDB(){
+  const blob=await dbGet(BIN_STORE,'bgm'); if(!blob) return;
+  const el=document.getElementById('bgmAudio');
+  if(bgmUrl) URL.revokeObjectURL(bgmUrl);
+  bgmUrl=URL.createObjectURL(blob);
+  el.src=bgmUrl; el.volume=settings.vol/100; el.loop=settings.loop;
+  document.getElementById('bgmBtn').textContent='🎵 BGM読込済';
+  updateBgmBtns();
+}
+function setVol(v){
+  settings.vol=+v;
+  document.getElementById('volLabel').textContent=v+'%';
+  document.getElementById('bgmAudio').volume=v/100;
+  document.getElementById('voiceAudio').volume=v/100;
+  saveSettings();
+}
+function toggleLoop(){
+  settings.loop=!settings.loop;
+  document.getElementById('bgmAudio').loop=settings.loop;
+  document.getElementById('loopBtn').textContent='🔁 ループ'+(settings.loop?'ON':'OFF');
+  document.getElementById('loopBtn').classList.toggle('on',settings.loop);
+  saveSettings();
+}
+async function playVoice(slide){
+  if(!slide.voiceKey) return;
+  const blob=await dbGet(BIN_STORE,slide.voiceKey); if(!blob) return;
+  const el=document.getElementById('voiceAudio');
+  if(el.getAttribute('src')) URL.revokeObjectURL(el.getAttribute('src'));
+  el.src=URL.createObjectURL(blob); el.volume=settings.vol/100; el.play().catch(()=>{});
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function setMode(m){
+  settings.mode=m;
+  document.getElementById('modeH').classList.toggle('on',m==='h');
+  document.getElementById('modeV').classList.toggle('on',m==='v');
+  saveSettings();
+}
+function applyFxUI(k){
+  // UI反映のみ・DB書き込みなし
+  const id='fx'+k[0].toUpperCase()+k.slice(1);
+  document.getElementById(id)?.classList.toggle('on',settings.fx[k]);
+}
+function toggleFx(k){
+  settings.fx[k]=!settings.fx[k];
+  applyFxUI(k);
+  saveSettings();
+}
+function setTr(t){
+  settings.tr=t;
+  ['trFade','trX','trY'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById(t==='fade'?'trFade':t==='slideX'?'trX':'trY').classList.add('on');
+  saveSettings();
+}
+function setSpeed(s){
+  settings.speed=s;
+  ['spFast','spNorm','spSlow'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById(s==='fast'?'spFast':s==='normal'?'spNorm':'spSlow').classList.add('on');
+  saveSettings();
+}
+function applySettings(){
+  setMode(settings.mode);
+  Object.keys(settings.fx).forEach(k=>applyFxUI(k)); // UI反映のみ（DB書き込みなし）
+  setTr(settings.tr);
+  setSpeed(settings.speed);
+  document.getElementById('volSlider').value=settings.vol;
+  document.getElementById('volLabel').textContent=settings.vol+'%';
+  document.getElementById('loopBtn').textContent='🔁 ループ'+(settings.loop?'ON':'OFF');
+  document.getElementById('loopBtn').classList.toggle('on',settings.loop);
+}
+
+// ============================================================
+// MENU
+// ============================================================
+document.getElementById('menuBtn').onclick=openMenu;
+document.getElementById('menuClose').onclick=closeMenu;
+document.getElementById('menuOverlay').onclick=e=>{if(e.target===document.getElementById('menuOverlay'))closeMenu();};
+function openMenu(){document.getElementById('menuOverlay').classList.add('open');updateStorageInfo();}
+function closeMenu(){document.getElementById('menuOverlay').classList.remove('open');}
+async function updateStorageInfo(){
+  const bins=await dbGetAll(BIN_STORE); let total=0;
+  bins.forEach(r=>total+=r.value?.size||0);
+  const metas=await dbGetAll(META_STORE);
+  document.getElementById('storageInfo').textContent=
+    `画像+音声+サムネ: ${bins.length}件 / 約${(total/1024/1024).toFixed(1)}MB | 設定: ${metas.length}件`;
+}
+function toggleFullscreen(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+}
+function exportMeta(){
+  const data=JSON.stringify({slides:slides.map(s=>({name:s.name,voiceKey:s.voiceKey})),settings},null,2);
+  const a=document.createElement('a'); a.href='data:application/json,'+encodeURIComponent(data); a.download='koma_meta.json'; a.click();
+}
+
+// ============================================================
+// GALLERY — サムネ遅延描画
+// ============================================================
+document.getElementById('galleryClose').onclick=closeGallery;
+let voiceTargetIdx=null, galleryEditMode=false;
+
+function toggleGalleryEdit(){
+  galleryEditMode=!galleryEditMode;
+  const btn=document.getElementById('galleryEditBtn');
+  btn.classList.toggle('on',galleryEditMode);
+  btn.textContent=galleryEditMode?'✎ 完了':'✎ 削除モード';
+  document.querySelectorAll('.thumbItem').forEach(el=>el.classList.toggle('editMode',galleryEditMode));
+}
+
+async function openGallery(){
+  closeMenu();
+  const grid=document.getElementById('galleryGrid'); grid.innerHTML='';
+  for(let i=0;i<slides.length;i++){
+    const s=slides[i];
+    const div=document.createElement('div');
+    div.className='thumbItem'+(i===current?' current':'')+(galleryEditMode?' editMode':'');
+    div.innerHTML=`
+      <div class="thumbSpin">⏳</div>
+      <span class="thumbNum">${i+1}</span>
+      ${s.voiceKey?'<span class="thumbVoice">🔊</span>':''}
+      <button class="thumbDel">✕</button>
+    `;
+    div.onclick=e=>{ if(e.target.classList.contains('thumbDel')) return; showSlide(i); closeGallery(); };
+    div.querySelector('.thumbDel').onclick=e=>{ e.stopPropagation(); deleteSlide(i); };
+    let lt;
+    div.addEventListener('touchstart',()=>{ lt=setTimeout(()=>{voiceTargetIdx=i;document.getElementById('voiceFileInput').click();},700); },{passive:true});
+    div.addEventListener('touchend',  ()=>clearTimeout(lt),{passive:true});
+    div.addEventListener('touchmove', ()=>clearTimeout(lt),{passive:true});
+    grid.appendChild(div);
+    // サムネを非同期で差し込み（DOMブロックなし）
+    ;(async(el,id)=>{
+      const url=await getThumbUrl(id);
+      if(!url||!el.isConnected) return;
+      const spin=el.querySelector('.thumbSpin');
+      const img=document.createElement('img'); img.src=url; img.loading='lazy';
+      if(spin) el.replaceChild(img,spin); else el.prepend(img);
+    })(div,s.id);
+  }
+  document.getElementById('galleryOverlay').classList.add('open');
+}
+
+function closeGallery(){
+  galleryEditMode=false;
+  const btn=document.getElementById('galleryEditBtn');
+  if(btn){btn.classList.remove('on');btn.textContent='✎ 削除モード';}
+  document.getElementById('galleryOverlay').classList.remove('open');
+}
+
+// ============================================================
+// スライド個別削除（splice でリインデックス自動完結）
+// ============================================================
+async function deleteSlide(idx){
+  if(!confirm(`コマ${idx+1}「${slides[idx].name}」を削除しますか？`)) return;
+  const s=slides[idx];
+  await dbDel(BIN_STORE,s.id);
+  await dbDel(BIN_STORE,thumbKey(s.id)).catch(()=>{});
+  if(s.voiceKey) await dbDel(BIN_STORE,s.voiceKey);
+  if(urlCache[s.id]){URL.revokeObjectURL(urlCache[s.id]);delete urlCache[s.id];}
+  if(thumbCache[s.id]){URL.revokeObjectURL(thumbCache[s.id]);delete thumbCache[s.id];}
+  slides.splice(idx,1);
+  if(slides.length===0){
+    current=0;
+  } else if(idx<current){
+    current--;
+  } else if(current>=slides.length){
+    current=slides.length-1;
+  }
+  await saveMeta();
+  showToast(`🗑 コマ${idx+1}を削除（残${slides.length}枚）`);
+  if(slides.length===0){
+    galleryEditMode=false; closeGallery(); stopAuto();
+    document.getElementById('viewer').style.display='none';
+    document.getElementById('topScreen').style.display='flex';
+  } else {
+    updateCounter();
+    // 削除モードを維持したまま再描画（closeGalleryを経由しない）
+    const prevEditMode=galleryEditMode;
+    document.getElementById('galleryOverlay').classList.remove('open');
+    galleryEditMode=prevEditMode;
+    openGallery();
+  }
+}
+
+// Voice per slide
+document.getElementById('voiceFileInput').onchange=async function(e){
+  const f=e.target.files[0]; if(!f||voiceTargetIdx===null) return;
+  const key='voice_'+Date.now();
+  if(slides[voiceTargetIdx].voiceKey) await dbDel(BIN_STORE,slides[voiceTargetIdx].voiceKey);
+  await dbPut(BIN_STORE,key,f);
+  slides[voiceTargetIdx].voiceKey=key;
+  await saveMeta();
+  showToast(`🎤 コマ${voiceTargetIdx+1}に音声セット`);
+  voiceTargetIdx=null; e.target.value=''; openGallery();
+};
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+window.addEventListener('pagehide',()=>releaseAllUrlsAndBgm());
+</script>
+
+<script>
+/* ============================================================
+   HELP MODAL JS
+   ============================================================ */
+const helpData = {
+  howto: [
+    {
+      title: "📂 画像の読み込み",
+      body: `
+        <strong>初回読み込み</strong><br>
+        TOP画面の「フォルダから画像を選択」をタップ。JPG・PNG・GIF・WebP 対応。複数枚まとめて選択可。<br><br>
+        <strong>続きを再開</strong><br>
+        「前回の続きを再開」で IndexedDB 保存済みのコマを復元。ブラウザを閉じても画像は消えない。<br><br>
+        <strong>追加読み込み</strong><br>
+        閲覧中に MENU →「＋ 画像を追加」で末尾へ追記できる。
+      `
+    },
+    {
+      title: "◀▶ コマ操作",
+      body: `
+        <strong>手動送り</strong><br>
+        コンソールの ◀ / ▶ ボタン、またはスワイプ（横送り時は左右、縦送り時は上下）でコマを送れる。<br><br>
+        <strong>AUTO 再生</strong><br>
+        「▷ AUTO」ボタンで自動送りON/OFF。再生速度はコンソール左のスライダーで 0.5x〜2.8x に調整。<br><br>
+        <strong>キーボード</strong><br>
+        ← → キーで前後移動、Space で AUTO 切り替え（PCブラウザ）。
+      `
+    },
+    {
+      title: "🖼 ギャラリー（コマ一覧）",
+      body: `
+        <strong>一覧表示</strong><br>
+        MENU →「🖼 一覧」でサムネグリッドを表示。タップで任意のコマへジャンプ。<br><br>
+        <strong>個別削除</strong><br>
+        「✎ 削除モード」をONにすると各コマに ✕ ボタンが現れ、1枚ずつ削除できる。<br><br>
+        <strong>コマ音声の設定</strong><br>
+        一覧のサムネを<strong>長押し</strong>すると、そのコマだけに流す音声ファイルを選択できる。
+      `
+    },
+    {
+      title: "⚙ MENU の各設定",
+      body: `
+        <strong>送り方向</strong>：「↔ 横送り」or「↕ 縦送り」<br>
+        <strong>トランジション</strong>：フェード / 横スライド / 縦スライド<br>
+        <strong>FX</strong>：暗転 / 効果音 / 振動<br>
+        <strong>BGM</strong>：音楽ファイルを選択してループ再生。コンソール右 BGM ボタンでも ON/OFF。<br>
+        <strong>音量</strong>：BGM＋コマ音声の共通音量スライダー。
+      `
+    },
+    {
+      title: "💾 データ管理",
+      body: `
+        <strong>永続保存</strong><br>
+        画像・音声・サムネはすべて IndexedDB に自動保存。「続きを再開」で次回も復元可。<br><br>
+        <strong>設定エクスポート</strong><br>
+        MENU →「💾 設定エクスポート」で <code>koma_meta.json</code> をダウンロード。<br><br>
+        <strong>全削除</strong><br>
+        MENU →「🗑 全削除してTOP」で IndexedDB を完全クリアして TOP へ戻る。
+      `
+    }
+  ],
+
+  lessons: [
+    {
+      title: "IndexedDB の非同期初期化タイミング",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        DB open が完了する前に <code>dbGet</code> が呼ばれると失敗するケースがあった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>openDB()</code> を Promise でラップし、全 DB 操作を <code>await openDB()</code> 後に実行するよう統一。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        IndexedDB のあらゆる読み書きは必ず DB open Promise の解決後に行うこと。初期化前の呼び出しは握りつぶさず Promise チェーンで順序保証する。
+      `
+    },
+    {
+      title: "iOS Safari でのスワイプとスクロールの競合",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>touchmove</code> で <code>preventDefault()</code> をかけると iOS Safari のギャラリースクロールが完全に止まった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>touchmove</code> を <code>passive:true</code> で登録し、水平移動量が垂直を上回った場合のみスライド送りフラグを立てる方式に変更。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        <code>touchmove</code> には原則 <code>passive:true</code>。縦スクロール可能な要素の内側で <code>preventDefault()</code> をグローバルにかけない。
+      `
+    },
+    {
+      title: "サムネ大量生成による UI ブロック",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        ギャラリーを開いた瞬間に全サムネを同期生成すると、コマ数が多い場合に数秒間 UI がフリーズした。
+
+        <div class="lesson-label">② どう解決したか</div>
+        各サムネを即時非同期 IIFE <code>(async(el,id)=>{...})(div,s.id)</code> で生成し、DOM 挿入後に画像をあとから差し込む遅延描画に変更。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        サムネ・Blob URL 生成はループ内で <code>await</code> せず非同期 IIFE で並列化する。メインスレッドをブロックしない設計を優先する。
+      `
+    }
+  ]
+};
+
+(function initHelpModal() {
+  const overlay  = document.getElementById('helpOverlay');
+  const body     = document.getElementById('helpBody');
+  const openBtn  = document.getElementById('helpBtn');
+  const closeBtn = document.getElementById('helpCloseBtn');
+
+  function renderHelp() {
+    body.innerHTML = '';
+    body.appendChild(makeSection('📖 使い方', helpData.howto, 'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓', helpData.lessons, 'lesson'));
+  }
+
+  function makeSection(label, items, prefix) {
+    const wrap = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'help-section-title';
+    title.textContent = label;
+    wrap.appendChild(title);
+    items.forEach(function(item, i) {
+      const id = prefix + '-' + i;
+      const row = document.createElement('div');
+      row.className = 'help-item';
+      const trigger = document.createElement('button');
+      trigger.className = 'help-item-trigger';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-controls', id);
+      trigger.innerHTML = '<span>' + escHtml(item.title) + '</span><span class="help-chevron">▼</span>';
+      const panel = document.createElement('div');
+      panel.className = 'help-item-body';
+      panel.id = id;
+      panel.innerHTML = item.body;
+      trigger.addEventListener('click', function() {
+        const isOpen = trigger.classList.contains('open');
+        wrap.querySelectorAll('.help-item-trigger.open').forEach(function(t) {
+          t.classList.remove('open');
+          t.setAttribute('aria-expanded', 'false');
+          document.getElementById(t.getAttribute('aria-controls')).classList.remove('open');
+        });
+        if (!isOpen) {
+          trigger.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+          panel.classList.add('open');
+        }
+      });
+      row.appendChild(trigger);
+      row.appendChild(panel);
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function openModal()  { renderHelp(); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+  function closeModal() { overlay.classList.remove('active'); document.body.style.overflow=''; }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+})();
+/* ============================================================
+   HELP MODAL JS ここまで
+   ============================================================ */
+</script>
+</body>
+</html>
