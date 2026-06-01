@@ -129,7 +129,105 @@ textarea.inp{resize:none;line-height:1.5}
 .empty{text-align:center;padding:28px 16px;color:var(--txt2);font-size:13px}
 .empty-icon{font-size:28px;margin-bottom:8px;opacity:0.4}
 
-/* Divider */
+/* ── Help Modal ── */
+:root {
+  --help-accent:       #1d9bf0;
+  --help-accent-dim:   rgba(29,155,240,0.22);
+  --help-bg:           rgba(10,10,20,0.97);
+  --help-border:       rgba(29,155,240,0.3);
+  --help-text:         #c8d8f0;
+  --help-text-dim:     #7888aa;
+  --help-section-bg:   rgba(29,155,240,0.10);
+  --help-item-bg:      rgba(255,255,255,0.04);
+  --help-btn-size:     2.2rem;
+}
+#helpBtn{
+  width:var(--help-btn-size);height:var(--help-btn-size);
+  border-radius:50%;border:1.5px solid var(--help-border);
+  background:var(--help-bg);color:var(--help-accent);
+  font-size:1rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,transform .15s;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 0 8px rgba(29,155,240,0.2);
+  flex-shrink:0;
+}
+#helpBtn:hover{background:var(--help-accent-dim);transform:scale(1.08);}
+#helpBtn:active{transform:scale(.95);}
+#helpOverlay{
+  display:none;position:fixed;inset:0;z-index:910;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:1rem;
+}
+#helpOverlay.active{display:flex;}
+#helpModal{
+  position:relative;width:100%;max-width:480px;max-height:85vh;
+  background:var(--help-bg);border:1px solid var(--help-border);
+  border-radius:1rem;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px var(--help-accent-dim);
+}
+#helpModal .help-header{
+  padding:.9rem 1.2rem;border-bottom:1px solid var(--help-border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#helpModal .help-header-title{font-size:1rem;font-weight:700;color:var(--help-accent);letter-spacing:.05em;}
+#helpCloseBtn{
+  width:2rem;height:2rem;border-radius:50%;border:1px solid var(--help-border);
+  background:transparent;color:var(--help-text-dim);font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:color .15s,background .15s;-webkit-tap-highlight-color:transparent;
+}
+#helpCloseBtn:hover{color:#fff;background:rgba(255,255,255,.08);}
+#helpBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem .8rem 1.2rem;flex:1;}
+.help-modal-section-title{
+  display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700;
+  letter-spacing:.12em;color:var(--help-accent);text-transform:uppercase;
+  background:var(--help-section-bg);border-radius:.45rem;
+  padding:.45rem .7rem;margin-bottom:.4rem;margin-top:.6rem;
+}
+.help-modal-section-title:first-child{margin-top:0;}
+.help-modal-item{border-radius:.5rem;overflow:hidden;margin-bottom:.3rem;}
+.help-modal-trigger{
+  width:100%;text-align:left;background:var(--help-item-bg);
+  border:1px solid transparent;border-radius:.5rem;
+  color:var(--help-text);font-size:.88rem;font-weight:600;
+  padding:.6rem .8rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent;
+}
+.help-modal-trigger:hover{border-color:var(--help-border);}
+.help-modal-trigger.open{
+  border-color:var(--help-accent-dim);
+  border-bottom-left-radius:0;border-bottom-right-radius:0;
+  background:rgba(29,155,240,0.08);
+}
+.help-modal-trigger .help-chevron{font-size:.7rem;color:var(--help-text-dim);transition:transform .2s;flex-shrink:0;}
+.help-modal-trigger.open .help-chevron{transform:rotate(180deg);}
+.help-modal-body{
+  display:none;background:rgba(255,255,255,.025);
+  border:1px solid var(--help-accent-dim);border-top:none;
+  border-bottom-left-radius:.5rem;border-bottom-right-radius:.5rem;
+  padding:.65rem .85rem .75rem;font-size:.83rem;color:var(--help-text);line-height:1.65;
+}
+.help-modal-body.open{display:block;}
+.help-modal-body strong{color:#fff;font-weight:700;}
+.help-modal-body .lesson-label{
+  font-size:.7rem;font-weight:700;letter-spacing:.08em;
+  color:var(--help-text-dim);text-transform:uppercase;
+  margin-top:.5rem;margin-bottom:.15rem;
+}
+.help-modal-body .lesson-label:first-child{margin-top:0;}
+#helpCopyPromptBtn{
+  display:block;width:calc(100% - 1.6rem);margin:.6rem .8rem .2rem;padding:.65rem;
+  background:var(--help-accent-dim);border:1px solid var(--help-border);
+  border-radius:.5rem;color:var(--help-accent);font-size:.85rem;font-weight:700;
+  cursor:pointer;text-align:center;letter-spacing:.04em;
+  transition:background .15s,transform .1s;-webkit-tap-highlight-color:transparent;flex-shrink:0;
+}
+#helpCopyPromptBtn:hover{background:rgba(29,155,240,.35);}
+#helpCopyPromptBtn:active{transform:scale(.97);}
+
 .divider{height:1px;background:rgba(255,255,255,0.06);margin:16px 0}
 
 /* Help */
@@ -146,8 +244,9 @@ textarea.inp{resize:none;line-height:1.5}
 </head>
 <body>
 
-<div class="app-header">
+<div class="app-header" style="display:flex;align-items:center;justify-content:space-between;">
   <div class="app-title">X Window</div>
+  <button id="helpBtn" aria-label="ヘルプを開く">❓</button>
 </div>
 
 <div class="scroll-area">
@@ -339,75 +438,6 @@ textarea.inp{resize:none;line-height:1.5}
     <div class="empty" id="tl-empty" style="display:none"><div class="empty-icon">👤</div>XタブでユーザーをADD</div>
   </div>
 
-  <!-- ===== ヘルプパネル ===== -->
-  <div class="panel" id="panel-help">
-
-  <div class="help-section">
-    <div class="help-section-title">🏠 X タブ</div>
-    <div class="help-card">
-      <div class="help-item"><div class="help-op">新規投稿</div><div class="help-desc">Xの投稿画面を空の状態で開く</div></div>
-      <div class="help-item"><div class="help-op">タグ付き投稿</div><div class="help-desc">スニペットに登録済みのハッシュタグを全部載せた状態で投稿画面を開く</div></div>
-      <div class="help-item"><div class="help-op">ユーザー検索</div><div class="help-desc">タップすると下の検索欄にフォーカス。@handleやキーワードを入力して検索</div></div>
-      <div class="help-item"><div class="help-op">プロフィール</div><div class="help-desc">自分の@IDを保存するとここから自分のページに飛べる</div></div>
-      <div class="help-item"><div class="help-op">登録ハンドル</div><div class="help-desc">⚙️管理ボタンで一覧を開き、handleを登録。チェックONのものだけ表示エリアに出る。件数制限なし</div></div>
-      <div class="help-item"><div class="help-op">固定ユーザー</div><div class="help-desc">⚙️管理ボタンで追加フォームを開く。名前と@handleを登録。タップでそのユーザーページを開く。自分の@ID設定もここで行う</div></div>
-    </div>
-  </div>
-
-  <div class="help-section">
-    <div class="help-section-title">✏️ 下書きタブ</div>
-    <div class="help-card">
-      <div class="help-item"><div class="help-op">種別</div><div class="help-desc"><span class="help-badge">投稿</span><span class="help-badge">返信</span><span class="help-badge">スレ</span>の3種類。下書き保存時に記録される</div></div>
-      <div class="help-item"><div class="help-op">文字数</div><div class="help-desc">120文字超でオレンジ、140文字超で赤に変化</div></div>
-      <div class="help-item"><div class="help-op">本文＋ALTコピー</div><div class="help-desc">本文とALTを【投稿本文】【ALT】の見出し付きで一括コピー</div></div>
-      <div class="help-item"><div class="help-op">ALTテキスト</div><div class="help-desc">画像の代替テキスト専用エリア。最大1000文字。保存・コピー・編集が可能</div></div>
-      <div class="help-item"><div class="help-op">保存</div><div class="help-desc">入力した文章を下書き一覧に保存。保存後は入力欄がクリアされる</div></div>
-      <div class="help-item"><div class="help-op">コピー</div><div class="help-desc">下書きのテキストをクリップボードにコピー</div></div>
-      <div class="help-item"><div class="help-op">Xで投稿</div><div class="help-desc">下書きのテキストをそのままXの投稿画面に渡して開く</div></div>
-      <div class="help-item"><div class="help-op">編集</div><div class="help-desc">保存済み下書きを入力欄に読み込む。種別も復元される</div></div>
-    </div>
-  </div>
-
-  <div class="help-section">
-    <div class="help-section-title">⚡ スニペットタブ</div>
-    <div class="help-card">
-      <div class="help-item"><div class="help-op">ハッシュタグ</div><div class="help-desc">よく使うタグを登録。タップでコピー。×で削除</div></div>
-      <div class="help-item"><div class="help-op">定型文</div><div class="help-desc">挨拶文・お礼文など繰り返し使うテキストを登録。タップでコピー</div></div>
-    </div>
-    <div class="help-note">💡 コピーしたらXアプリに貼り付けるだけ。投稿テンプレとして使うのが便利</div>
-  </div>
-
-  <div class="help-section">
-    <div class="help-section-title">👥 TL タブ</div>
-    <div class="help-card">
-      <div class="help-item"><div class="help-op">ユーザー一覧</div><div class="help-desc">Xタブで登録した固定ユーザーが並ぶ</div></div>
-      <div class="help-item"><div class="help-op">新規投稿</div><div class="help-desc">空の投稿画面を開く</div></div>
-      <div class="help-item"><div class="help-op">タブ付きコメント</div><div class="help-desc">@handle＋登録済みハッシュタグを入れた状態で投稿画面を開く</div></div>
-      <div class="help-item"><div class="help-op">プロフィール</div><div class="help-desc">そのユーザーのXプロフィールページを開く</div></div>
-    </div>
-    <div class="help-note">💡 タグはスニペットタブで管理。追加・削除するとTLタブのURLにも即反映される</div>
-  </div>
-
-  <div class="help-section">
-    <div class="help-section-title">📊 ログタブ</div>
-    <div class="help-card">
-      <div class="help-item"><div class="help-op">統計</div><div class="help-desc">今日・今週・合計の投稿記録数を表示</div></div>
-      <div class="help-item"><div class="help-op">予約メモ</div><div class="help-desc">日時と内容を設定してメモとして保存。実際の予約投稿機能ではない</div></div>
-      <div class="help-item"><div class="help-op">投稿ログ</div><div class="help-desc">投稿した内容を手動で記録。最新50件を表示</div></div>
-    </div>
-    <div class="help-note">⚠️ 予約メモはリマインダー機能ではありません。X公式の予約投稿は別途X上で操作してください</div>
-  </div>
-
-  <div class="help-section">
-    <div class="help-section-title">💾 データについて</div>
-    <div class="help-card">
-      <div class="help-item"><div class="help-op">保存先</div><div class="help-desc">すべてのデータはこのブラウザのLocalStorageに保存される</div></div>
-      <div class="help-item"><div class="help-op">注意</div><div class="help-desc">ブラウザのデータ消去・シークレットモードではデータが失われる</div></div>
-    </div>
-  </div>
-
-  </div><!-- /panel-help -->
-
 </div><!-- /scroll-area -->
 
 <!-- Tab Bar -->
@@ -432,11 +462,19 @@ textarea.inp{resize:none;line-height:1.5}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     ログ
   </button>
-  <button class="tab-btn" onclick="switchTab('help',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="3" stroke-linecap="round"/></svg>
-    ヘルプ
-  </button>
 </nav>
+
+<!-- ヘルプモーダル -->
+<div id="helpOverlay">
+  <div id="helpModal">
+    <div class="help-header">
+      <div class="help-header-title">❓ X Window ヘルプ</div>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div id="helpBody"></div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+  </div>
+</div>
 
 <div class="toast" id="toast">コピーしました</div>
 
@@ -579,6 +617,124 @@ async function init(){
 
 init();
 
+// ヘルプモーダル初期化
+buildHelpModal();
+document.getElementById('helpBtn').addEventListener('click', openHelp);
+document.getElementById('helpCloseBtn').addEventListener('click', closeHelp);
+document.getElementById('helpOverlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('helpOverlay')) closeHelp();
+});
+document.getElementById('helpCopyPromptBtn').addEventListener('click', ()=>{
+  const lessonsText=helpData.lessons.map(l=>`[${l.label}] ${l.text}`).join('\n');
+  const text=COMMON_PROMPT+'\n\n【開発教訓】\n'+lessonsText;
+  const btn=document.getElementById('helpCopyPromptBtn');
+  const ok=()=>{ btn.textContent='✅ コピーしました'; setTimeout(()=>{ btn.textContent='📋 バグチェック用プロンプトをコピー'; },1800); };
+  const fail=()=>alert('コピーに失敗しました');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(ok).catch(()=>{
+      try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }catch{ fail(); }
+    });
+  } else {
+    try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }catch{ fail(); }
+  }
+});
+
+
+const COMMON_PROMPT = `【前提条件】
+- 環境: Android Brave ブラウザ / GitHub Pages (https://kaerukaerukaeru2-lab.github.io/lab/)
+- バニラ HTML/CSS/JS のみ（フレームワーク不使用）
+- データ永続化: IndexedDB（LocalStorageからの自動移行あり）
+- 動いているバージョンは絶対に直接触らない。改造時は必ず新バージョン番号で作業。`;
+
+const helpData = {
+  howto: [
+    {
+      title: '🏠 X タブ',
+      body: `<strong>新規投稿</strong>：Xの投稿画面を空の状態で開く<br>
+<strong>タグ付き投稿</strong>：スニペットに登録済みのハッシュタグを全部載せた状態で投稿画面を開く<br>
+<strong>ユーザー検索</strong>：タップすると下の検索欄にフォーカス。@handleやキーワードを入力して検索<br>
+<strong>プロフィール</strong>：自分の@IDを保存するとここから自分のページに飛べる<br>
+<strong>登録ハンドル</strong>：⚙️管理ボタンで一覧を開き、handleを登録。チェックONのものだけ表示エリアに出る。件数制限なし<br>
+<strong>固定ユーザー</strong>：⚙️管理ボタンで追加フォームを開く。名前と@handleを登録。自分の@ID設定もここで行う`
+    },
+    {
+      title: '✏️ 下書きタブ',
+      body: `<strong>種別</strong>：投稿・返信・スレッドの3種類。下書き保存時に記録される<br>
+<strong>文字数</strong>：120文字超でオレンジ、140文字超で赤に変化<br>
+<strong>ALTテキスト</strong>：画像の代替テキスト専用エリア。最大1000文字<br>
+<strong>本文＋ALTコピー</strong>：本文とALTを【投稿本文】【ALT】の見出し付きで一括コピー<br>
+<strong>Xで投稿</strong>：下書きのテキストをそのままXの投稿画面に渡して開く<br>
+<strong>編集</strong>：保存済み下書きを入力欄に読み込む。種別も復元される`
+    },
+    {
+      title: '⚡ スニペットタブ',
+      body: `<strong>ハッシュタグ</strong>：よく使うタグを登録。タップでコピー。×で削除<br>
+<strong>定型文</strong>：挨拶文・お礼文など繰り返し使うテキストを登録。タップでコピー<br>
+💡 コピーしたらXアプリに貼り付けるだけ。投稿テンプレとして使うのが便利`
+    },
+    {
+      title: '👥 TL タブ',
+      body: `<strong>ユーザー一覧</strong>：Xタブで登録した固定ユーザーが並ぶ<br>
+<strong>新規投稿</strong>：空の投稿画面を開く<br>
+<strong>タグ付きコメント</strong>：@handle＋登録済みハッシュタグを入れた状態で投稿画面を開く<br>
+<strong>プロフィール</strong>：そのユーザーのXプロフィールページを開く<br>
+💡 タグはスニペットタブで管理。追加・削除するとTLタブのURLにも即反映される`
+    },
+    {
+      title: '📊 ログタブ',
+      body: `<strong>統計</strong>：今日・今週・合計の投稿記録数を表示<br>
+<strong>予約メモ</strong>：日時と内容を設定してメモとして保存。実際の予約投稿機能ではない<br>
+<strong>投稿ログ</strong>：投稿した内容を手動で記録。最新50件を表示<br>
+⚠️ 予約メモはリマインダー機能ではありません。X公式の予約投稿は別途X上で操作してください`
+    },
+    {
+      title: '💾 データについて',
+      body: `<strong>保存先</strong>：すべてのデータはIndexedDBに保存される<br>
+<strong>注意</strong>：ブラウザのデータ消去・シークレットモードではデータが失われる`
+    },
+  ],
+  lessons: [
+    { label: '教訓1', text: 'バージョンアップ時は「消えた機能」を必ず差分確認せよ。追加に気を取られると既存機能が無言で消える。' },
+    { label: '教訓2', text: 'ブラウザ固有の制限（Brave・twitter://等）は早期に実機検証せよ。設計後に発覚すると手戻りが大きい。' },
+    { label: '教訓3', text: '試作アプリは「何を検証したか」を明確にせよ。目的が曖昧だと移植時に何を残すか判断できなくなる。' },
+  ]
+};
+
+function buildHelpModal(){
+  const body = document.getElementById('helpBody');
+  let html = '<div class="help-modal-section-title">📖 使い方</div>';
+  helpData.howto.forEach((sec,si)=>{
+    html+=`<div class="help-modal-item">
+      <button class="help-modal-trigger" onclick="toggleHelpItem(this)">
+        <span>${sec.title}</span><span class="help-chevron">▼</span>
+      </button>
+      <div class="help-modal-body">${sec.body}</div>
+    </div>`;
+  });
+  html += '<div class="help-modal-section-title">📌 開発教訓</div>';
+  helpData.lessons.forEach((l,li)=>{
+    html+=`<div class="help-modal-item">
+      <button class="help-modal-trigger" onclick="toggleHelpItem(this)">
+        <span>${l.label}</span><span class="help-chevron">▼</span>
+      </button>
+      <div class="help-modal-body">${l.text}</div>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+function toggleHelpItem(btn){
+  const body=btn.nextElementSibling;
+  const isOpen=btn.classList.contains('open');
+  btn.closest('#helpBody').querySelectorAll('.help-modal-trigger.open').forEach(b=>{
+    if(b!==btn){b.classList.remove('open');b.nextElementSibling.classList.remove('open');}
+  });
+  btn.classList.toggle('open',!isOpen);
+  body.classList.toggle('open',!isOpen);
+}
+
+function openHelp(){document.getElementById('helpOverlay').classList.add('active');}
+function closeHelp(){document.getElementById('helpOverlay').classList.remove('active');}
 
 /* Tab */
 function switchTab(name,btn){
