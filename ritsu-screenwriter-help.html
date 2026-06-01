@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>律 Screenwriter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700&display=swap');
+:root{
+  --ink:#0d0d0f;--ink2:#161619;--ink3:#1f1f24;--ink4:#2a2a30;
+  --gold:#c9a84c;--gold-lt:#e8c96a;
+  --mist:#c8c6be;--mist2:#8a8880;
+  --scene:#4ecdc4;--char:#e07090;--stage:#8a9db5;--dialog:#d4d0c8;
+  --r:6px;--font:'Shippori Mincho','Hiragino Mincho ProN','游明朝',serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--mist);
+  font-family:var(--font);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+
+/* topbar */
+#topbar{height:44px;background:var(--ink2);border-bottom:1px solid rgba(201,168,76,.2);
+  display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0}
+.logo{font-size:15px;font-weight:700;letter-spacing:.12em;color:var(--gold);white-space:nowrap}
+.logo span{font-weight:400;color:var(--mist2);font-size:11px;margin-left:6px;letter-spacing:.06em}
+.tb-r{margin-left:auto;display:flex;gap:5px}
+.tb-btn{height:30px;padding:0 9px;border:1px solid rgba(201,168,76,.3);border-radius:var(--r);
+  background:transparent;color:var(--gold);font-size:11px;font-family:var(--font);
+  cursor:pointer;letter-spacing:.04em;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.tb-btn:active{background:rgba(201,168,76,.15)}
+.tb-btn.hi{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.tb-btn.hi:active{background:var(--gold-lt)}
+
+/* app */
+#app{display:flex;flex-direction:column;height:calc(100% - 44px)}
+#mode-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.06);background:var(--ink2);flex-shrink:0}
+.mtab{flex:1;height:36px;background:transparent;border:none;color:var(--mist2);font-size:11px;
+  font-family:var(--font);cursor:pointer;letter-spacing:.06em;
+  border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.mtab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* edit pane */
+#pane-edit{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;
+  gap:6px;-webkit-overflow-scrolling:touch}
+#pane-edit::-webkit-scrollbar{width:3px}
+#pane-edit::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:2px}
+.block{position:relative;padding:10px 12px 10px 14px;border-left:3px solid transparent;
+  background:var(--ink2);border-radius:var(--r);font-size:14px;line-height:1.75;
+  cursor:pointer;transition:background .12s;-webkit-user-select:none;user-select:none}
+.block:active{background:var(--ink3)}
+.block.scene{border-color:var(--scene);color:var(--scene);font-weight:700;font-size:13px;letter-spacing:.08em}
+.block.stage{border-color:var(--stage);color:var(--stage);font-style:italic;font-size:13px}
+.block.char{border-color:var(--char);color:var(--char);font-weight:700;font-size:13px;margin-left:16px}
+.block.dialog{border-color:var(--dialog);color:var(--dialog);margin-left:16px}
+.block .btype{position:absolute;top:4px;right:8px;font-size:9px;color:var(--mist2);opacity:.6}
+.block .btext{white-space:pre-wrap;word-break:break-all}
+.empty-msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;opacity:.3;pointer-events:none}
+.empty-msg .kanji{font-size:48px;color:var(--gold)}
+.empty-msg p{font-size:12px;letter-spacing:.1em;color:var(--mist2)}
+
+/* preview pane */
+#pane-preview{flex:1;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+  padding:12px 10px;display:none;align-items:flex-start}
+#pane-preview.active{display:flex}
+.tategaki-preview{writing-mode:vertical-rl;text-orientation:mixed;direction:rtl;
+  font-family:var(--font);font-size:14px;line-height:2.2;
+  min-height:calc(100% - 24px);background:var(--ink2);
+  border:1px solid rgba(201,168,76,.12);border-radius:var(--r);
+  padding:18px 14px;white-space:nowrap}
+.tp-scene{color:var(--scene);font-weight:700;display:block;margin-bottom:.5em}
+.tp-stage{color:var(--stage);font-style:italic;display:block;margin:.3em 0}
+.tp-char{color:var(--char);font-weight:700;display:block;margin-top:.8em}
+.tp-dialog{color:var(--dialog);display:block;margin-left:1.5em}
+.tp-sep{display:inline-block;width:.8em}
+
+/* input panel */
+#input-panel{background:var(--ink2);border-top:1px solid rgba(255,255,255,.07);
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));flex-shrink:0}
+#input-row{display:flex;gap:6px;margin-bottom:7px}
+#text-input{flex:1;background:var(--ink3);border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r);color:var(--mist);font-size:15px;font-family:var(--font);
+  padding:9px 12px;outline:none;-webkit-appearance:none;letter-spacing:.04em}
+#text-input::placeholder{color:var(--mist2);opacity:.5;font-size:13px}
+#text-input:focus{border-color:rgba(201,168,76,.4)}
+#btn-add{width:44px;height:44px;border-radius:var(--r);border:none;background:var(--gold);
+  color:var(--ink);font-size:22px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+#btn-add:active{background:var(--gold-lt)}
+#type-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.type-btn{height:38px;border:1px solid transparent;border-radius:var(--r);background:var(--ink3);
+  color:var(--mist2);font-size:11px;font-family:var(--font);letter-spacing:.06em;cursor:pointer;
+  transition:background .12s,color .12s,border-color .12s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.type-btn .tmark{font-size:14px;line-height:1}
+.type-btn.selected{font-weight:700}
+.type-btn[data-t="scene"].selected{background:rgba(78,205,196,.15);color:var(--scene);border-color:rgba(78,205,196,.4)}
+.type-btn[data-t="stage"].selected{background:rgba(138,157,181,.15);color:var(--stage);border-color:rgba(138,157,181,.4)}
+.type-btn[data-t="char"].selected{background:rgba(224,112,144,.15);color:var(--char);border-color:rgba(224,112,144,.4)}
+.type-btn[data-t="dialog"].selected{background:rgba(212,208,200,.1);color:var(--dialog);border-color:rgba(212,208,200,.3)}
+
+/* ══ DRAWER (ボトムシート) ══ */
+#drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150}
+#drawer-overlay.open{display:block}
+#drawer{position:fixed;bottom:-100%;left:0;right:0;height:88vh;
+  background:var(--ink2);border-radius:16px 16px 0 0;
+  border-top:1px solid rgba(201,168,76,.25);
+  z-index:151;display:flex;flex-direction:column;
+  transition:bottom .3s cubic-bezier(.4,0,.2,1);overflow:hidden}
+#drawer.open{bottom:0}
+.d-handle{flex-shrink:0;display:flex;flex-direction:column;align-items:center;
+  padding:10px 16px 0;gap:5px}
+.d-handle .bar{width:36px;height:3px;background:var(--ink4);border-radius:2px}
+.d-handle h2{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.12em;align-self:flex-start}
+
+/* drawer tabs */
+.dtabs{display:flex;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;padding:0 4px}
+.dtab{flex:1;height:40px;background:transparent;border:none;color:var(--mist2);
+  font-size:10px;font-family:var(--font);cursor:pointer;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:color .15s,border-color .15s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.dtab .dico{font-size:14px;line-height:1}
+.dtab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* drawer panels */
+.dpanel{display:none;flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
+.dpanel.active{display:block}
+.dpanel::-webkit-scrollbar{width:3px}
+.dpanel::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:2px}
+
+/* drawer内共通 */
+.dsec{font-size:10px;font-weight:700;color:var(--mist2);letter-spacing:.1em;
+  margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.06)}
+.dhr{border:none;border-top:1px solid rgba(255,255,255,.06);margin:14px 0}
+.dinp{width:100%;background:var(--ink3);border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r);color:var(--mist);font-family:var(--font);font-size:12px;
+  padding:7px 10px;outline:none}
+.dinp:focus{border-color:rgba(201,168,76,.35)}
+.dinp::placeholder{color:var(--mist2);opacity:.5}
+.drow{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.dbtn{padding:7px 12px;border:1px solid rgba(201,168,76,.3);border-radius:var(--r);
+  background:transparent;color:var(--gold);font-size:11px;font-family:var(--font);
+  cursor:pointer;letter-spacing:.04em;white-space:nowrap}
+.dbtn:active{background:rgba(201,168,76,.15)}
+.dbtn.pri{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.dbtn.pri:active{background:var(--gold-lt)}
+.dbtn.dng{border-color:rgba(224,112,144,.4);color:var(--char)}
+
+/* キャラカード */
+.cc{background:var(--ink3);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.ccr{display:grid;grid-template-columns:36px 1fr;gap:6px;align-items:center;margin-bottom:5px}
+.cclbl{font-size:10px;color:var(--mist2)}
+
+/* 用語 */
+.gi{display:grid;grid-template-columns:1fr 1fr 28px;gap:5px;align-items:center;margin-bottom:5px}
+
+/* 統計 */
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.scard{background:var(--ink3);border-radius:8px;padding:10px 8px;text-align:center}
+.snum{font-size:20px;font-weight:700;color:var(--gold)}
+.slbl{font-size:9px;color:var(--mist2);margin-top:2px}
+.brow{display:grid;grid-template-columns:60px 1fr 28px;gap:6px;align-items:center;font-size:10px;margin-bottom:4px}
+.btrack{background:var(--ink4);border-radius:3px;height:6px;overflow:hidden}
+.bfill{height:100%;border-radius:3px;background:var(--gold);transition:width .4s}
+.trow{display:flex;gap:3px;align-items:center;margin-bottom:3px}
+.tlbl{font-size:9px;color:var(--mist2);width:38px;white-space:nowrap}
+.tcell{width:12px;height:12px;border-radius:2px;background:var(--ink4);display:inline-block}
+.tcell.d{background:#2a5a7a}.tcell.s{background:#2a3a4c}.tcell.c{background:#4c2040}
+
+/* 書き出し */
+.eitem{display:flex;align-items:center;gap:10px;padding:11px 12px;
+  background:var(--ink3);border:1px solid rgba(255,255,255,.07);
+  border-radius:8px;margin-bottom:7px}
+.eico{font-size:20px;flex-shrink:0}
+.einfo{flex:1}
+.ename{font-size:12px;font-weight:700;color:var(--mist)}
+.edesc{font-size:10px;color:var(--mist2);margin-top:2px}
+
+/* 削除確認 */
+#confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;padding:20px}
+#confirm-overlay.open{display:flex;flex-direction:column;justify-content:flex-end;gap:7px}
+#confirm-card{background:var(--ink3);border:1px solid rgba(201,168,76,.2);border-radius:12px;
+  padding:14px;font-size:12px;line-height:1.7;color:var(--mist);word-break:break-all}
+#confirm-card strong{color:var(--gold);font-size:10px;letter-spacing:.08em}
+.cfmbtn{height:48px;border-radius:10px;border:none;font-size:15px;font-family:var(--font);cursor:pointer}
+#btn-del-yes{background:#7a1f2e;color:#ffb3bf}
+#btn-del-no{background:var(--ink3);color:var(--mist2);border:1px solid rgba(255,255,255,.1)}
+
+/* loader */
+#loader{display:none;position:fixed;inset:0;background:rgba(13,13,15,.92);z-index:300;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px}
+#loader.show{display:flex}
+.spinner{width:34px;height:34px;border:2px solid rgba(201,168,76,.2);
+  border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loader p{font-size:12px;color:var(--mist2);letter-spacing:.1em}
+
+/* PDF stage */
+#pdf-stage{position:fixed;left:-9999px;top:0;width:794px;min-height:1123px;
+  background:#fff;color:#111;font-family:'Hiragino Mincho ProN','游明朝','Yu Mincho',serif}
+.pdf-page{width:794px;height:1123px;padding:56px 52px;display:flex;
+  flex-direction:column;overflow:hidden;position:relative}
+.pdf-body{flex:1;writing-mode:vertical-rl;text-orientation:mixed;direction:rtl;
+  overflow:hidden;font-size:15px;line-height:2.2;letter-spacing:.05em}
+.pdf-title{writing-mode:vertical-rl;direction:rtl;font-size:20px;font-weight:700;
+  letter-spacing:.15em;color:#1a1a1a;margin-left:16px;padding-left:12px;border-left:3px solid #222}
+.pdf-scene{color:#1a5c58;font-weight:700;font-size:13px;letter-spacing:.08em}
+.pdf-stage{color:#3a4a5c;font-style:italic;font-size:13px}
+.pdf-char{color:#6a1a30;font-weight:700;font-size:14px;margin-right:1.5em}
+.pdf-dialog{color:#111;font-size:15px;margin-right:2em}
+.pdf-sep{display:inline-block;width:1em}
+.pdf-foot{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:10px;color:#aaa}
+
+/* ══ HELP MODAL ══ */
+:root{
+  --help-accent:       var(--gold);
+  --help-accent-dim:   rgba(201,168,76,0.2);
+  --help-bg:           rgba(22,22,25,0.98);
+  --help-border:       rgba(201,168,76,0.3);
+  --help-text:         var(--mist);
+  --help-text-dim:     var(--mist2);
+  --help-section-bg:   rgba(201,168,76,0.1);
+  --help-item-bg:      rgba(255,255,255,0.04);
+  --help-btn-size:     2.4rem;
+}
+#helpOverlay{display:none;position:fixed;inset:0;z-index:910;background:rgba(0,0,0,.65);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:1rem}
+#helpOverlay.active{display:flex}
+#helpModal{position:relative;width:100%;max-width:480px;max-height:85vh;
+  background:var(--help-bg);border:1px solid var(--help-border);border-radius:1rem;
+  overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px var(--help-accent-dim)}
+#helpModal .help-header{padding:.9rem 1.2rem;border-bottom:1px solid var(--help-border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#helpModal .help-header-title{font-size:1rem;font-weight:700;color:var(--gold);letter-spacing:.05em;font-family:var(--font)}
+#helpCloseBtn{width:2rem;height:2rem;border-radius:50%;border:1px solid var(--help-border);
+  background:transparent;color:var(--help-text-dim);font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:color .15s,background .15s;
+  -webkit-tap-highlight-color:transparent}
+#helpCloseBtn:hover{color:#fff;background:rgba(255,255,255,.08)}
+#helpBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem .8rem 1.2rem;flex:1}
+#helpBody::-webkit-scrollbar{width:3px}
+#helpBody::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:2px}
+.help-section-title{display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700;
+  letter-spacing:.12em;color:var(--gold);text-transform:uppercase;background:var(--help-section-bg);
+  border-radius:.45rem;padding:.45rem .7rem;margin-bottom:.4rem;margin-top:.6rem;font-family:var(--font)}
+.help-section-title:first-child{margin-top:0}
+.help-item{border-radius:.5rem;overflow:hidden;margin-bottom:.3rem}
+.help-item-trigger{width:100%;text-align:left;background:var(--help-item-bg);
+  border:1px solid transparent;border-radius:.5rem;color:var(--help-text);
+  font-size:.88rem;font-weight:600;padding:.6rem .8rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent;font-family:var(--font)}
+.help-item-trigger:hover{border-color:var(--help-border)}
+.help-item-trigger.open{border-color:var(--help-accent-dim);
+  border-bottom-left-radius:0;border-bottom-right-radius:0;background:rgba(201,168,76,.08)}
+.help-item-trigger .help-chevron{font-size:.7rem;color:var(--help-text-dim);
+  transition:transform .2s;flex-shrink:0}
+.help-item-trigger.open .help-chevron{transform:rotate(180deg)}
+.help-item-body{display:none;background:rgba(255,255,255,.025);
+  border:1px solid var(--help-accent-dim);border-top:none;
+  border-bottom-left-radius:.5rem;border-bottom-right-radius:.5rem;
+  padding:.65rem .85rem .75rem;font-size:.83rem;color:var(--help-text);line-height:1.65;font-family:var(--font)}
+.help-item-body.open{display:block}
+.help-item-body .lesson-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;
+  color:var(--help-text-dim);text-transform:uppercase;margin-top:.5rem;margin-bottom:.15rem}
+.help-item-body .lesson-label:first-child{margin-top:0}
+.help-item-body strong{color:#fff;font-weight:700}
+.help-item-body code{font-family:'Courier New',monospace;font-size:.78rem;
+  background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);
+  border-radius:.25rem;padding:.05em .35em;color:#a0e0ff}
+#helpCopyPromptBtn{display:block;width:calc(100% - 1.6rem);margin:.6rem .8rem .2rem;
+  padding:.65rem;background:var(--help-accent-dim);border:1px solid var(--help-border);
+  border-radius:.5rem;color:var(--gold);font-size:.85rem;font-weight:700;cursor:pointer;
+  text-align:center;letter-spacing:.04em;transition:background .15s,transform .1s;
+  -webkit-tap-highlight-color:transparent;flex-shrink:0;font-family:var(--font)}
+#helpCopyPromptBtn:hover{background:rgba(201,168,76,.35)}
+#helpCopyPromptBtn:active{transform:scale(.97)}
+
+/* toast */
+.toast{position:fixed;bottom:calc(8px + env(safe-area-inset-bottom));left:50%;
+  transform:translateX(-50%) translateY(60px);background:var(--ink3);
+  border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:12px;
+  letter-spacing:.06em;padding:8px 16px;border-radius:20px;white-space:nowrap;
+  opacity:0;transition:transform .25s,opacity .25s;z-index:999;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">律<span>Screenwriter</span></div>
+  <div class="tb-r">
+    <button class="tb-btn" onclick="exportJSON()">💾 保存</button>
+    <button class="tb-btn" onclick="document.getElementById('fi').click()">📂 開く</button>
+    <button class="tb-btn hi" onclick="startPDF()">⬇ PDF</button>
+    <button class="tb-btn" style="font-size:16px;padding:0 8px" onclick="openDrawer()">⚙️</button>
+    <button class="tb-btn" style="font-size:16px;padding:0 8px" onclick="openHelpModal()" aria-label="ヘルプを開く">❓</button>
+  </div>
+</div>
+
+<div id="app">
+  <div id="mode-tabs">
+    <button class="mtab active" onclick="switchMode('edit')">✍ 編集</button>
+    <button class="mtab" onclick="switchMode('preview')">📖 縦書き確認</button>
+  </div>
+  <div id="pane-edit">
+    <div class="empty-msg" id="empty-msg">
+      <div class="kanji">律</div>
+      <p>下のボタンで台本を入力してください</p>
+    </div>
+  </div>
+  <div id="pane-preview">
+    <div class="tategaki-preview" id="tp"></div>
+  </div>
+  <div id="input-panel">
+    <div id="input-row">
+      <input type="text" id="text-input" placeholder="テキストを入力…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button id="btn-add" onclick="commitBlock()">＋</button>
+    </div>
+    <div id="type-row">
+      <button class="type-btn selected" data-t="scene" onclick="selType('scene')"><span class="tmark">柱</span><span>シーン</span></button>
+      <button class="type-btn" data-t="stage" onclick="selType('stage')"><span class="tmark">書</span><span>ト書き</span></button>
+      <button class="type-btn" data-t="char"  onclick="selType('char')"><span class="tmark">名</span><span>キャラ</span></button>
+      <button class="type-btn" data-t="dialog" onclick="selType('dialog')"><span class="tmark">言</span><span>セリフ</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ⚙️ ドロワー -->
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+<div id="drawer">
+  <div class="d-handle">
+    <div class="bar"></div>
+    <h2>⚙ ツール</h2>
+  </div>
+  <div class="dtabs">
+    <button class="dtab active" onclick="dTab('manage')"><span class="dico">📁</span>制作管理</button>
+    <button class="dtab" onclick="dTab('analysis')"><span class="dico">📊</span>構成分析</button>
+    <button class="dtab" onclick="dTab('export')"><span class="dico">📤</span>書き出し</button>
+  </div>
+
+  <!-- 制作管理 -->
+  <div class="dpanel active" id="dp-manage">
+    <p class="dsec">キャラクター設定</p>
+    <div id="chara-list"></div>
+    <button class="dbtn" onclick="addChara()">＋ キャラクター追加</button>
+    <hr class="dhr">
+    <p class="dsec">用語集 / 世界観メモ</p>
+    <div id="gloss-list"></div>
+    <button class="dbtn" onclick="addGloss()">＋ 用語追加</button>
+    <hr class="dhr">
+    <p class="dsec">シーン一覧</p>
+    <div id="scene-table"></div>
+  </div>
+
+  <!-- 構成分析 -->
+  <div class="dpanel" id="dp-analysis">
+    <div class="sgrid" id="stat-grid"></div>
+    <p class="dsec">キャラ別セリフ量</p>
+    <div id="chara-chart" style="margin-bottom:12px"></div>
+    <p class="dsec">登場シーン</p>
+    <div id="appear-table" style="overflow-x:auto;margin-bottom:12px"></div>
+    <p class="dsec">テンポ分析</p>
+    <div id="tempo-grid"></div>
+    <div style="display:flex;gap:10px;margin-top:6px;font-size:9px;color:var(--mist2)">
+      <span>■ <span style="color:#2a5a7a">セリフ</span></span>
+      <span>■ <span style="color:#2a3a4c">ト書き</span></span>
+      <span>■ <span style="color:#4c2040">シーン</span></span>
+    </div>
+  </div>
+
+  <!-- 書き出し -->
+  <div class="dpanel" id="dp-export">
+    <div class="eitem"><div class="eico">📄</div><div class="einfo"><div class="ename">Fountain 形式</div><div class="edesc">Final Draft / Fade In 互換・業界標準</div></div><button class="dbtn" onclick="expFountain()">出力</button></div>
+    <div class="eitem"><div class="eico">🎬</div><div class="einfo"><div class="ename">Final Draft XML (.fdx)</div><div class="edesc">Final Draft 直接読み込み形式</div></div><button class="dbtn" onclick="expFDX()">出力</button></div>
+    <div class="eitem"><div class="eico">🎙</div><div class="einfo"><div class="ename">音響台本 (.txt)</div><div class="edesc">SE / BGM キュー欄付きテキスト</div></div><button class="dbtn" onclick="expAudio()">出力</button></div>
+    <div class="eitem"><div class="eico">📋</div><div class="einfo"><div class="ename">プレーンテキスト</div><div class="edesc">汎用テキスト形式</div></div><button class="dbtn" onclick="expTXT()">出力</button></div>
+    <div class="eitem"><div class="eico">💾</div><div class="einfo"><div class="ename">プロジェクト (.json)</div><div class="edesc">キャラ設定・用語集含む全データ</div></div><button class="dbtn" onclick="exportJSON()">保存</button></div>
+    <div class="eitem"><div class="eico">🖨</div><div class="einfo"><div class="ename">縦書き PDF</div><div class="edesc">A4・ページ分割・句読点縦書き変換</div></div><button class="dbtn pri" onclick="startPDF()">生成</button></div>
+  </div>
+</div>
+
+<!-- アクションシート -->
+<div id="confirm-overlay">
+  <div id="confirm-card">
+    <strong id="cfm-lbl">ブロックを編集</strong><br>
+    <span id="cfm-txt" style="font-size:11px;color:var(--mist2)"></span>
+  </div>
+  <button class="cfmbtn" id="btn-act-up"   onclick="doMove(-1)" style="background:var(--ink3);color:var(--mist);border:1px solid rgba(255,255,255,.1);font-size:13px">▲ 上へ移動</button>
+  <button class="cfmbtn" id="btn-act-down" onclick="doMove(1)"  style="background:var(--ink3);color:var(--mist);border:1px solid rgba(255,255,255,.1);font-size:13px">▼ 下へ移動</button>
+  <button class="cfmbtn" id="btn-act-edit" onclick="openEdit()"  style="background:var(--ink3);color:var(--gold-lt);border:1px solid rgba(201,168,76,.3);font-size:14px">✏ テキスト編集</button>
+  <button class="cfmbtn" id="btn-del-yes"  onclick="doDelete()" style="background:#7a1f2e;color:#ffb3bf;font-size:14px">🗑 削除する</button>
+  <button class="cfmbtn" id="btn-del-no"   onclick="closeConfirm()" style="background:var(--ink3);color:var(--mist2);border:1px solid rgba(255,255,255,.1)">キャンセル</button>
+</div>
+
+<!-- 編集モーダル -->
+<div id="edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:210;padding:20px;flex-direction:column;justify-content:flex-end;gap:7px">
+  <div style="background:var(--ink3);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:14px">
+    <p style="font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.1em;margin-bottom:8px" id="edit-lbl">テキスト編集</p>
+    <textarea id="edit-textarea" style="width:100%;min-height:80px;background:var(--ink2);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:var(--mist);font-family:var(--font);font-size:14px;padding:9px 11px;outline:none;resize:vertical;line-height:1.75;letter-spacing:.04em" autocorrect="off" spellcheck="false"></textarea>
+  </div>
+  <button class="cfmbtn" onclick="doEdit()" style="background:var(--gold);color:var(--ink);font-size:14px;font-weight:700">✓ 確定</button>
+  <button class="cfmbtn" onclick="closeEdit()" style="background:var(--ink3);color:var(--mist2);border:1px solid rgba(255,255,255,.1)">キャンセル</button>
+</div>
+
+<div id="loader"><div class="spinner"></div><p id="loader-msg">処理中…</p></div>
+<div id="pdf-stage"></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="fi" accept=".json" style="display:none" onchange="importJSON(event)">
+
+<!-- ❓ ヘルプモーダル -->
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 律 Screenwriter ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
+  </div>
+</div>
+
+<script>
+/* ══ STATE ══ */
+const SK='ritsu-v3';
+let blocks=[],charas=[],glossary=[];
+let selType_='scene',delIdx=null,mode='edit';
+let nCid=1,nGid=1;
+
+const TMAP={'、':'︑','。':'︒','「':'﹁','」':'﹂','『':'﹃','』':'﹄',
+  '（':'︵','）':'︶','ー':'｜','〜':'｜','…':'︙','‥':'︰','—':'︱'};
+const tate=s=>s.split('').map(c=>TMAP[c]||c).join('');
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const LBLS={scene:'シーン',stage:'ト書き',char:'キャラ',dialog:'セリフ'};
+
+/* ══ PERSIST ══ */
+function load(){
+  try{
+    const r=localStorage.getItem(SK);
+    if(r){const d=JSON.parse(r);
+      blocks=d.blocks||[];charas=d.charas||[];glossary=d.gloss||[];
+      nCid=Math.max(1,...charas.map(c=>c.id),0)+1;
+      nGid=Math.max(1,...glossary.map(g=>g.id),0)+1;}
+  }catch(e){blocks=[];}
+}
+function save(){
+  try{localStorage.setItem(SK,JSON.stringify({blocks,charas,gloss:glossary}));}catch(e){}
+}
+
+/* ══ RENDER EDIT ══ */
+function renderEdit(scrollToBottom=false){
+  const pane=document.getElementById('pane-edit');
+  const empty=document.getElementById('empty-msg');
+  [...pane.querySelectorAll('.block')].forEach(e=>e.remove());
+  if(!blocks.length){empty.style.display='flex';return;}
+  empty.style.display='none';
+  blocks.forEach((b,i)=>{
+    const d=document.createElement('div');
+    d.className=`block ${b.type}`;
+    d.innerHTML=`<span class="btype">${LBLS[b.type]}</span><div class="btext">${esc(b.text)}</div>`;
+    d.addEventListener('click',()=>openConfirm(i));
+    pane.appendChild(d);
+  });
+  if(scrollToBottom)pane.scrollTop=pane.scrollHeight;
+}
+
+/* ══ RENDER PREVIEW ══ */
+function renderPreview(){
+  const el=document.getElementById('tp');
+  let h='';
+  blocks.forEach(b=>{
+    const t=esc(tate(b.text));
+    if(b.type==='scene')h+=`<span class="tp-scene">◆${t}</span><span class="tp-sep"></span>`;
+    if(b.type==='stage')h+=`<span class="tp-stage">　${t}</span><span class="tp-sep"></span>`;
+    if(b.type==='char') h+=`<span class="tp-char">【${t}】</span>`;
+    if(b.type==='dialog')h+=`<span class="tp-dialog">　　${t}</span><span class="tp-sep"></span>`;
+  });
+  el.innerHTML=h||'<span style="color:#444;font-size:12px">ブロックがありません</span>';
+}
+
+/* ══ BLOCK OPS ══ */
+function commitBlock(){
+  const inp=document.getElementById('text-input');
+  const txt=inp.value.trim();if(!txt){inp.focus();return;}
+  blocks.push({type:selType_,text:txt});
+  inp.value='';save();renderEdit(true);
+  if(mode==='preview')renderPreview();
+  inp.focus();
+}
+function selType(t){
+  selType_=t;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.toggle('selected',b.dataset.t===t));
+  document.getElementById('text-input').focus();
+}
+function openConfirm(i){
+  delIdx=i;
+  const b=blocks[i];
+  document.getElementById('cfm-lbl').textContent=LBLS[b.type]+' ブロック';
+  document.getElementById('cfm-txt').textContent=b.text.slice(0,60)+(b.text.length>60?'…':'');
+  // 先頭/末尾なら移動ボタンをdim
+  document.getElementById('btn-act-up').style.opacity=i===0?'.3':'1';
+  document.getElementById('btn-act-up').disabled=i===0;
+  document.getElementById('btn-act-down').style.opacity=i===blocks.length-1?'.3':'1';
+  document.getElementById('btn-act-down').disabled=i===blocks.length-1;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm(){delIdx=null;document.getElementById('confirm-overlay').classList.remove('open');}
+function doDelete(){
+  if(delIdx===null)return;
+  blocks.splice(delIdx,1);save();closeConfirm();renderEdit();
+  if(mode==='preview')renderPreview();
+  toast('削除しました');
+}
+function doMove(dir){
+  if(delIdx===null)return;
+  const i=delIdx,j=i+dir;
+  if(j<0||j>=blocks.length)return;
+  [blocks[i],blocks[j]]=[blocks[j],blocks[i]];
+  delIdx=j;
+  save();closeConfirm();renderEdit();
+  if(mode==='preview')renderPreview();
+  toast(dir<0?'上に移動しました':'下に移動しました');
+}
+/* ══ EDIT MODAL ══ */
+function openEdit(){
+  if(delIdx===null)return;
+  closeConfirm();
+  const b=blocks[delIdx];
+  document.getElementById('edit-lbl').textContent=LBLS[b.type]+' を編集';
+  document.getElementById('edit-textarea').value=b.text;
+  const ov=document.getElementById('edit-overlay');
+  ov.style.display='flex';
+  setTimeout(()=>document.getElementById('edit-textarea').focus(),100);
+}
+function closeEdit(){
+  document.getElementById('edit-overlay').style.display='none';
+  delIdx=null;
+}
+function doEdit(){
+  if(delIdx===null)return;
+  const txt=document.getElementById('edit-textarea').value.trim();
+  if(!txt){toast('テキストを入力してください');return;}
+  blocks[delIdx].text=txt;
+  save();closeEdit();renderEdit();
+  if(mode==='preview')renderPreview();
+  toast('編集しました');
+}
+
+/* ══ MODE ══ */
+function switchMode(m){
+  mode=m;
+  document.querySelectorAll('.mtab').forEach((t,i)=>t.classList.toggle('active',['edit','preview'][i]===m));
+  document.getElementById('pane-edit').style.display=m==='edit'?'flex':'none';
+  const pp=document.getElementById('pane-preview');
+  if(m==='preview'){pp.classList.add('active');renderPreview();}
+  else pp.classList.remove('active');
+}
+
+/* ══ DRAWER ══ */
+function openDrawer(){
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+  renderCharaList();renderGlossList();renderSceneTable();refreshCharaSel();
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+function dTab(id){
+  document.querySelectorAll('.dtab').forEach((t,i)=>
+    t.classList.toggle('active',['manage','analysis','export'][i]===id));
+  document.querySelectorAll('.dpanel').forEach(p=>p.classList.toggle('active',p.id===`dp-${id}`));
+  if(id==='analysis')refreshAnalysis();
+}
+
+/* ══ 制作管理: キャラ ══ */
+function renderCharaList(){
+  const el=document.getElementById('chara-list');el.innerHTML='';
+  charas.forEach(c=>{
+    const d=document.createElement('div');d.className='cc';
+    d.innerHTML=`
+      <div class="ccr"><span class="cclbl">名前</span><input class="dinp" value="${esc(c.name)}" oninput="uc(${c.id},'name',this.value)" placeholder="キャラ名"></div>
+      <div class="ccr"><span class="cclbl">年齢</span><input class="dinp" value="${esc(c.age)}"  oninput="uc(${c.id},'age',this.value)"  placeholder="例: 17歳"></div>
+      <div class="ccr"><span class="cclbl">役割</span><input class="dinp" value="${esc(c.role)}" oninput="uc(${c.id},'role',this.value)" placeholder="例: 主人公"></div>
+      <div class="ccr"><span class="cclbl">口調</span><input class="dinp" value="${esc(c.tone)}" oninput="uc(${c.id},'tone',this.value)" placeholder="例: 短文・内省的"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px">
+        <button class="dbtn dng" onclick="delChara(${c.id})">削除</button>
+      </div>`;
+    el.appendChild(d);
+  });
+}
+function addChara(){charas.push({id:nCid++,name:'',age:'',role:'',tone:''});save();renderCharaList();refreshCharaSel();}
+const uc=(id,k,v)=>{const c=charas.find(x=>x.id===id);if(c){c[k]=v;save();}};
+function delChara(id){charas=charas.filter(x=>x.id!==id);save();renderCharaList();refreshCharaSel();}
+function refreshCharaSel(){
+  // 執筆支援タブ削除により chara-sel は存在しない
+}
+
+/* ══ 用語集 ══ */
+function renderGlossList(){
+  const el=document.getElementById('gloss-list');el.innerHTML='';
+  glossary.forEach(g=>{
+    const d=document.createElement('div');d.className='gi';
+    d.innerHTML=`<input class="dinp" value="${esc(g.term)}" oninput="ug(${g.id},'term',this.value)" placeholder="用語">
+      <input class="dinp" value="${esc(g.desc)}" oninput="ug(${g.id},'desc',this.value)" placeholder="説明">
+      <button class="dbtn dng" style="padding:6px 8px" onclick="delGloss(${g.id})">×</button>`;
+    el.appendChild(d);
+  });
+}
+function addGloss(){glossary.push({id:nGid++,term:'',desc:''});save();renderGlossList();}
+const ug=(id,k,v)=>{const g=glossary.find(x=>x.id===id);if(g){g[k]=v;save();}};
+function delGloss(id){glossary=glossary.filter(x=>x.id!==id);save();renderGlossList();}
+
+/* ══ シーン一覧 ══ */
+function renderSceneTable(){
+  const sc=blocks.filter(b=>b.type==='scene');
+  const el=document.getElementById('scene-table');
+  if(!sc.length){el.innerHTML='<p style="color:var(--mist2);font-size:11px">シーンブロックがありません</p>';return;}
+  let h='<table style="width:100%;border-collapse:collapse;font-size:10px">'
+    +'<tr><th style="text-align:left;padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.06);color:var(--mist2)">#</th>'
+    +'<th style="text-align:left;padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.06);color:var(--mist2)">シーン名</th>'
+    +'<th style="text-align:right;padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.06);color:var(--mist2)">セリフ</th></tr>';
+  sc.forEach((s,i)=>{
+    const si=blocks.indexOf(s),ni=sc[i+1]?blocks.indexOf(sc[i+1]):blocks.length;
+    const dl=blocks.slice(si,ni).filter(b=>b.type==='dialog').length;
+    h+=`<tr><td style="padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--mist2)">${i+1}</td>
+      <td style="padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--mist)">${esc(s.text.slice(0,18))}</td>
+      <td style="padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.04);text-align:right;color:var(--gold)">${dl}</td></tr>`;
+  });
+  el.innerHTML=h+'</table>';
+}
+
+/* ══ 構成分析 ══ */
+function refreshAnalysis(){
+  const sc=blocks.filter(b=>b.type==='scene');
+  const dl=blocks.filter(b=>b.type==='dialog');
+  const st=blocks.filter(b=>b.type==='stage');
+  const tc=blocks.reduce((s,b)=>s+b.text.length,0);
+  const uc=[...new Set(blocks.filter(b=>b.type==='char').map(b=>b.text))].length;
+  document.getElementById('stat-grid').innerHTML=`
+    <div class="scard"><div class="snum">${sc.length}</div><div class="slbl">シーン数</div></div>
+    <div class="scard"><div class="snum">${dl.length}</div><div class="slbl">セリフ数</div></div>
+    <div class="scard"><div class="snum">${Math.ceil(tc/400)||0}</div><div class="slbl">約ページ</div></div>
+    <div class="scard"><div class="snum">${tc}</div><div class="slbl">総文字数</div></div>
+    <div class="scard"><div class="snum">${st.length}</div><div class="slbl">ト書き数</div></div>
+    <div class="scard"><div class="snum">${uc}</div><div class="slbl">登場キャラ</div></div>`;
+  // キャラ別セリフ量
+  const cm={};let cur='';
+  blocks.forEach(b=>{if(b.type==='char')cur=b.text;if(b.type==='dialog'&&cur)cm[cur]=(cm[cur]||0)+b.text.length;});
+  const mx=Math.max(1,...Object.values(cm));
+  document.getElementById('chara-chart').innerHTML=Object.entries(cm).sort((a,b)=>b[1]-a[1])
+    .map(([n,v])=>`<div class="brow"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mist)">${esc(n)}</span><div class="btrack"><div class="bfill" style="width:${Math.round(v/mx*100)}%"></div></div><span style="text-align:right;color:var(--mist2)">${v}</span></div>`).join('')
+    ||'<p style="color:var(--mist2);font-size:11px">キャラ・セリフブロックが必要です</p>';
+  // 登場シーン
+  const cnames=[...new Set(blocks.filter(b=>b.type==='char').map(b=>b.text))];
+  if(sc.length&&cnames.length){
+    let h='<table style="border-collapse:collapse;font-size:9px"><tr><th style="padding:2px 4px;border:1px solid rgba(255,255,255,.08);color:var(--mist2)">シーン</th>';
+    cnames.forEach(c=>h+=`<th style="padding:2px 4px;border:1px solid rgba(255,255,255,.08);color:var(--char)">${esc(c)}</th>`);h+='</tr>';
+    sc.forEach((s,i)=>{
+      const si=blocks.indexOf(s),ni=sc[i+1]?blocks.indexOf(sc[i+1]):blocks.length;
+      const pr=new Set(blocks.slice(si,ni).filter(b=>b.type==='char').map(b=>b.text));
+      h+=`<tr><td style="padding:2px 4px;border:1px solid rgba(255,255,255,.06);white-space:nowrap;color:var(--mist2)">${esc(s.text.slice(0,10))}…</td>`;
+      cnames.forEach(c=>h+=`<td style="padding:2px 4px;border:1px solid rgba(255,255,255,.06);text-align:center;color:var(--scene)">${pr.has(c)?'●':''}</td>`);
+      h+='</tr>';
+    });
+    document.getElementById('appear-table').innerHTML=h+'</table>';
+  }else document.getElementById('appear-table').innerHTML='<p style="color:var(--mist2);font-size:10px">シーン・キャラブロックが必要です</p>';
+  // テンポ
+  const tg=document.getElementById('tempo-grid');tg.innerHTML='';
+  for(let i=0;i<blocks.length;i+=8){
+    const chunk=blocks.slice(i,i+8);
+    const row=document.createElement('div');row.className='trow';
+    const lb=document.createElement('span');lb.className='tlbl';lb.textContent=`${i+1}〜${Math.min(i+8,blocks.length)}`;
+    row.appendChild(lb);
+    chunk.forEach(b=>{
+      const c=document.createElement('span');
+      c.className='tcell '+({scene:'c',stage:'s',dialog:'d',char:''}[b.type]||'');
+      c.title=`[${LBLS[b.type]}] ${b.text.slice(0,20)}`;
+      row.appendChild(c);
+    });
+    tg.appendChild(row);
+  }
+}
+
+/* ══ 書き出し ══ */
+function expFountain(){
+  const ttl=prompt('タイトル','無題の台本')||'無題';
+  let o=`Title: ${ttl}\n\n`;
+  blocks.forEach(b=>{
+    if(b.type==='scene') o+=`\n${b.text.toUpperCase()}\n\n`;
+    if(b.type==='stage') o+=`${b.text}\n\n`;
+    if(b.type==='char')  o+=`\n${b.text.toUpperCase()}\n`;
+    if(b.type==='dialog')o+=`${b.text}\n\n`;
+  });
+  dlBlob(new Blob([o],{type:'text/plain'}),'screenplay.fountain');toast('Fountain形式で書き出しました');
+}
+function expFDX(){
+  const ttl=esc(prompt('タイトル','無題の台本')||'無題');
+  const tm={scene:'Scene Heading',stage:'Action',char:'Character',dialog:'Dialogue'};
+  let els='';blocks.forEach(b=>els+=`    <Paragraph Type="${tm[b.type]||'Action'}">\n      <Text>${esc(b.text)}</Text>\n    </Paragraph>\n`);
+  const xml=`<?xml version="1.0" encoding="UTF-8"?>\n<FinalDraft DocumentType="Script" Version="2">\n  <Content>\n${els}  </Content>\n  <TitlePage><Content><Paragraph Type="Title"><Text>${ttl}</Text></Paragraph></Content></TitlePage>\n</FinalDraft>`;
+  dlBlob(new Blob([xml],{type:'application/xml'}),'screenplay.fdx');toast('Final Draft形式で書き出しました');
+}
+function expAudio(){
+  let o=`■ 音響台本\n${'─'.repeat(30)}\n\n`;
+  blocks.forEach(b=>{
+    if(b.type==='scene') o+=`\n◆ ${b.text}\n[BGM: ]\n\n`;
+    if(b.type==='stage') o+=`（${b.text}）\n[SE: ]\n\n`;
+    if(b.type==='char')  o+=`【${b.text}】\n`;
+    if(b.type==='dialog')o+=`　${b.text}\n\n`;
+  });
+  dlBlob(new Blob([o],{type:'text/plain'}),'audio_script.txt');toast('音響台本で書き出しました');
+}
+function expTXT(){
+  let o='';
+  blocks.forEach(b=>{
+    if(b.type==='scene') o+=`\n◆ ${b.text}\n\n`;
+    if(b.type==='stage') o+=`　${b.text}\n\n`;
+    if(b.type==='char')  o+=`\n${b.text}\n`;
+    if(b.type==='dialog')o+=`　　${b.text}\n\n`;
+  });
+  dlBlob(new Blob([o],{type:'text/plain'}),'screenplay.txt');toast('テキストで書き出しました');
+}
+
+/* ══ JSON ══ */
+function exportJSON(){
+  if(!blocks.length){toast('ブロックがありません');return;}
+  const d={app:'律 Screenwriter',version:3,savedAt:new Date().toISOString(),blocks,charas,gloss:glossary};
+  dlBlob(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),`ritsu-${Date.now()}.json`);
+  toast('JSONを保存しました');
+}
+function importJSON(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      blocks=d.blocks||[];charas=d.charas||[];glossary=d.gloss||[];
+      nCid=Math.max(1,...charas.map(c=>c.id),0)+1;
+      nGid=Math.max(1,...glossary.map(g=>g.id),0)+1;
+      save();renderEdit();toast('読み込みました');
+    }catch{toast('読み込みエラー');}
+  };
+  r.readAsText(f);e.target.value='';
+}
+
+/* ══ PDF ══ */
+async function startPDF(){
+  if(!blocks.length){toast('ブロックがありません');return;}
+  const title=prompt('タイトル','無題の台本')||'無題の台本';
+  showLoader('縦書きを描画中…');
+  try{
+    buildPDFStage(title);
+    await new Promise(r=>setTimeout(r,300));
+    await renderPDF(title);
+  }catch(e){toast('PDF生成エラー: '+e.message);console.error(e);}
+  finally{hideLoader();document.getElementById('pdf-stage').innerHTML='';}
+}
+function buildPDFStage(title){
+  const stage=document.getElementById('pdf-stage');stage.innerHTML='';
+  const LPP=18;let pages=[[]];let lc=3;
+  blocks.forEach(b=>{
+    const el=Math.ceil(b.text.length/14)+1;
+    if(lc+el>LPP){pages.push([]);lc=0;}
+    pages[pages.length-1].push(b);lc+=el;
+  });
+  pages.forEach((pb,pi)=>{
+    const page=document.createElement('div');page.className='pdf-page';
+    const body=document.createElement('div');body.className='pdf-body';
+    if(pi===0){
+      const te=document.createElement('span');te.className='pdf-title';te.textContent=tate(title);body.appendChild(te);
+      const sp=document.createElement('span');sp.className='pdf-sep';sp.innerHTML='&nbsp;&nbsp;';body.appendChild(sp);
+    }
+    pb.forEach(b=>{
+      const s=document.createElement('span');const t=tate(b.text);
+      if(b.type==='scene'){s.className='pdf-scene';s.textContent='◆'+t;}
+      if(b.type==='stage'){s.className='pdf-stage';s.textContent='　'+t;}
+      if(b.type==='char') {s.className='pdf-char'; s.textContent='【'+t+'】';}
+      if(b.type==='dialog'){s.className='pdf-dialog';s.textContent='　　'+t;}
+      body.appendChild(s);
+      const s2=document.createElement('span');s2.className='pdf-sep';body.appendChild(s2);
+    });
+    page.appendChild(body);
+    const ft=document.createElement('div');ft.className='pdf-foot';ft.textContent=`${pi+1} / ${pages.length}`;
+    page.appendChild(ft);stage.appendChild(page);
+  });
+}
+async function renderPDF(title){
+  const{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pages=document.querySelectorAll('#pdf-stage .pdf-page');
+  for(let i=0;i<pages.length;i++){
+    showLoader(`PDF生成中… (${i+1}/${pages.length})`);
+    const cvs=await html2canvas(pages[i],{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false});
+    if(i>0)pdf.addPage();
+    pdf.addImage(cvs.toDataURL('image/jpeg',.92),'JPEG',0,0,210,297);
+  }
+  pdf.save(`${title}.pdf`);
+  toast('PDFを保存しました');
+}
+
+/* ══ UTILS ══ */
+function dlBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
+function showLoader(m){document.getElementById('loader-msg').textContent=m;document.getElementById('loader').classList.add('show');}
+function hideLoader(){document.getElementById('loader').classList.remove('show');}
+let _tt;
+function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);}
+
+/* ══ HELP MODAL ══ */
+const helpData = {
+  howto: [
+    {
+      title: '4種のブロックタイプ',
+      body: `
+        <strong>柱（シーン）</strong><br>
+        場面の切り替えを示す見出し。シアン色で強調表示。<br><br>
+        <strong>ト書き</strong><br>
+        登場人物の動作・場の状況を記述。青みがかった斜体。<br><br>
+        <strong>キャラ</strong><br>
+        セリフを話すキャラクター名。ピンク色・インデント付き。<br><br>
+        <strong>セリフ</strong><br>
+        キャラの台詞本文。インデント付きで続けて入力。
+      `
+    },
+    {
+      title: 'ブロックの編集・移動・削除',
+      body: `
+        <strong>ブロックをタップ</strong><br>
+        アクションシートが開く。上へ移動 / 下へ移動 / テキスト編集 / 削除 が選べる。<br><br>
+        <strong>先頭・末尾のブロック</strong><br>
+        移動ボタンは自動的に無効化（半透明表示）される。
+      `
+    },
+    {
+      title: '縦書きプレビューとPDF出力',
+      body: `
+        <strong>📖 縦書き確認タブ</strong><br>
+        入力内容を縦書き・右から左方向でプレビュー。句読点・括弧は縦向きに変換済み。<br><br>
+        <strong>⬇ PDF ボタン</strong><br>
+        A4縦書きPDFを生成。タイトルを入力してダウンロード。ページ番号自動付与。<br><br>
+        <strong>ドロワー「書き出し」タブ</strong><br>
+        Fountain・Final Draft XML・音響台本TXT・プレーンTXTの4形式で書き出し可能。
+      `
+    },
+    {
+      title: 'ドロワー（⚙️）の機能',
+      body: `
+        <strong>制作管理</strong><br>
+        キャラクター設定（名前・年齢・役割・口調）、用語集、シーン一覧を管理。<br><br>
+        <strong>構成分析</strong><br>
+        シーン数・セリフ数・総文字数・約ページ数などの統計、キャラ別セリフ量グラフ、登場シーン表、テンポ分析を表示。<br><br>
+        <strong>💾 保存 / 📂 開く</strong><br>
+        JSONファイルでプロジェクト全体（ブロック＋キャラ設定＋用語集）を保存・読み込み。
+      `
+    }
+  ],
+  lessons: [
+    {
+      title: 'DOM参照バグ：存在しない要素へのアクセス',
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        削除済みの「執筆支援」タブに紐づく <code>chara-sel</code> 要素を
+        <code>refreshCharaSel()</code> 内で参照しようとしてエラーが出た。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>refreshCharaSel()</code> の中身を空にして、
+        存在しない要素へのアクセスを完全に排除した。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        タブやパネルを削除するときは、それを参照するJS関数も必ず同時に空にするか削除すること。
+      `
+    },
+    {
+      title: 'スクロール副作用：pane切り替え時の位置ずれ',
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        編集ペインと縦書きペインを切り替えると、スクロール位置が意図せずリセットされた。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>switchMode()</code> でペインの <code>display</code> を直接操作し、
+        preview側は <code>classList</code> の <code>active</code> で <code>display:flex</code> を制御。
+        editペインは <code>style.display='flex'/'none'</code> で独立管理。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        パネル切り替えは共有クラスを使わず、パネルIDごとに個別のdisplayルールを持たせること。
+      `
+    },
+    {
+      title: 'innerHTML内onclickのクォートエスケープ地獄',
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>renderCharaList()</code> 内の <code>innerHTML</code> テンプレートで
+        <code>oninput="uc(${'{'}c.id{'}'},'name',this.value)"</code> のような
+        ネストしたクォートが文字列を壊し、関数が動かなくなった。
+
+        <div class="lesson-label">② どう解決したか</div>
+        関数に <code>id</code> と <code>key</code> を渡す設計にして、
+        クォートのネストを最小限に抑えた。
+        また <code>esc()</code> で値をエスケープしてから埋め込んだ。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        <code>innerHTML</code> 内の <code>onclick/oninput</code> に複雑な文字列を
+        ネストしない。ID参照方式（<code>addEventListener</code>）に変更するか、
+        引数を数値・単純文字列のみに限定すること。
+      `
+    }
+  ]
+};
+
+const COMMON_PROMPT =
+`【前提条件（必ず守れ）】
+- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）
+- localStorage 使用あり（キー: ritsu-v3）
+- モバイル前提（Android Brave、タップ操作）
+- 既存機能を削除するな
+- UIを破壊するな
+- 同期ロジックを勝手に変えるな
+`;
+
+function _helpStripHtml(html){
+  var tmp=document.createElement('div');tmp.innerHTML=html;
+  return(tmp.textContent||tmp.innerText||'').replace(/\s+/g,' ').trim();
+}
+function _helpBuildPrompt(){
+  var lines=[COMMON_PROMPT,'【このアプリの教訓（過去のバグ・制約）】'];
+  for(var i=0;i<helpData.lessons.length;i++){
+    var l=helpData.lessons[i];
+    lines.push('・'+l.title+'\n  '+_helpStripHtml(l.body));
+  }
+  return lines.join('\n');
+}
+function _helpEsc(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+(function initHelpModal(){
+  var overlay=document.getElementById('helpOverlay');
+  var body=document.getElementById('helpBody');
+  var closeBtn=document.getElementById('helpCloseBtn');
+
+  function renderHelp(){
+    body.innerHTML='';
+    body.appendChild(makeSection('📖 使い方',helpData.howto,'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓',helpData.lessons,'lesson'));
+  }
+  function makeSection(label,items,prefix){
+    var wrap=document.createElement('div');
+    var title=document.createElement('div');
+    title.className='help-section-title';title.textContent=label;
+    wrap.appendChild(title);
+    for(var i=0;i<items.length;i++){
+      (function(item,idx){
+        var id=prefix+'-'+idx;
+        var row=document.createElement('div');row.className='help-item';
+        var trigger=document.createElement('button');
+        trigger.className='help-item-trigger';
+        trigger.setAttribute('aria-expanded','false');
+        trigger.setAttribute('aria-controls',id);
+        trigger.innerHTML='<span>'+_helpEsc(item.title)+'</span><span class="help-chevron">▼</span>';
+        var panel=document.createElement('div');
+        panel.className='help-item-body';panel.id=id;panel.innerHTML=item.body;
+        trigger.onclick=function(){
+          var isOpen=trigger.classList.contains('open');
+          var triggers=wrap.querySelectorAll('.help-item-trigger.open');
+          for(var k=0;k<triggers.length;k++){
+            triggers[k].classList.remove('open');
+            triggers[k].setAttribute('aria-expanded','false');
+            document.getElementById(triggers[k].getAttribute('aria-controls')).classList.remove('open');
+          }
+          if(!isOpen){
+            trigger.classList.add('open');trigger.setAttribute('aria-expanded','true');panel.classList.add('open');
+          }
+        };
+        row.appendChild(trigger);row.appendChild(panel);wrap.appendChild(row);
+      })(items[i],i);
+    }
+    return wrap;
+  }
+  function openModal(){renderHelp();overlay.classList.add('active');}
+  function closeModal(){overlay.classList.remove('active');}
+  window.openHelpModal=openModal;
+  closeBtn.onclick=closeModal;
+  document.getElementById('helpCopyPromptBtn').onclick=function(){
+    var text=_helpBuildPrompt();
+    navigator.clipboard.writeText(text).then(function(){
+      toast('プロンプトをコピーしました！');
+    }).catch(function(){toast('コピー失敗');});
+  };
+  overlay.onclick=function(e){if(e.target===overlay)closeModal();};
+})();
+
+/* ══ INIT ══ */
+document.getElementById('text-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();commitBlock();}
+});
+load();renderEdit();
+</script>
+</body>
+</html>
