@@ -391,13 +391,12 @@
 <script>
 // ── RSS フィード設定（Google News RSS / CORS不要）──
 const PROXY = 'https://ritsu-news-proxy.kaerukaeru2.workers.dev/?url=';
-const BASE = PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=');
 const FEEDS = {
-  general:       BASE + encodeURIComponent('日本 ニュース'),
-  tech:          BASE + encodeURIComponent('テクノロジー IT'),
-  entertainment: BASE + encodeURIComponent('エンタメ 芸能'),
-  sports:        BASE + encodeURIComponent('スポーツ'),
-  business:      BASE + encodeURIComponent('経済 ビジネス'),
+  general:       PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('日本 ニュース')),
+  tech:          PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('テクノロジー IT')),
+  entertainment: PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('エンタメ 芸能')),
+  sports:        PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('スポーツ')),
+  business:      PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('経済 ビジネス')),
 };
 const WMO_CODES = {
   0:'☀️晴れ',1:'🌤うす曇',2:'⛅曇り',3:'☁️曇り',
