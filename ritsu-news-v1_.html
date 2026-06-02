@@ -572,10 +572,7 @@ function getText(node, tag) {
 
 async function fetchFeed(url) {
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(function() { controller.abort(); }, 10000);
-    const r = await fetch(url, { cache: 'no-store', signal: controller.signal });
-    clearTimeout(timer);
+    const r = await fetch(url, { cache: 'no-store' });
     if (!r.ok) {
       window._debugLog = (window._debugLog || []);
       window._debugLog.push('HTTP ' + r.status);
@@ -793,12 +790,7 @@ const helpData = {
   ]
 };
 
-const COMMON_PROMPT = \`【前提条件】
-- Cloudflare Workers（ritsu-news-proxy.kaerukaerukaeru2.workers.dev）でRSSプロキシ稼働中
-- NHK RSS（cat0〜7）をWorker経由で取得しJSON変換して返す
-- ブラウザ単体アプリ（vanilla HTML/CSS/JS）
-- Android Brave スマホ前提
-\`;
+const COMMON_PROMPT = '【前提条件】\n- Cloudflare Workers（ritsu-news-proxy.kaerukaerukaeru2.workers.dev）でRSSプロキシ稼働中\n- NHK RSS（cat0〜7）をWorker経由で取得しJSON変換して返す\n- ブラウザ単体アプリ（vanilla HTML/CSS/JS）\n- Android Brave スマホ前提\n';
 
 function stripHtml(html) {
   var tmp = document.createElement('div');
