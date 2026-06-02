@@ -464,29 +464,22 @@ async function fetchFeed(url) {
       window._debugLog.push('HTTP ' + r.status);
       return [];
     }
-    const xml = await r.text();
-    const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    if (doc.querySelector('parsererror')) {
+    var items = await r.json();
+    if (!Array.isArray(items)) {
       window._debugLog = (window._debugLog || []);
-      window._debugLog.push('XMLパースエラー');
+      window._debugLog.push('JSONエラー: ' + JSON.stringify(items));
       return [];
     }
-    var nodes = doc.querySelectorAll('item');
-    var items = [];
-    var limit = Math.min(nodes.length, 15);
-    for (var i = 0; i < limit; i++) {
-      var node = nodes[i];
-      var srcEl = node.querySelector('source');
-      items.push({
-        title:   getText(node, 'title'),
-        link:    getText(node, 'link') || getText(node, 'guid'),
-        desc:    getText(node, 'description').replace(/<[^>]*>/g, '').trim(),
-        source:  srcEl ? srcEl.textContent.trim() : 'Google News',
+    return items.map(function(item) {
+      return {
+        title:   item.title || '',
+        link:    item.link || '',
+        desc:    item.desc || '',
+        source:  item.source || 'Google News',
         thumb:   null,
-        pubDate: getText(node, 'pubDate'),
-      });
-    }
-    return items;
+        pubDate: item.pubDate || '',
+      };
+    });
   } catch(e) {
     console.error('fetchFeed error:', e.message);
     window._debugLog = (window._debugLog || []);
