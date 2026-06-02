@@ -766,52 +766,33 @@ const helpData = {
   howto: [
     {
       title: '基本操作',
-      body: `
-        <strong>タブ切り替え</strong><br>
-        上部タブで国内全般・テック・エンタメ・スポーツ・ビジネスを切り替え。<br><br>
-        <strong>記事を開く</strong><br>
-        カードをタップで記事をNHKサイトで開く。<br><br>
-        <strong>カード削除</strong><br>
-        カードを左にスワイプで削除（再読み込みで復活）。<br><br>
-        <strong>再取得</strong><br>
-        「再試行」ボタンで最新ニュースを再取得。
-      `
+      body: '<strong>タブ切り替え</strong><br>上部タブで国内全般・テック・エンタメ・スポーツ・経済を切り替え。<br><br><strong>記事を開く</strong><br>カードをタップで記事を同タブで開く。戻るボタン（◀）でアプリに戻る。<br><br><strong>カード削除</strong><br>カードを左にスワイプでそっと削除（リロードで復活）。<br><br><strong>再取得</strong><br>「再試行」ボタンで最新ニュースを再取得。'
+    },
+    {
+      title: 'タブ別ソース',
+      body: '<strong>国内全般</strong> NHK主要ニュース<br><strong>テック</strong> NHK科学・医療<br><strong>エンタメ</strong> AKB48タイムズ（livedoor）<br><strong>スポーツ</strong> NHKスポーツ<br><strong>経済</strong> NHK経済<br><br>FEEDSの配列にURLを追加するだけで複数ソース混在可能。'
     },
     {
       title: '天気表示',
-      body: `
-        <strong>位置情報を許可</strong><br>
-        起動時に位置情報を許可すると現在地の天気・気温・湿度・風速を表示。
-      `
+      body: '<strong>位置情報を許可</strong><br>起動時に位置情報を許可すると現在地の天気・気温・湿度・風速を表示（open-meteo API）。'
     }
   ],
   lessons: [
     {
-      title: 'Google News RSSはサーバーからfetch不可',
-      body: `
-        <div class="lesson-label">① 何が問題だったか</div>
-        Google NewsのRSSをCloudflare Workers経由でfetchしたところ、503エラーでブロックされた。
-
-        <div class="lesson-label">② どう解決したか</div>
-        NHKのRSS（nhk.or.jp/rss/news/cat*.xml）に切り替え。Workers経由で正常取得できる。
-
-        <div class="lesson-label">③ 次回Claudeへの指示</div>
-        Google News RSSはCloudflare WorkersのIPからはfetch不可。NHK RSSを使うこと。
-      `
+      title: 'CORSはCloudflare Workerで解決',
+      body: '<div class="lesson-label">① 何が問題だったか</div>ブラウザから直接外部RSSをfetchするとCORSエラー。alloriginsなどのプロキシも不安定。<div class="lesson-label">② どう解決したか</div>Cloudflare Workers（無料）でRSSプロキシを作成。Worker URL: https://ritsu-news-proxy.kaerukaerukaeru2.workers.dev/?url=<div class="lesson-label">③ 次回Claudeへの指示</div>CORSで詰まったら上記WorkerのURLを使い回す。?url=に対象URLを渡すだけで動く。'
     },
     {
-      title: 'CORSはWorker（サーバーサイド）で解決',
-      body: `
-        <div class="lesson-label">① 何が問題だったか</div>
-        ブラウザから直接外部RSSをfetchするとCORSエラー。alloriginsなどのプロキシも不安定。
-
-        <div class="lesson-label">② どう解決したか</div>
-        Cloudflare Workers（無料）でRSSプロキシを作り、Access-Control-Allow-Origin: *を返す。
-
-        <div class="lesson-label">③ 次回Claudeへの指示</div>
-        Worker URL: https://ritsu-news-proxy.kaerukaerukaeru2.workers.dev/?url=
-        WorkerでXMLをパースしてJSONで返す構成。
-      `
+      title: 'Google News RSSはWorkerからもfetch不可',
+      body: '<div class="lesson-label">① 何が問題だったか</div>Google NewsのRSSをWorker経由でfetchしたところ503エラーでブロックされた。<div class="lesson-label">② どう解決したか</div>NHK RSSとlivedoorブログRSSに切り替え。<div class="lesson-label">③ 次回Claudeへの指示</div>Google News RSSはCloudflare WorkersのIPから不可。NHKやlivedoorを使うこと。'
+    },
+    {
+      title: 'livedoorブログはRDF形式（RSS1.0）',
+      body: '<div class="lesson-label">① 何が問題だったか</div>livedoorブログのRSSはRDF形式（&lt;rdf:RDF&gt;）でitemタグのマッチが通常と異なる。<div class="lesson-label">② どう解決したか</div>Workerでrdfについてもregexでitemブロックを抽出。dc:dateタグで日付取得。<div class="lesson-label">③ 次回Claudeへの指示</div>Worker側でRDF/RSS両対応済み。新しいlivedoorブログを追加する場合はFEEDSのURLに追加するだけでOK。'
+    },
+    {
+      title: 'JSの構文エラーでページ全体が止まる',
+      body: '<div class="lesson-label">① 何が問題だったか</div>helpDataのCOMMON_PROMPTにバックスラッシュ付きバッククォートを使ったら構文エラーで時計もニュースも全部止まった。<div class="lesson-label">② どう解決したか</div>テンプレートリテラルを通常文字列（シングルクォート+\n）に変更。<div class="lesson-label">③ 次回Claudeへの指示</div>helpDataのbodyはシングルクォート文字列で書く。テンプレートリテラル禁止。修正後は必ずnode --checkで構文チェックすること。'
     }
   ]
 };
