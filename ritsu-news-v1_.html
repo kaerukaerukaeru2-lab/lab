@@ -381,7 +381,7 @@
     --help-btn-size:     2.2rem;
   }
   #helpBtn {
-    position: fixed; top: 0.6rem; right: 0.6rem; z-index: 900;
+    position: static; z-index: 900;
     width: var(--help-btn-size); height: var(--help-btn-size);
     border-radius: 50%; border: 1.5px solid var(--help-border);
     background: var(--help-bg); color: var(--help-accent);
@@ -462,6 +462,7 @@
     <div class="brand">
       <span class="brand-icon">📰</span>
       <span class="brand-name">律ニュースチャンネル</span>
+      <button id="helpBtn" aria-label="ヘルプを開く">❓</button>
     </div>
     <div class="clock-wrap">
       <div id="clock-time">--:--:--</div>
@@ -652,8 +653,8 @@ async function loadNews(genre) {
   }).join('');
 
   container.innerHTML = `<div class="news-list">${html}</div>`;
+  initSwipeDelete();
 }
-initSwipeDelete();
 
 // ── カードスワイプ削除 ──
 function initSwipeDelete() {
@@ -875,7 +876,6 @@ function copyPrompt() {
 </script>
 
 <!-- HELP MODAL HTML -->
-<button id="helpBtn" aria-label="ヘルプを開く">❓</button>
 <div id="helpOverlay" role="dialog" aria-modal="true">
   <div id="helpModal">
     <div class="help-header">
