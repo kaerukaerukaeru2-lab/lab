@@ -524,11 +524,14 @@
 // ── RSS フィード設定（Google News RSS / CORS不要）──
 const PROXY = 'https://ritsu-news-proxy.kaerukaerukaeru2.workers.dev/?url=';
 const FEEDS = {
-  general:       PROXY + 'https://www3.nhk.or.jp/rss/news/cat0.xml',
-  tech:          PROXY + 'https://www3.nhk.or.jp/rss/news/cat3.xml',
-  entertainment: PROXY + 'https://www3.nhk.or.jp/rss/news/cat2.xml',
-  sports:        PROXY + 'https://www3.nhk.or.jp/rss/news/cat7.xml',
-  business:      PROXY + 'https://www3.nhk.or.jp/rss/news/cat5.xml',
+  general:       [PROXY + 'https://www3.nhk.or.jp/rss/news/cat0.xml'],
+  tech:          [PROXY + 'https://www3.nhk.or.jp/rss/news/cat3.xml'],
+  entertainment: [
+    PROXY + 'https://www3.nhk.or.jp/rss/news/cat2.xml',
+    PROXY + 'http://akb48taimuzu.livedoor.biz/index.rdf',
+  ],
+  sports:        [PROXY + 'https://www3.nhk.or.jp/rss/news/cat7.xml'],
+  business:      [PROXY + 'https://www3.nhk.or.jp/rss/news/cat5.xml'],
 };
 const WMO_CODES = {
   0:'☀️晴れ',1:'🌤うす曇',2:'⛅曇り',3:'☁️曇り',
@@ -624,8 +627,13 @@ async function loadNews(genre) {
   const container = document.getElementById('news-container');
   container.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><div class="loading-text">ニュース取得中...</div></div>';
 
-  const url = FEEDS[genre];
-  const items = url ? await fetchFeed(url) : [];
+  var urls = FEEDS[genre] || [];
+  var allItems = [];
+  for (var fi = 0; fi < urls.length; fi++) {
+    var got = await fetchFeed(urls[fi]);
+    for (var gi = 0; gi < got.length; gi++) { allItems.push(got[gi]); }
+  }
+  var items = allItems;
 
   if (!items.length) {
     const logs = (window._debugLog||[]).join('<br>');
