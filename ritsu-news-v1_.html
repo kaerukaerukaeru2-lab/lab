@@ -648,7 +648,7 @@ async function loadNews(genre) {
     return `
       <div class="news-card-wrap" data-index="${i}">
         <div class="swipe-hint">🗑️</div>
-        <a class="news-card" href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${i*0.04}s">
+        <a class="news-card" href="${escHtml(item.link)}" style="animation-delay:${i*0.04}s">
           <div class="card-top">
             ${thumbHtml}
             <div class="card-body">
