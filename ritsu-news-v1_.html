@@ -502,6 +502,19 @@
 
 <footer>律ニュースチャンネル · RSS配信</footer>
 
+
+
+<!-- HELP MODAL HTML -->
+<div id="helpOverlay" role="dialog" aria-modal="true">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 律ニュースチャンネル ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
+  </div>
+</div>
 <script>
 // ── RSS フィード設定（Google News RSS / CORS不要）──
 const PROXY = 'https://ritsu-news-proxy.kaerukaerukaeru2.workers.dev/?url=';
@@ -869,17 +882,5 @@ function copyPrompt() {
 // ── HELP MODAL JS END ──
 
 </script>
-
-<!-- HELP MODAL HTML -->
-<div id="helpOverlay" role="dialog" aria-modal="true">
-  <div id="helpModal">
-    <div class="help-header">
-      <span class="help-header-title" id="helpTitle">📋 律ニュースチャンネル ヘルプ</span>
-      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
-    </div>
-    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
-    <div id="helpBody"></div>
-  </div>
-</div>
 </body>
 </html>
