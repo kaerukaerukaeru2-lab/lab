@@ -392,11 +392,11 @@
 // ── RSS フィード設定（Google News RSS / CORS不要）──
 const PROXY = 'https://ritsu-news-proxy.kaerukaeru2.workers.dev/?url=';
 const FEEDS = {
-  general:       PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('日本 ニュース')),
-  tech:          PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('テクノロジー IT')),
-  entertainment: PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('エンタメ 芸能')),
-  sports:        PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('スポーツ')),
-  business:      PROXY + encodeURIComponent('https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=' + encodeURIComponent('経済 ビジネス')),
+  general:       PROXY + 'https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=%E6%97%A5%E6%9C%AC%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%B9',
+  tech:          PROXY + 'https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=%E3%83%86%E3%82%AF%E3%83%8E%E3%83%AD%E3%82%B8%E3%83%BC%20IT',
+  entertainment: PROXY + 'https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=%E3%82%A8%E3%83%B3%E3%82%BF%E3%83%A1%20%E8%8A%B8%E8%83%BD',
+  sports:        PROXY + 'https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84',
+  business:      PROXY + 'https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q=%E7%B5%8C%E6%B8%88%20%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9',
 };
 const WMO_CODES = {
   0:'☀️晴れ',1:'🌤うす曇',2:'⛅曇り',3:'☁️曇り',
