@@ -177,6 +177,33 @@
     gap: 10px;
   }
 
+
+  /* スワイプ削除 */
+  .news-card-wrap {
+    overflow: hidden;
+    position: relative;
+    border-radius: 12px;
+    margin-bottom: 0;
+  }
+  .news-card-wrap .swipe-hint {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 80px;
+    background: #e53935;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.4rem;
+    border-radius: 0 12px 12px 0;
+    pointer-events: none;
+  }
+  .news-card-wrap .news-card {
+    position: relative;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    margin-bottom: 0;
+    border-radius: 12px;
+  }
   .news-card {
     background: var(--card);
     border-radius: 12px;
@@ -340,6 +367,92 @@
   .news-card {
     animation: fadeUp 0.3s ease both;
   }
+
+  /* ========== HELP MODAL CSS ========== */
+  :root {
+    --help-accent:       #e53935;
+    --help-accent-dim:   rgba(229,57,53,0.2);
+    --help-bg:           rgba(10,10,10,0.97);
+    --help-border:       rgba(229,57,53,0.3);
+    --help-text:         #e0e0e0;
+    --help-text-dim:     #888;
+    --help-section-bg:   rgba(229,57,53,0.1);
+    --help-item-bg:      rgba(255,255,255,0.04);
+    --help-btn-size:     2.2rem;
+  }
+  #helpBtn {
+    position: fixed; top: 0.6rem; right: 0.6rem; z-index: 900;
+    width: var(--help-btn-size); height: var(--help-btn-size);
+    border-radius: 50%; border: 1.5px solid var(--help-border);
+    background: var(--help-bg); color: var(--help-accent);
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 8px rgba(229,57,53,0.2);
+  }
+  #helpOverlay {
+    display: none; position: fixed; inset: 0; z-index: 910;
+    background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  #helpOverlay.active { display: flex; }
+  #helpModal {
+    position: relative; width: 100%; max-width: 480px; max-height: 85vh;
+    background: var(--help-bg); border: 1px solid var(--help-border);
+    border-radius: 1rem; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,.6);
+  }
+  #helpModal .help-header {
+    padding: .9rem 1.2rem; border-bottom: 1px solid var(--help-border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  #helpModal .help-header-title { font-size: 1rem; font-weight: 700; color: var(--help-accent); }
+  #helpCloseBtn {
+    width: 2rem; height: 2rem; border-radius: 50%;
+    border: 1px solid var(--help-border); background: transparent;
+    color: var(--help-text-dim); font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #helpBody { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: .8rem .8rem 1.2rem; flex: 1; }
+  .help-section-title {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .75rem; font-weight: 700; letter-spacing: .12em;
+    color: var(--help-accent); text-transform: uppercase;
+    background: var(--help-section-bg); border-radius: .45rem;
+    padding: .45rem .7rem; margin-bottom: .4rem; margin-top: .6rem;
+  }
+  .help-section-title:first-child { margin-top: 0; }
+  .help-item { border-radius: .5rem; overflow: hidden; margin-bottom: .3rem; }
+  .help-item-trigger {
+    width: 100%; text-align: left; background: var(--help-item-bg);
+    border: 1px solid transparent; border-radius: .5rem;
+    color: var(--help-text); font-size: .88rem; font-weight: 600;
+    padding: .6rem .8rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-item-trigger.open { border-color: var(--help-accent-dim); border-bottom-left-radius:0; border-bottom-right-radius:0; }
+  .help-item-trigger .help-chevron { font-size: .7rem; color: var(--help-text-dim); transition: transform .2s; flex-shrink:0; }
+  .help-item-trigger.open .help-chevron { transform: rotate(180deg); }
+  .help-item-body {
+    display: none; background: rgba(255,255,255,.025);
+    border: 1px solid var(--help-accent-dim); border-top: none;
+    border-bottom-left-radius: .5rem; border-bottom-right-radius: .5rem;
+    padding: .65rem .85rem .75rem; font-size: .83rem; color: var(--help-text); line-height: 1.65;
+  }
+  .help-item-body.open { display: block; }
+  .help-item-body strong { color: #fff; font-weight: 700; }
+  .help-item-body code { font-family: monospace; font-size: .78rem; background: rgba(0,0,0,.35); border-radius: .25rem; padding: .05em .35em; color: #a0e0ff; }
+  #helpCopyPromptBtn {
+    display: block; width: calc(100% - 1.6rem); margin: .6rem .8rem .2rem;
+    padding: .65rem; background: var(--help-accent-dim);
+    border: 1px solid var(--help-border); border-radius: .5rem;
+    color: var(--help-accent); font-size: .85rem; font-weight: 700;
+    cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent;
+  }
+  /* ========== HELP MODAL CSS END ========== */
 </style>
 </head>
 <body>
@@ -475,7 +588,7 @@ async function fetchFeed(url) {
         title:   item.title || '',
         link:    item.link || '',
         desc:    item.desc || '',
-        source:  item.source || 'Google News',
+        source:  item.source || 'NHK',
         thumb:   null,
         pubDate: item.pubDate || '',
       };
@@ -519,24 +632,75 @@ async function loadNews(genre) {
       : `<div class="card-thumb-placeholder">${GENRE_EMOJI[genre]}</div>`;
 
     return `
-      <a class="news-card" href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${i*0.04}s">
-        <div class="card-top">
-          ${thumbHtml}
-          <div class="card-body">
-            <div class="card-title">${escHtml(item.title)}</div>
+      <div class="news-card-wrap" data-index="${i}">
+        <div class="swipe-hint">🗑️</div>
+        <a class="news-card" href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${i*0.04}s">
+          <div class="card-top">
+            ${thumbHtml}
+            <div class="card-body">
+              <div class="card-title">${escHtml(item.title)}</div>
+            </div>
           </div>
-        </div>
-        <div class="card-meta">
-          <span class="card-source">${escHtml(item.source)}</span>
-          <span class="card-dot"></span>
-          <span class="card-time">${timeStr}</span>
-        </div>
-        ${item.desc ? `<div class="card-desc">${escHtml(item.desc.slice(0, 100))}</div>` : ''}
-      </a>`;
+          <div class="card-meta">
+            <span class="card-source">${escHtml(item.source)}</span>
+            <span class="card-dot"></span>
+            <span class="card-time">${timeStr}</span>
+          </div>
+          ${item.desc ? `<div class="card-desc">${escHtml(item.desc.slice(0, 100))}</div>` : ''}
+        </a>
+      </div>`;
   }).join('');
 
   container.innerHTML = `<div class="news-list">${html}</div>`;
 }
+initSwipeDelete();
+
+// ── カードスワイプ削除 ──
+function initSwipeDelete() {
+  var wraps = document.querySelectorAll('.news-card-wrap');
+  for (var i = 0; i < wraps.length; i++) {
+    attachSwipe(wraps[i]);
+  }
+}
+function attachSwipe(wrap) {
+  var card = wrap.querySelector('.news-card');
+  var startX = 0;
+  var currentX = 0;
+  var dragging = false;
+  var THRESHOLD = 80;
+
+  card.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    dragging = true;
+    card.style.transition = 'none';
+  }, { passive: true });
+
+  card.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    currentX = e.touches[0].clientX - startX;
+    if (currentX < 0) {
+      card.style.transform = 'translateX(' + currentX + 'px)';
+    }
+  }, { passive: true });
+
+  card.addEventListener('touchend', function() {
+    if (!dragging) return;
+    dragging = false;
+    if (currentX < -THRESHOLD) {
+      card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+      card.style.transform = 'translateX(-100%)';
+      card.style.opacity = '0';
+      setTimeout(function() {
+        wrap.style.display = 'none';
+      }, 200);
+    } else {
+      card.style.transition = 'transform 0.2s ease';
+      card.style.transform = 'translateX(0)';
+    }
+    currentX = 0;
+  });
+}
+
 
 function formatTime(dateStr) {
   if (!dateStr) return '';
@@ -569,6 +733,158 @@ document.getElementById('tabs').addEventListener('click', e => {
 window.addEventListener('load', () => {
   loadNews(currentGenre);
 });
+
+// ── HELP MODAL JS ──
+const helpData = {
+  howto: [
+    {
+      title: '基本操作',
+      body: `
+        <strong>タブ切り替え</strong><br>
+        上部タブで国内全般・テック・エンタメ・スポーツ・ビジネスを切り替え。<br><br>
+        <strong>記事を開く</strong><br>
+        カードをタップで記事をNHKサイトで開く。<br><br>
+        <strong>カード削除</strong><br>
+        カードを左にスワイプで削除（再読み込みで復活）。<br><br>
+        <strong>再取得</strong><br>
+        「再試行」ボタンで最新ニュースを再取得。
+      `
+    },
+    {
+      title: '天気表示',
+      body: `
+        <strong>位置情報を許可</strong><br>
+        起動時に位置情報を許可すると現在地の天気・気温・湿度・風速を表示。
+      `
+    }
+  ],
+  lessons: [
+    {
+      title: 'Google News RSSはサーバーからfetch不可',
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        Google NewsのRSSをCloudflare Workers経由でfetchしたところ、503エラーでブロックされた。
+
+        <div class="lesson-label">② どう解決したか</div>
+        NHKのRSS（nhk.or.jp/rss/news/cat*.xml）に切り替え。Workers経由で正常取得できる。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        Google News RSSはCloudflare WorkersのIPからはfetch不可。NHK RSSを使うこと。
+      `
+    },
+    {
+      title: 'CORSはWorker（サーバーサイド）で解決',
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        ブラウザから直接外部RSSをfetchするとCORSエラー。alloriginsなどのプロキシも不安定。
+
+        <div class="lesson-label">② どう解決したか</div>
+        Cloudflare Workers（無料）でRSSプロキシを作り、Access-Control-Allow-Origin: *を返す。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        Worker URL: https://ritsu-news-proxy.kaerukaerukaeru2.workers.dev/?url=
+        WorkerでXMLをパースしてJSONで返す構成。
+      `
+    }
+  ]
+};
+
+const COMMON_PROMPT = \`【前提条件】
+- Cloudflare Workers（ritsu-news-proxy.kaerukaerukaeru2.workers.dev）でRSSプロキシ稼働中
+- NHK RSS（cat0〜7）をWorker経由で取得しJSON変換して返す
+- ブラウザ単体アプリ（vanilla HTML/CSS/JS）
+- Android Brave スマホ前提
+\`;
+
+function stripHtml(html) {
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+function buildPrompt() {
+  var lines = [COMMON_PROMPT, '【教訓】'];
+  for (var i = 0; i < helpData.lessons.length; i++) {
+    var l = helpData.lessons[i];
+    lines.push('・' + l.title + '\n  ' + stripHtml(l.body));
+  }
+  return lines.join('\n');
+}
+function copyPrompt() {
+  var text = buildPrompt();
+  navigator.clipboard.writeText(text).then(function() {
+    alert('コピーしました！');
+  }).catch(function() { alert('コピー失敗'); });
+}
+
+(function initHelpModal() {
+  var overlay  = document.getElementById('helpOverlay');
+  var body     = document.getElementById('helpBody');
+  var openBtn  = document.getElementById('helpBtn');
+  var closeBtn = document.getElementById('helpCloseBtn');
+
+  function escH(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function makeSection(label, items, prefix) {
+    var wrap = document.createElement('div');
+    var title = document.createElement('div');
+    title.className = 'help-section-title';
+    title.textContent = label;
+    wrap.appendChild(title);
+    items.forEach(function(item, i) {
+      var id = prefix + '-' + i;
+      var row = document.createElement('div');
+      row.className = 'help-item';
+      var trigger = document.createElement('button');
+      trigger.className = 'help-item-trigger';
+      trigger.innerHTML = '<span>' + escH(item.title) + '</span><span class="help-chevron">▼</span>';
+      var panel = document.createElement('div');
+      panel.className = 'help-item-body';
+      panel.id = id;
+      panel.innerHTML = item.body;
+      trigger.onclick = function() {
+        var isOpen = trigger.classList.contains('open');
+        wrap.querySelectorAll('.help-item-trigger.open').forEach(function(t) {
+          t.classList.remove('open');
+          document.getElementById(t.getAttribute('aria-controls') || '').classList.remove('open');
+        });
+        if (!isOpen) { trigger.classList.add('open'); panel.classList.add('open'); }
+      };
+      trigger.setAttribute('aria-controls', id);
+      row.appendChild(trigger);
+      row.appendChild(panel);
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+  function renderHelp() {
+    body.innerHTML = '';
+    body.appendChild(makeSection('📖 使い方', helpData.howto, 'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓', helpData.lessons, 'lesson'));
+  }
+  function openModal() { renderHelp(); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+  function closeModal() { overlay.classList.remove('active'); document.body.style.overflow=''; }
+
+  openBtn.onclick = openModal;
+  closeBtn.onclick = closeModal;
+  document.getElementById('helpCopyPromptBtn').onclick = copyPrompt;
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+})();
+// ── HELP MODAL JS END ──
+
 </script>
+
+<!-- HELP MODAL HTML -->
+<button id="helpBtn" aria-label="ヘルプを開く">❓</button>
+<div id="helpOverlay" role="dialog" aria-modal="true">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 律ニュースチャンネル ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
+  </div>
+</div>
 </body>
 </html>
