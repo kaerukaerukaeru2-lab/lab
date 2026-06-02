@@ -197,6 +197,11 @@
     font-size: 1.4rem;
     border-radius: 0 12px 12px 0;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .news-card-wrap.swiping .swipe-hint {
+    opacity: 1;
   }
   .news-card-wrap .news-card {
     position: relative;
@@ -694,6 +699,7 @@ function attachSwipe(wrap) {
     currentX = e.touches[0].clientX - startX;
     if (currentX < 0) {
       card.style.transform = 'translateX(' + currentX + 'px)';
+      wrap.classList.add('swiping');
     }
   }, { passive: true });
 
