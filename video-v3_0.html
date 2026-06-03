@@ -345,7 +345,7 @@ input[type=range].seek{width:100%;accent-color:var(--neo);cursor:pointer;}
 </div><!-- /#typeAPanel -->
 
 <!-- TYPE-B パネル -->
-<div id="typeBPanel">
+<div id="typeBPanel" style="display:none;">
   <div class="b-drop" id="bDrop" onclick="document.getElementById('bFileInput').click()">
     <div class="b-drop-icon">📂</div>
     <div class="b-drop-txt">タップしてファイルを選択</div>
@@ -361,7 +361,7 @@ input[type=range].seek{width:100%;accent-color:var(--neo);cursor:pointer;}
 </div>
 
 <!-- TYPE-C パネル -->
-<div id="typeCPanel">
+<div id="typeCPanel" style="display:none;">
   <!-- HFサーバーURL設定 -->
   <div class="c-section">
     <div class="c-lbl">HF SPACE URL</div>
@@ -387,6 +387,8 @@ input[type=range].seek{width:100%;accent-color:var(--neo);cursor:pointer;}
     <div class="c-status" id="cUploadStatus"></div>
   </div>
 </div>
+
+<div class="video-wrap">
   <div class="no-video" id="noVideo">
     <div class="no-video-icon">🎬</div>
     URLまたはファイルを選択
@@ -818,8 +820,8 @@ function setSpeedSlider(v){
   document.querySelectorAll('.spd').forEach(function(b){b.classList.toggle('on',parseFloat(b.dataset.s)===s);});
 }
 function exitFullscreen(){
-  if(document.exitFullscreen)document.exitFullscreen();
-  else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  else if(document.exitFullscreen)document.exitFullscreen();
   document.getElementById('fsBtn').textContent='⛶';
   document.getElementById('vidCtrlPanel').classList.remove('show');
 }
@@ -1500,11 +1502,11 @@ function copyPrompt(){
   function openModal(){renderHelp();overlay.classList.add('active');document.body.style.overflow='hidden';}
   function closeModal(){overlay.classList.remove('active');document.body.style.overflow='';}
 
-  openBtn.addEventListener('click',openModal);
-  closeBtn.addEventListener('click',closeModal);
-  document.getElementById('helpCopyPromptBtn').addEventListener('click',copyPrompt);
-  overlay.addEventListener('click',function(e){if(e.target===overlay)closeModal();});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
+  openBtn.onclick=openModal;
+  closeBtn.onclick=closeModal;
+  document.getElementById('helpCopyPromptBtn').onclick=copyPrompt;
+  overlay.onclick=function(e){if(e.target===overlay)closeModal();};
+  document.onkeydown=function(e){if(e.key==='Escape')closeModal();};
 })();
 /* ============================================================
    HELP MODAL JS ここまで
