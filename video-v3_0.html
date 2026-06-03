@@ -400,7 +400,7 @@ input[type=range].seek{width:100%;accent-color:var(--neo);cursor:pointer;}
     onerror="onError()">
   </video>
   <!-- 動画上コントロール -->
-  <div class="vid-overlay" id="vidOverlay" onclick="toggleVidOverlay()"></div>
+  <div class="vid-overlay" id="vidOverlay" onclick="toggleVidOverlay()" style="display:none;"></div>
   <div class="vid-ctrl-panel" id="vidCtrlPanel" onclick="event.stopPropagation()">
     <div class="vid-seek-row">
       <span class="vid-time" id="voCurTime">0:00</span>
