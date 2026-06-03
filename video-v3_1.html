@@ -961,12 +961,13 @@ function switchMode(mode){
     tabA.className='mode-tab active-a';
     panelA.style.display='block';
     subtitle.textContent='TYPE-A · IndexedDB永続保存';
-    if(bCurrentUrl){vid.pause();URL.revokeObjectURL(bCurrentUrl);bCurrentUrl=null;}
+    // BのBlobURL解放・src切断
+    if(bCurrentUrl){vid.pause();URL.revokeObjectURL(bCurrentUrl);bCurrentUrl=null;vid.src='';}
     if(playlist.length>0){
       vid.style.display='block';
       document.getElementById('noVideo').style.display='none';
       document.getElementById('vidOverlay').style.display='block';
-      if(currentBlobUrl&&vid.src!==currentBlobUrl){vid.src=currentBlobUrl;vid.load();}
+      if(currentBlobUrl){vid.src=currentBlobUrl;vid.load();}
     }else{
       vid.style.display='none';
       document.getElementById('noVideo').style.display='flex';
@@ -976,11 +977,14 @@ function switchMode(mode){
     tabB.className='mode-tab active-b';
     panelB.style.display='block';
     subtitle.textContent='TYPE-B · Blob即再生（一時）';
-    if(!vid.paused)vid.pause();
+    // AのsrcをクリアしてBリストのみ有効に
+    vid.pause();vid.src='';
     if(bList.length>0){
       vid.style.display='block';
       document.getElementById('noVideo').style.display='none';
       document.getElementById('vidOverlay').style.display='block';
+      // Bの現在のアイテムを再セット
+      if(bCurrentUrl){vid.src=bCurrentUrl;vid.load();}
     }else{
       vid.style.display='none';
       document.getElementById('noVideo').style.display='flex';
