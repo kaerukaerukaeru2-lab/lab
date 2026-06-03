@@ -1455,11 +1455,16 @@ function copyPrompt(){
 }
 
 function openHelpModal(){
+  var overlay=document.getElementById('helpOverlay');
   var body=document.getElementById('helpBody');
-  body.innerHTML='';
-  body.appendChild(makeHelpSection('📖 使い方',helpData.howto,'howto'));
-  body.appendChild(makeHelpSection('🧠 Claude用教訓',helpData.lessons,'lesson'));
-  document.getElementById('helpOverlay').classList.add('active');
+  try{
+    body.innerHTML='';
+    body.appendChild(makeHelpSection('📖 使い方',helpData.howto,'howto'));
+    body.appendChild(makeHelpSection('🧠 Claude用教訓',helpData.lessons,'lesson'));
+  }catch(e){
+    body.innerHTML='<p style="color:#f88;padding:1rem;">ヘルプ読み込みエラー: '+e.message+'</p>';
+  }
+  overlay.classList.add('active');
   document.body.style.overflow='hidden';
 }
 function closeHelpModal(){
