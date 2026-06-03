@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>思い出再生くん</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;500&display=swap');
+:root{
+  --bg:#1a1a1a;--sur:#242424;--sur2:#2e2e2e;--bdr:#3a3a3a;
+  --tx:#f0f0f0;--tx2:#888;
+  --acc:#ff6b2b;--acc2:rgba(255,107,43,0.15);
+  --neo:#00ffe0;--neo2:rgba(0,255,224,0.1);
+  --mono:'Space Mono',monospace;--sans:'Noto Sans JP',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);overflow-x:hidden;}
+.hd{padding:.75rem 1rem .5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bdr);}
+.logo{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--acc);letter-spacing:.15em;}
+.logo span{color:var(--neo);font-size:11px;display:block;letter-spacing:.05em;font-weight:400;}
+.version{font-family:var(--mono);font-size:10px;color:var(--tx2);}
+.url-wrap{padding:.75rem 1rem .5rem;}
+.url-box{display:flex;gap:8px;align-items:center;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:8px 12px;transition:border-color .2s;margin-bottom:8px;}
+.url-box:focus-within{border-color:var(--acc);}
+.url-icon{font-size:14px;color:var(--tx2);flex-shrink:0;}
+.url-input{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-size:14px;font-family:var(--sans);}
+.url-input::placeholder{color:var(--tx2);}
+.btn-play{background:var(--acc);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--mono);letter-spacing:.05em;transition:all .15s;flex-shrink:0;}
+.btn-play:active{transform:scale(0.95);}
+.btn-clear{background:transparent;border:1px solid var(--bdr);color:var(--tx2);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;flex-shrink:0;transition:all .15s;}
+.btn-clear:hover{border-color:var(--acc);color:var(--acc);}
+.file-row{display:flex;gap:8px;align-items:center;}
+.btn-file{flex:1;background:var(--sur);border:1px solid var(--bdr);color:var(--tx2);border-radius:12px;padding:10px;font-size:13px;cursor:pointer;text-align:center;transition:all .15s;font-family:var(--sans);}
+.btn-file:hover{border-color:var(--neo);color:var(--neo);}
+.btn-file:active{transform:scale(0.97);}
+.file-name{font-size:11px;color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);}
+.video-wrap{position:relative;width:100%;background:#000;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);min-height:40px;}
+.video-wrap:-webkit-full-screen{width:100vw;height:100vh;}
+.video-wrap:-webkit-full-screen video{width:100%;height:100%;max-height:100vh;object-fit:contain;}
+.video-wrap:fullscreen{width:100vw;height:100vh;}
+.video-wrap:fullscreen video{width:100%;height:100%;max-height:100vh;object-fit:contain;}
+/* 動画上オーバーレイ */
+.vid-overlay{position:absolute;inset:0;z-index:10;cursor:pointer;touch-action:manipulation;}
+.vid-ctrl-panel{position:absolute;bottom:0;left:0;right:0;padding:10px 12px;background:linear-gradient(transparent,rgba(0,0,0,0.88));display:none;flex-direction:column;gap:8px;z-index:9999;}
+.vid-ctrl-panel.show{display:flex;}
+.vid-seek-row{display:flex;align-items:center;gap:6px;}
+.vid-time{font-family:var(--mono);font-size:10px;color:#fff;white-space:nowrap;}
+.vid-seek{flex:1;accent-color:var(--acc);cursor:pointer;height:3px;}
+.vid-btn-row{display:flex;gap:6px;align-items:center;justify-content:center;}
+.vid-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:var(--mono);}
+.vid-btn.primary{background:rgba(255,107,43,0.6);border-color:var(--acc);}
+.vid-spd{font-family:var(--mono);font-size:12px;color:var(--acc);font-weight:700;min-width:36px;text-align:center;}
+video{width:100%;max-height:75vw;display:block;object-fit:contain;background:#000;}
+@media(orientation:landscape){video{max-height:85vh;width:100%;}}
+.no-video{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--tx2);font-size:13px;gap:8px;}
+.no-video-icon{font-size:40px;opacity:.3;}
+.ctrl{padding:.75rem 1rem;display:flex;flex-direction:column;gap:10px;}
+.speed-section{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:.75rem 1rem;}
+.speed-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.speed-lbl{font-family:var(--mono);font-size:11px;color:var(--tx2);letter-spacing:.1em;}
+.speed-display{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--acc);}
+.speed-btns{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.spd{background:var(--sur2);border:1px solid var(--bdr);color:var(--tx2);border-radius:8px;padding:6px 12px;font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .15s;}
+.spd.on{background:var(--acc2);border-color:var(--acc);color:var(--acc);font-weight:700;}
+.spd:active{transform:scale(0.95);}
+.slider-row{display:flex;align-items:center;gap:10px;}
+.slider-min{font-size:10px;color:var(--tx2);font-family:var(--mono);}
+input[type=range]{flex:1;accent-color:var(--acc);cursor:pointer;height:4px;}
+.slider-max{font-size:10px;color:var(--tx2);font-family:var(--mono);}
+.pb-ctrl{display:flex;gap:8px;align-items:center;}
+.btn-ctrl{background:var(--sur);border:1px solid var(--bdr);color:var(--tx);border-radius:10px;padding:10px 0;font-size:13px;cursor:pointer;flex:1;text-align:center;transition:all .15s;font-family:var(--sans);}
+.btn-ctrl:active{transform:scale(0.97);}
+.btn-ctrl.primary{background:var(--acc2);border-color:var(--acc);color:var(--acc);}
+.btn-ctrl.neo{background:var(--neo2);border-color:var(--neo);color:var(--neo);}
+.seek-wrap{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:.75rem 1rem;}
+.seek-lbl{font-family:var(--mono);font-size:10px;color:var(--tx2);margin-bottom:8px;display:flex;justify-content:space-between;}
+input[type=range].seek{width:100%;accent-color:var(--neo);cursor:pointer;}
+.status{font-family:var(--mono);font-size:10px;color:var(--tx2);text-align:center;padding:.5rem;}
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--sur2);border:1px solid var(--acc);color:var(--acc);padding:8px 16px;border-radius:8px;font-size:12px;font-family:var(--mono);opacity:0;transition:opacity .25s;pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.on{opacity:1;}
+.extra-ctrl{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:.75rem 1rem;}
+.extra-lbl{font-family:var(--mono);font-size:11px;color:var(--tx2);letter-spacing:.1em;margin-bottom:8px;}
+.extra-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.btn-ex{background:var(--sur2);border:1px solid var(--bdr);color:var(--tx2);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:var(--mono);transition:all .15s;flex:1;text-align:center;}
+.btn-ex.on{background:var(--acc2);border-color:var(--acc);color:var(--acc);}
+.btn-ex.neo-on{background:var(--neo2);border-color:var(--neo);color:var(--neo);}
+.btn-ex:active{transform:scale(0.95);}
+.filter-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.filter-lbl{font-size:11px;color:var(--tx2);font-family:var(--mono);width:52px;flex-shrink:0;}
+.filter-val{font-size:11px;color:var(--acc);font-family:var(--mono);width:36px;text-align:right;flex-shrink:0;}
+.ab-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.ab-time{font-family:var(--mono);font-size:11px;color:var(--neo);background:var(--sur2);border:1px solid var(--bdr);border-radius:6px;padding:4px 8px;}
+
+/* 全画面オーバーレイコントロール */
+.fs-overlay{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;}
+.fs-overlay.show{opacity:1;pointer-events:all;}
+.fs-overlay-bg{position:absolute;bottom:0;left:0;right:0;height:160px;background:linear-gradient(transparent,rgba(0,0,0,0.85));pointer-events:none;}
+.fs-controls{position:absolute;bottom:0;left:0;right:0;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.fs-seek-row{display:flex;align-items:center;gap:8px;}
+.fs-time{font-family:var(--mono);font-size:11px;color:#fff;white-space:nowrap;}
+.fs-seek{flex:1;accent-color:var(--acc);cursor:pointer;height:3px;}
+.fs-btn-row{display:flex;gap:8px;align-items:center;justify-content:center;}
+.fs-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:var(--mono);backdrop-filter:blur(4px);}
+.fs-btn.primary{background:rgba(255,107,43,0.5);border-color:var(--acc);}
+.fs-spd{font-family:var(--mono);font-size:13px;color:var(--acc);font-weight:700;min-width:40px;text-align:center;}
+/* プレイリスト */
+.pl-section{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:.75rem 1rem;}
+.pl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.pl-lbl{font-family:var(--mono);font-size:11px;color:var(--tx2);letter-spacing:.1em;}
+.pl-counter{font-family:var(--mono);font-size:13px;color:var(--neo);font-weight:700;}
+.pl-ctrl{display:flex;gap:6px;}
+.btn-pl{background:var(--sur2);border:1px solid var(--bdr);color:var(--tx2);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;font-family:var(--mono);transition:all .15s;flex:1;text-align:center;}
+.btn-pl:active{transform:scale(0.95);}
+.btn-pl.on{background:var(--acc2);border-color:var(--acc);color:var(--acc);}
+.pl-repeat{font-family:var(--mono);font-size:11px;color:var(--tx2);cursor:pointer;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:5px 10px;white-space:nowrap;}
+.pl-repeat.on{border-color:var(--neo);color:var(--neo);}
+.pl-name{font-size:11px;color:var(--tx2);font-family:var(--mono);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ===== MODE SWITCHER ===== */
+.mode-bar{display:flex;gap:0;padding:8px 1rem 0;border-bottom:1px solid var(--bdr);}
+.mode-tab{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--tx2);font-family:var(--mono);font-size:12px;padding:6px 0 8px;cursor:pointer;letter-spacing:.05em;transition:all .2s;text-align:center;}
+.mode-tab.active-a{color:var(--acc);border-bottom-color:var(--acc);}
+.mode-tab.active-b{color:var(--neo);border-bottom-color:var(--neo);}
+.mode-badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;margin-left:4px;vertical-align:middle;}
+.badge-a{background:var(--acc2);color:var(--acc);}
+.badge-b{background:var(--neo2);color:var(--neo);}
+
+/* ===== TYPE-B パネル ===== */
+#typeBPanel{display:none;padding:.75rem 1rem .5rem;}
+.b-drop{
+  border:2px dashed var(--bdr);border-radius:14px;padding:20px 16px;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative;
+  background:var(--sur);
+}
+.b-drop:active,.b-drop.dragover{border-color:var(--neo);background:var(--neo2);}
+.b-drop-icon{font-size:28px;margin-bottom:6px;}
+.b-drop-txt{font-size:13px;color:var(--tx2);font-family:var(--mono);}
+.b-drop-sub{font-size:10px;color:var(--tx2);margin-top:4px;opacity:.7;}
+#bFileInput{display:none;}
+.b-playlist{margin-top:8px;max-height:110px;overflow-y:auto;display:none;}
+.b-item{
+  display:flex;align-items:center;gap:6px;padding:5px 8px;
+  border-radius:8px;background:var(--sur);margin-bottom:3px;cursor:pointer;
+  border:1px solid transparent;transition:all .15s;
+}
+.b-item.playing{background:var(--neo2);border-color:var(--neo);}
+.b-item-name{flex:1;font-size:11px;font-family:var(--mono);color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.b-item.playing .b-item-name{color:var(--neo);}
+.b-item-del{background:transparent;border:none;color:var(--tx2);font-size:11px;cursor:pointer;flex-shrink:0;padding:2px 4px;}
+.b-ctrl{display:flex;gap:6px;margin-top:6px;}
+.b-note{font-size:9px;font-family:var(--mono);color:var(--tx2);text-align:center;margin-top:4px;opacity:.6;}
+/* Type-B時のステータスバッジ */
+
+/* ===== TYPE-C パネル ===== */
+#typeCPanel{display:none;padding:.75rem 1rem .5rem;}
+.c-section{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:.75rem 1rem;margin-bottom:8px;}
+.c-lbl{font-family:var(--mono);font-size:11px;color:var(--tx2);letter-spacing:.1em;margin-bottom:8px;}
+.c-url-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.c-url-input{flex:1;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:12px;font-family:var(--mono);outline:none;}
+.c-url-input:focus{border-color:var(--neo);}
+.btn-c-save{background:var(--neo2);border:1px solid var(--neo);color:var(--neo);border-radius:8px;padding:8px 14px;font-size:12px;font-family:var(--mono);cursor:pointer;white-space:nowrap;}
+.btn-c-save:active{transform:scale(0.95);}
+.c-status{font-family:var(--mono);font-size:10px;color:var(--tx2);margin-bottom:8px;min-height:14px;}
+.c-status.ok{color:var(--neo);}
+.c-status.err{color:#ff4444;}
+.c-drop{border:2px dashed var(--bdr);border-radius:14px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--sur);}
+.c-drop:active,.c-drop.dragover{border-color:var(--neo);background:var(--neo2);}
+.c-drop-icon{font-size:28px;margin-bottom:6px;}
+.c-drop-txt{font-size:13px;color:var(--tx2);font-family:var(--mono);}
+.c-drop-sub{font-size:10px;color:var(--tx2);margin-top:4px;opacity:.7;}
+#cFileInput{display:none;}
+.c-progress{display:none;margin-top:8px;}
+.c-prog-bar-wrap{background:var(--sur2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px;}
+.c-prog-bar{height:100%;background:var(--neo);width:0%;transition:width .2s;border-radius:4px;}
+.c-prog-txt{font-family:var(--mono);font-size:10px;color:var(--tx2);text-align:center;}
+.badge-c{background:rgba(0,255,224,0.15);color:var(--neo);}
+.mode-tab.active-c{color:var(--neo);border-bottom-color:var(--neo);}
+.b-status-badge{
+  display:inline-block;background:var(--neo2);color:var(--neo);
+  border:1px solid var(--neo);border-radius:4px;font-size:9px;
+  font-family:var(--mono);padding:1px 6px;margin-left:6px;vertical-align:middle;
+}
+
+/* ============================================================
+   HELP MODAL CSS
+   ============================================================ */
+:root {
+  --help-accent:       #ff6b2b;
+  --help-accent-dim:   rgba(255,107,43,0.2);
+  --help-bg:           rgba(20,18,18,0.97);
+  --help-border:       rgba(255,107,43,0.3);
+  --help-text:         #e8e0d8;
+  --help-text-dim:     #888;
+  --help-section-bg:   rgba(255,107,43,0.1);
+  --help-item-bg:      rgba(255,255,255,0.04);
+  --help-btn-size:     2.2rem;
+}
+#helpBtn {
+  width:var(--help-btn-size);height:var(--help-btn-size);
+  border-radius:50%;border:1.5px solid var(--help-border);
+  background:var(--help-bg);color:var(--help-accent);
+  font-size:1rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,transform .15s;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 0 10px rgba(255,107,43,0.2);
+}
+#helpBtn:hover{background:var(--help-accent-dim);transform:scale(1.08);}
+#helpBtn:active{transform:scale(.95);}
+#helpOverlay{
+  display:none;position:fixed;inset:0;z-index:910;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:1rem;
+}
+#helpOverlay.active{display:flex;}
+#helpModal{
+  position:relative;width:100%;max-width:480px;max-height:85vh;
+  background:var(--help-bg);border:1px solid var(--help-border);
+  border-radius:1rem;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px var(--help-accent-dim);
+}
+#helpModal .help-header{
+  padding:.9rem 1.2rem;border-bottom:1px solid var(--help-border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#helpModal .help-header-title{font-size:1rem;font-weight:700;color:var(--help-accent);letter-spacing:.05em;}
+#helpCloseBtn{
+  width:2rem;height:2rem;border-radius:50%;
+  border:1px solid var(--help-border);background:transparent;
+  color:var(--help-text-dim);font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:color .15s,background .15s;-webkit-tap-highlight-color:transparent;
+}
+#helpCloseBtn:hover{color:#fff;background:rgba(255,255,255,.08);}
+#helpBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:.8rem .8rem 1.2rem;flex:1;}
+.help-section-title{
+  display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:700;
+  letter-spacing:.12em;color:var(--help-accent);text-transform:uppercase;
+  background:var(--help-section-bg);border-radius:.45rem;
+  padding:.45rem .7rem;margin-bottom:.4rem;margin-top:.6rem;
+}
+.help-section-title:first-child{margin-top:0;}
+.help-item{border-radius:.5rem;overflow:hidden;margin-bottom:.3rem;}
+.help-item-trigger{
+  width:100%;text-align:left;background:var(--help-item-bg);
+  border:1px solid transparent;border-radius:.5rem;color:var(--help-text);
+  font-size:.88rem;font-weight:600;padding:.6rem .8rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent;
+}
+.help-item-trigger:hover{border-color:var(--help-border);}
+.help-item-trigger.open{
+  border-color:var(--help-accent-dim);border-bottom-left-radius:0;border-bottom-right-radius:0;
+  background:rgba(255,107,43,0.08);
+}
+.help-item-trigger .help-chevron{font-size:.7rem;color:var(--help-text-dim);transition:transform .2s;flex-shrink:0;}
+.help-item-trigger.open .help-chevron{transform:rotate(180deg);}
+.help-item-body{
+  display:none;background:rgba(255,255,255,.025);
+  border:1px solid var(--help-accent-dim);border-top:none;
+  border-bottom-left-radius:.5rem;border-bottom-right-radius:.5rem;
+  padding:.65rem .85rem .75rem;font-size:.83rem;color:var(--help-text);line-height:1.65;
+}
+.help-item-body.open{display:block;}
+.help-item-body .lesson-label{
+  font-size:.7rem;font-weight:700;letter-spacing:.08em;color:var(--help-text-dim);
+  text-transform:uppercase;margin-top:.5rem;margin-bottom:.15rem;
+}
+.help-item-body .lesson-label:first-child{margin-top:0;}
+.help-item-body strong{color:#fff;font-weight:700;}
+.help-item-body code{
+  font-family:'Courier New',monospace;font-size:.78rem;
+  background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);
+  border-radius:.25rem;padding:.05em .35em;color:#ffa080;
+}
+/* プロンプトコピーボタン */
+#helpCopyPromptBtn {
+  display:block;
+  width:calc(100% - 1.6rem);
+  margin:.6rem .8rem .2rem;
+  padding:.65rem;
+  background:var(--help-accent-dim);
+  border:1px solid var(--help-border);
+  border-radius:.5rem;
+  color:var(--help-accent);
+  font-size:.85rem;
+  font-weight:700;
+  cursor:pointer;
+  text-align:center;
+  letter-spacing:.04em;
+  transition:background .15s,transform .1s;
+  -webkit-tap-highlight-color:transparent;
+  flex-shrink:0;
+}
+#helpCopyPromptBtn:hover{background:rgba(255,107,43,0.35);}
+#helpCopyPromptBtn:active{transform:scale(.97);}
+/* ============================================================
+   HELP MODAL CSS ここまで
+   ============================================================ */
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="logo" style="font-size:14px;">思い出再生くん<span id="modeSubtitle">TYPE-A · IndexedDB永続保存</span></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="version">v3.1</div>
+    <button id="helpBtn" aria-label="ヘルプを開く" onclick="openHelpModal()">❓</button>
+  </div>
+</div>
+
+<!-- モード切替タブ -->
+<div class="mode-bar">
+  <button class="mode-tab active-a" id="tabA" onclick="switchMode('A')">
+    TYPE-A <span class="mode-badge badge-a">DB保存</span>
+  </button>
+  <button class="mode-tab" id="tabB" onclick="switchMode('B')">
+    TYPE-B <span class="mode-badge badge-b">即再生</span>
+  </button>
+  <button class="mode-tab" id="tabC" onclick="switchMode('C')">
+    TYPE-C <span class="mode-badge badge-c">HF</span>
+  </button>
+</div>
+
+<!-- TYPE-A パネル -->
+<div id="typeAPanel">
+<div class="url-wrap">
+  <div class="url-box">
+    <span class="url-icon">🔗</span>
+    <input type="url" class="url-input" id="urlInput" placeholder="動画URLを貼り付け..." autocomplete="off" autocorrect="off" spellcheck="false">
+    <button class="btn-clear" onclick="clearUrl()">✕</button>
+    <button class="btn-play" onclick="loadUrl()">GO</button>
+  </div>
+  <div class="file-row">
+    <button class="btn-file" onclick="document.getElementById('fileInput').click()">📁 動画を保存・追加</button>
+    <button class="btn-file" onclick="clearPlaylist()" style="flex:0.4;color:var(--tx2);">🗑 クリア</button>
+  </div>
+  <input type="file" id="fileInput" accept="video/*,audio/*" style="display:none" onchange="addFile(this)" multiple>
+  <div id="dbStatus" style="font-size:10px;font-family:var(--mono);color:var(--tx2);padding:4px 2px;">DB: 初期化中...</div>
+  <div id="plList" style="margin-top:6px;display:none;max-height:120px;overflow-y:auto;"></div>
+</div>
+</div><!-- /#typeAPanel -->
+
+<!-- TYPE-B パネル -->
+<div id="typeBPanel" style="display:none;">
+  <div class="b-drop" id="bDrop" onclick="document.getElementById('bFileInput').click()">
+    <div class="b-drop-icon">📂</div>
+    <div class="b-drop-txt">タップしてファイルを選択</div>
+    <div class="b-drop-sub">保存なし · Blob即再生 · 複数OK</div>
+  </div>
+  <input type="file" id="bFileInput" accept="video/*,audio/*" multiple onchange="bAddFiles(this)">
+  <div class="b-playlist" id="bPlaylist"></div>
+  <div class="b-ctrl" id="bCtrl" style="display:none;">
+    <button class="btn-file" style="flex:1;" onclick="bClearAll()">🗑 リストクリア</button>
+    <button class="btn-file" style="flex:1;border-color:var(--neo);color:var(--neo);" onclick="document.getElementById('bFileInput').click()">＋ 追加</button>
+  </div>
+  <div class="b-note">※ページを閉じると消えます（保存不要な一時再生用）</div>
+</div>
+
+<!-- TYPE-C パネル -->
+<div id="typeCPanel" style="display:none;">
+  <!-- HFサーバーURL設定 -->
+  <div class="c-section">
+    <div class="c-lbl">HF SPACE URL</div>
+    <div class="c-url-row">
+      <input type="url" class="c-url-input" id="cHfUrl" placeholder="https://xxxx.hf.space" autocomplete="off" spellcheck="false">
+      <button class="btn-c-save" onclick="cSaveUrl()">保存</button>
+    </div>
+    <div class="c-status" id="cUrlStatus">未設定</div>
+  </div>
+  <!-- 動画アップロード -->
+  <div class="c-section">
+    <div class="c-lbl">動画をアップロードして再生</div>
+    <div class="c-drop" id="cDrop" onclick="document.getElementById('cFileInput').click()">
+      <div class="c-drop-icon">☁️</div>
+      <div class="c-drop-txt">タップして動画を選択</div>
+      <div class="c-drop-sub">HF Spacesに一時送信 · 離脱時自動削除</div>
+    </div>
+    <input type="file" id="cFileInput" accept="video/*" onchange="cUpload(this)">
+    <div class="c-progress" id="cProgress">
+      <div class="c-prog-bar-wrap"><div class="c-prog-bar" id="cProgBar"></div></div>
+      <div class="c-prog-txt" id="cProgTxt">アップロード中...</div>
+    </div>
+    <div class="c-status" id="cUploadStatus"></div>
+  </div>
+</div>
+
+<div class="video-wrap">
+  <div class="no-video" id="noVideo">
+    <div class="no-video-icon">🎬</div>
+    URLまたはファイルを選択
+  </div>
+  <video id="vid" playsinline webkit-playsinline preload="metadata" style="display:none"
+    onloadedmetadata="onLoaded()"
+    ontimeupdate="onTimeUpdate()"
+    onplay="updatePlayBtn()"
+    onpause="updatePlayBtn()"
+    onended="onEnded()"
+    onerror="onError()">
+  </video>
+  <!-- 動画上コントロール -->
+  <div class="vid-overlay" id="vidOverlay" onclick="toggleVidOverlay()" style="display:none;"></div>
+  <div class="vid-ctrl-panel" id="vidCtrlPanel" onclick="event.stopPropagation()" style="display:none;">
+    <div class="vid-seek-row">
+      <span class="vid-time" id="voCurTime">0:00</span>
+      <input type="range" class="vid-seek" id="voSeekBar" min="0" max="100" value="0" oninput="onSeek(this.value)" ontouchstart="event.stopPropagation()">
+      <span class="vid-time" id="voDurTime">0:00</span>
+    </div>
+    <div class="vid-btn-row">
+      <button class="vid-btn" onclick="skip(-10)">-10秒</button>
+      <button class="vid-btn" onclick="changeSpeedVo(-0.5)">－</button>
+      <span class="vid-spd" id="voSpdDisplay">2.8x</span>
+      <button class="vid-btn" onclick="changeSpeedVo(0.5)">＋</button>
+      <button class="vid-btn primary" id="voPlayBtn" onclick="togglePlay()">▶</button>
+      <button class="vid-btn" onclick="skip(10)">+10秒</button>
+      <button class="vid-btn" onclick="toggleMute()" id="voMuteBtn">🔊</button>
+      <button class="vid-btn" onclick="exitFullscreen()" style="border-color:var(--acc);color:var(--acc);">✕ 戻る</button>
+    </div>
+  </div>
+</div>
+
+<div class="ctrl">
+  <!-- プレイリスト -->
+  <div class="pl-section" id="plSection" style="display:none;">
+    <div class="pl-top">
+      <span class="pl-lbl">PLAYLIST</span>
+      <span class="pl-counter" id="plCounter">1 / 1</span>
+      <button class="pl-repeat" id="plRepeatBtn" onclick="cycleRepeat()">🔁 全曲</button>
+    </div>
+    <div class="pl-ctrl">
+      <button class="btn-pl" onclick="playPrev()">⏮ 前へ</button>
+      <button class="btn-pl" onclick="playNext()">次へ ⏭</button>
+    </div>
+    <div class="pl-name" id="plName"></div>
+  </div>
+
+  <div class="speed-section">
+    <div class="speed-top">
+      <span class="speed-lbl">SPEED</span>
+      <span class="speed-display" id="speedDisplay">2.8x</span>
+    </div>
+    <div class="speed-btns">
+      <button class="spd" data-s="0.5" onclick="setSpeed(0.5,this)">0.5x</button>
+      <button class="spd" data-s="1.0" onclick="setSpeed(1.0,this)">1.0x</button>
+      <button class="spd" data-s="1.5" onclick="setSpeed(1.5,this)">1.5x</button>
+      <button class="spd" data-s="2.0" onclick="setSpeed(2.0,this)">2.0x</button>
+      <button class="spd on" data-s="2.8" onclick="setSpeed(2.8,this)">2.8x</button>
+      <button class="spd" data-s="4.0" onclick="setSpeed(4.0,this)">4.0x</button>
+    </div>
+    <div class="slider-row">
+      <span class="slider-min">0.5x</span>
+      <input type="range" id="speedSlider" min="0.5" max="4.0" step="0.1" value="2.8" oninput="setSpeedSlider(this.value)">
+      <span class="slider-max">4.0x</span>
+    </div>
+  </div>
+
+  <div class="pb-ctrl">
+    <button class="btn-ctrl" onclick="skip(-10)">-10秒</button>
+    <button class="btn-ctrl primary" id="playBtn" onclick="togglePlay()">▶ 再生</button>
+    <button class="btn-ctrl" onclick="skip(10)">+10秒</button>
+    <button class="btn-ctrl neo" id="muteBtn" onclick="toggleMute()">🔊</button>
+    <button class="btn-ctrl" onclick="toggleFullscreen()" id="fsBtn">⛶</button>
+  </div>
+
+  <div class="seek-wrap">
+    <div class="seek-lbl">
+      <span id="curTime">0:00</span>
+      <span id="durTime">0:00</span>
+    </div>
+    <input type="range" class="seek" id="seekBar" min="0" max="100" value="0" oninput="onSeek(this.value)">
+  </div>
+</div>
+
+<div class="ctrl" style="padding-top:0;">
+  <div class="extra-ctrl">
+    <div class="extra-lbl">LOOP / FILTER</div>
+    <div class="extra-row">
+      <button class="btn-ex" id="loopBtn" onclick="toggleLoop()">🔁 ループOFF</button>
+      <button class="btn-ex" id="abBtn" onclick="toggleAB()">A-B リピート</button>
+      <button class="btn-ex" id="abResetBtn" onclick="resetAB()" style="flex:0.5;">リセット</button>
+    </div>
+    <div class="ab-row" id="abDisplay" style="margin-bottom:8px;display:none;">
+      <span class="ab-time" id="abATime">A: --</span>
+      <span style="color:var(--tx2);font-size:12px;">→</span>
+      <span class="ab-time" id="abBTime">B: --</span>
+      <span style="font-size:11px;color:var(--tx2);">再生中にA→Bをタップ</span>
+    </div>
+    <div class="filter-row">
+      <span class="filter-lbl">明るさ</span>
+      <input type="range" style="flex:1;accent-color:var(--acc);" min="50" max="150" step="5" value="100" oninput="updateFilter('brightness',this.value)">
+      <span class="filter-val" id="brightVal">100%</span>
+    </div>
+    <div class="filter-row">
+      <span class="filter-lbl">コントラスト</span>
+      <input type="range" style="flex:1;accent-color:var(--neo);" min="50" max="150" step="5" value="100" oninput="updateFilter('contrast',this.value)">
+      <span class="filter-val" id="contrastVal">100%</span>
+    </div>
+  </div>
+</div>
+<div class="status" id="status">待機中</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var vid=document.getElementById('vid');
+var curSpeed=2.8,isMuted=false;
+
+// =============================================
+// IndexedDB レイヤー
+// DB: omoide_player_v1
+//   ストア "videos" : メタデータ { id, name, size, type, addedAt }
+//   ストア "blobs"  : バイナリ   { id, data: ArrayBuffer }
+// id は両ストアで共通 (videos.id === blobs.id)
+// 将来の編集機能: videos に duration/trim情報を追加するだけで対応可
+// =============================================
+var DB_NAME='omoide_player_v1', DB_VER=1;
+var db=null;
+
+function openDB(){
+  return new Promise(function(resolve,reject){
+    var req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=function(e){
+      var d=e.target.result;
+      if(!d.objectStoreNames.contains('videos')){
+        var vs=d.createObjectStore('videos',{keyPath:'id'});
+        vs.createIndex('addedAt','addedAt',{unique:false});
+      }
+      if(!d.objectStoreNames.contains('blobs')){
+        d.createObjectStore('blobs',{keyPath:'id'});
+      }
+    };
+    req.onsuccess=function(e){db=e.target.result;resolve(db);};
+    req.onerror=function(){reject(req.error);};
+  });
+}
+
+// 動画を保存（メタデータ + バイナリを分離して保存）
+function saveVideoToDB(file){
+  return new Promise(function(resolve,reject){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var id=Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      var meta={id:id,name:file.name,size:file.size,type:file.type,addedAt:Date.now()};
+      var tx=db.transaction(['videos','blobs'],'readwrite');
+      tx.objectStore('videos').put(meta);
+      tx.objectStore('blobs').put({id:id,data:e.target.result});
+      tx.oncomplete=function(){resolve(meta);};
+      tx.onerror=function(){reject(tx.error);};
+    };
+    reader.onerror=function(){reject(reader.error);};
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// メタデータ一覧取得（addedAt昇順）
+function getAllMeta(){
+  return new Promise(function(resolve,reject){
+    var tx=db.transaction('videos','readonly');
+    var req=tx.objectStore('videos').index('addedAt').getAll();
+    req.onsuccess=function(){resolve(req.result);};
+    req.onerror=function(){reject(req.error);};
+  });
+}
+
+// バイナリ取得 → ObjectURL生成
+function getBlobUrl(id,type){
+  return new Promise(function(resolve,reject){
+    var tx=db.transaction('blobs','readonly');
+    var req=tx.objectStore('blobs').get(id);
+    req.onsuccess=function(){
+      if(!req.result){reject(new Error('blob not found'));return;}
+      var blob=new Blob([req.result.data],{type:type||'video/mp4'});
+      resolve(URL.createObjectURL(blob));
+    };
+    req.onerror=function(){reject(req.error);};
+  });
+}
+
+// 動画削除（メタ + バイナリ両方）
+function deleteVideoFromDB(id){
+  return new Promise(function(resolve,reject){
+    var tx=db.transaction(['videos','blobs'],'readwrite');
+    tx.objectStore('videos').delete(id);
+    tx.objectStore('blobs').delete(id);
+    tx.oncomplete=resolve;
+    tx.onerror=function(){reject(tx.error);};
+  });
+}
+
+// DB使用量を概算表示
+function updateDbStatus(){
+  getAllMeta().then(function(metas){
+    var total=metas.reduce(function(s,m){return s+m.size;},0);
+    var mb=(total/1024/1024).toFixed(1);
+    document.getElementById('dbStatus').textContent=
+      'DB: '+metas.length+'件 / 約'+mb+'MB保存済 (IndexedDB)';
+  });
+}
+
+// =============================================
+// プレイリスト（メモリ上はメタデータのみ保持）
+// playlist: [ { id, name, size, type, addedAt } ]
+// 再生時にgetBlobUrl()でObjectURLを都度生成
+// =============================================
+var playlist=[];
+var plIdx=0;
+var repeatMode=1;
+var repeatLabels=['🔂 なし','🔁 全曲','🔂 1曲'];
+var currentBlobUrl=null; // 再生中のObjectURL（再生後revoke）
+
+// 起動時: DBからメタデータを復元してプレイリストに積む
+function loadFromDB(){
+  getAllMeta().then(function(metas){
+    playlist=metas;
+    plIdx=0;
+    updatePlUI();
+    updateDbStatus();
+    if(playlist.length>0)setStatus('DB: '+playlist.length+'件の動画があります');
+    else setStatus('待機中 — 動画を追加してください');
+  }).catch(function(e){
+    setStatus('DB読み込みエラー: '+e.message);
+  });
+}
+
+function addFile(input){
+  var files=Array.from(input.files);
+  if(!files.length)return;
+  input.value='';
+  var wasEmpty=playlist.length===0;
+  setStatus('保存中... (0/'+files.length+')');
+
+  var done=0;
+  var saves=files.map(function(file){
+    return saveVideoToDB(file).then(function(meta){
+      done++;
+      setStatus('保存中... ('+done+'/'+files.length+')');
+      return meta;
+    });
+  });
+
+  Promise.all(saves).then(function(metas){
+    metas.forEach(function(m){playlist.push(m);});
+    updatePlUI();
+    updateDbStatus();
+    if(wasEmpty&&playlist.length>0){
+      // 初回追加なら即再生
+      playAtIdx(0);
+    } else {
+      toast(files.length+'件を保存しました (IndexedDB)');
+      setStatus('保存完了');
+    }
+  }).catch(function(e){
+    toast('保存エラー: '+e.message);
+    setStatus('エラー');
+  });
+}
+
+function clearPlaylist(){
+  // DBからも全削除
+  var deletes=playlist.map(function(p){return deleteVideoFromDB(p.id);});
+  Promise.all(deletes).then(function(){
+    playlist=[];plIdx=0;
+    revokeCurrent();
+    vid.pause();vid.src='';
+    vid.style.display='none';
+    document.getElementById('noVideo').style.display='flex';
+    updatePlUI();
+    updateDbStatus();
+    toast('全動画をDBから削除しました');
+  }).catch(function(e){toast('削除エラー: '+e.message);});
+}
+
+function revokeCurrent(){
+  if(currentBlobUrl){URL.revokeObjectURL(currentBlobUrl);currentBlobUrl=null;}
+}
+
+function playAtIdx(idx){
+  if(!playlist.length)return;
+  plIdx=idx;
+  var p=playlist[plIdx];
+  updatePlUI();
+  setStatus('読み込み中: '+p.name);
+
+  revokeCurrent(); // 前のObjectURLを解放
+
+  getBlobUrl(p.id,p.type).then(function(url){
+    currentBlobUrl=url;
+    document.getElementById('noVideo').style.display='none';
+    vid.style.display='block';
+    document.getElementById('vidOverlay').style.display='block';
+    vid.src=url;
+    vid.playbackRate=curSpeed;
+    vid.play().catch(function(){toast('再生できませんでした');});
+    setStatus(p.name+' ('+(plIdx+1)+'/'+playlist.length+')');
+  }).catch(function(e){
+    toast('読み込みエラー: '+e.message);
+    setStatus('エラー');
+  });
+}
+
+function updatePlUI(){
+  var sec=document.getElementById('plSection');
+  var listEl=document.getElementById('plList');
+  if(playlist.length>0){
+    sec.style.display=playlist.length>1?'block':'none';
+    document.getElementById('plCounter').textContent=(plIdx+1)+' / '+playlist.length;
+    document.getElementById('plName').textContent=playlist[plIdx]?playlist[plIdx].name:'';
+    listEl.style.display='block';
+    listEl.innerHTML=playlist.map(function(p,i){
+      var mb=(p.size/1024/1024).toFixed(1);
+      return '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;background:'+(i===plIdx?'var(--acc2)':'var(--sur2)')+';margin-bottom:3px;">'
+        +'<span style="font-family:var(--mono);font-size:10px;color:'+(i===plIdx?'var(--acc)':'var(--tx2)')+';cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" onclick="playAtIdx('+i+')">'
+        +(i===plIdx?'▶ ':'')+p.name+' <span style="color:var(--tx2);">'+mb+'MB</span></span>'
+        +'<button onclick="removeTrack('+i+')" style="background:transparent;border:none;color:var(--tx2);font-size:11px;cursor:pointer;flex-shrink:0;">✕</button>'
+        +'</div>';
+    }).join('');
+  } else {
+    sec.style.display='none';
+    listEl.style.display='none';
+    listEl.innerHTML='';
+  }
+}
+
+function removeTrack(i){
+  var p=playlist[i];
+  var wasCurrent=(i===plIdx);
+  deleteVideoFromDB(p.id).then(function(){
+    playlist.splice(i,1);
+    if(plIdx>=playlist.length)plIdx=Math.max(0,playlist.length-1);
+    if(wasCurrent||playlist.length===0){
+      revokeCurrent();
+      if(playlist.length>0)playAtIdx(plIdx);
+      else{vid.pause();vid.src='';vid.style.display='none';document.getElementById('noVideo').style.display='flex';}
+    }
+    updatePlUI();
+    updateDbStatus();
+    toast(p.name+' を削除しました');
+  }).catch(function(e){toast('削除エラー: '+e.message);});
+}
+
+function playNext(){
+  if(!playlist.length)return;
+  var next=plIdx+1;
+  if(next>=playlist.length){if(repeatMode===1)next=0;else return;}
+  playAtIdx(next);
+}
+function playPrev(){
+  if(!playlist.length)return;
+  var prev=plIdx-1;
+  if(prev<0)prev=playlist.length-1;
+  playAtIdx(prev);
+}
+
+function cycleRepeat(){
+  repeatMode=(repeatMode+1)%3;
+  var btn=document.getElementById('plRepeatBtn');
+  btn.textContent=repeatLabels[repeatMode];
+  btn.className=repeatMode>0?'pl-repeat on':'pl-repeat';
+  toast(repeatLabels[repeatMode]);
+}
+
+// =============================================
+// URL再生（URLはDBに保存せず一時再生）
+// =============================================
+function clearUrl(){document.getElementById('urlInput').value='';document.getElementById('urlInput').focus();}
+
+function loadUrl(){
+  var url=document.getElementById('urlInput').value.trim();
+  if(!url){toast('URLを入力してください');return;}
+  if(/youtube\.com|youtu\.be/.test(url)){toast('YouTube対応は準備中');return;}
+  if(/twitter\.com|x\.com/.test(url)){toast('X/Twitter対応は準備中');return;}
+  if(/drive\.google\.com/.test(url)){var m=url.match(/\/d\/([^\/]+)/);if(m)url='https://drive.google.com/uc?export=download&id='+m[1];}
+  revokeCurrent();
+  document.getElementById('noVideo').style.display='none';
+  vid.style.display='block';
+  vid.src=url;vid.playbackRate=curSpeed;
+  vid.play().catch(function(){toast('再生できませんでした');});
+  setStatus('再生中 URL');
+}
+
+function onLoaded(){
+  vid.playbackRate=curSpeed;
+  document.getElementById('durTime').textContent=fmtTime(vid.duration);
+  document.getElementById('seekBar').max=Math.floor(vid.duration);
+}
+function onTimeUpdate(){
+  if(!vid.duration)return;
+  var t=fmtTime(vid.currentTime);
+  document.getElementById('curTime').textContent=t;
+  document.getElementById('seekBar').value=Math.floor(vid.currentTime);
+  // 動画オーバーレイ同期
+  document.getElementById('voCurTime').textContent=t;
+  document.getElementById('voSeekBar').value=Math.floor(vid.currentTime);
+  document.getElementById('voSeekBar').max=Math.floor(vid.duration||0);
+  document.getElementById('voDurTime').textContent=fmtTime(vid.duration);
+  document.getElementById('voPlayBtn').textContent=vid.paused?'▶':'⏸';
+  document.getElementById('voMuteBtn').textContent=isMuted?'🔇':'🔊';
+  document.getElementById('voSpdDisplay').textContent=curSpeed.toFixed(1)+'x';
+}
+function onError(){toast('動画を読み込めませんでした');setStatus('エラー');}
+function togglePlay(){if(vid.paused)vid.play();else vid.pause();}
+function updatePlayBtn(){document.getElementById('playBtn').textContent=vid.paused?'▶ 再生':'⏸ 停止';}
+function skip(sec){vid.currentTime=Math.max(0,Math.min(vid.duration||0,vid.currentTime+sec));}
+function onSeek(v){vid.currentTime=parseFloat(v);}
+function toggleMute(){isMuted=!isMuted;vid.muted=isMuted;document.getElementById('muteBtn').textContent=isMuted?'🔇':'🔊';}
+function setSpeed(s,el){
+  curSpeed=s;vid.playbackRate=s;
+  document.getElementById('speedDisplay').textContent=s+'x';
+  document.getElementById('speedSlider').value=s;
+  document.querySelectorAll('.spd').forEach(function(b){b.classList.remove('on');});
+  if(el)el.classList.add('on');
+  toast(s+'x に設定');
+}
+function setSpeedSlider(v){
+  var s=parseFloat(parseFloat(v).toFixed(1));
+  curSpeed=s;vid.playbackRate=s;
+  document.getElementById('speedDisplay').textContent=s+'x';
+  document.querySelectorAll('.spd').forEach(function(b){b.classList.toggle('on',parseFloat(b.dataset.s)===s);});
+}
+function exitFullscreen(){
+  if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  else if(document.exitFullscreen)document.exitFullscreen();
+  document.getElementById('fsBtn').textContent='⛶';
+  document.getElementById('vidCtrlPanel').style.display='none';
+}
+function toggleFullscreen(){
+  var el=document.getElementById('vid');
+  if(!el.src&&!el.currentSrc){toast('先に動画を選択してください');return;}
+  if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+    // Android BraveはvideoのwebkitEnterFullscreenが最も確実
+    if(el.webkitEnterFullscreen){
+      el.webkitEnterFullscreen();
+    }else{
+      var wrap=document.querySelector('.video-wrap');
+      if(wrap.webkitRequestFullscreen)wrap.webkitRequestFullscreen();
+      else if(wrap.requestFullscreen)wrap.requestFullscreen();
+    }
+    document.getElementById('fsBtn').textContent='✕';
+  }else{
+    if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+    else if(document.exitFullscreen)document.exitFullscreen();
+    document.getElementById('fsBtn').textContent='⛶';
+  }
+}
+document.addEventListener('fullscreenchange',function(){
+  if(!document.fullscreenElement)document.getElementById('fsBtn').textContent='⛶';
+});
+document.addEventListener('webkitfullscreenchange',function(){
+  if(!document.webkitFullscreenElement)document.getElementById('fsBtn').textContent='⛶';
+});
+
+function fmtTime(s){if(isNaN(s))return '0:00';var m=Math.floor(s/60),sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec;}
+function setStatus(msg){document.getElementById('status').textContent=msg;}
+function toast(msg){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('on');setTimeout(function(){el.classList.remove('on');},2000);}
+// =============================================
+// 動画オーバーレイコントロール
+// =============================================
+var voTimer=null;
+function toggleVidOverlay(){
+  var panel=document.getElementById('vidCtrlPanel');
+  if(panel.style.display==='flex'){
+    panel.style.display='none';
+  }else{
+    panel.style.display='flex';
+    clearTimeout(voTimer);
+    voTimer=setTimeout(function(){panel.style.display='none';},4000);
+  }
+}
+function changeSpeedVo(delta){
+  var s=Math.round((curSpeed+delta)*10)/10;
+  s=Math.max(0.5,Math.min(4.0,s));
+  setSpeed(s,null);
+  document.getElementById('voSpdDisplay').textContent=s.toFixed(1)+'x';
+}
+
+// =============================================
+// 起動: IndexedDB を開いてから既存動画を復元
+// =============================================
+openDB().then(function(){
+  document.getElementById('dbStatus').textContent='DB: 接続済';
+  loadFromDB();
+}).catch(function(e){
+  document.getElementById('dbStatus').textContent='DB: エラー — '+e.message;
+  setStatus('IndexedDB初期化失敗');
+});
+
+document.getElementById('urlInput').addEventListener('keydown',function(e){if(e.key==='Enter')loadUrl();});
+
+var isLoop=false;
+function toggleLoop(){
+  isLoop=!isLoop;vid.loop=isLoop;
+  var btn=document.getElementById('loopBtn');
+  btn.textContent=isLoop?'🔁 ループON':'🔁 ループOFF';
+  btn.className=isLoop?'btn-ex on':'btn-ex';
+  toast(isLoop?'ループON':'ループOFF');
+}
+
+var abMode=false,abA=null,abB=null,abInterval=null;
+function toggleAB(){
+  if(!abMode){
+    abMode=true;abA=null;abB=null;
+    document.getElementById('abBtn').className='btn-ex neo-on';
+    document.getElementById('abBtn').textContent='A点をタップ';
+    document.getElementById('abDisplay').style.display='flex';
+    document.getElementById('abATime').textContent='A: --';
+    document.getElementById('abBTime').textContent='B: --';
+    toast('A-Bリピート ON');
+  } else if(abA===null){
+    abA=vid.currentTime;
+    document.getElementById('abATime').textContent='A: '+fmtTime(abA);
+    document.getElementById('abBtn').textContent='B点をタップ';
+    toast('A点設定: '+fmtTime(abA));
+  } else if(abB===null){
+    abB=vid.currentTime;
+    if(abB<=abA){toast('B点はA点より後にしてください');return;}
+    document.getElementById('abBTime').textContent='B: '+fmtTime(abB);
+    document.getElementById('abBtn').textContent='A-B再生中';
+    vid.currentTime=abA;
+    if(abInterval)clearInterval(abInterval);
+    abInterval=setInterval(function(){if(vid.currentTime>=abB)vid.currentTime=abA;},200);
+    toast('A-Bリピート開始');
+  }
+}
+function resetAB(){
+  abMode=false;abA=null;abB=null;
+  if(abInterval){clearInterval(abInterval);abInterval=null;}
+  document.getElementById('abBtn').className='btn-ex';
+  document.getElementById('abBtn').textContent='A-B リピート';
+  document.getElementById('abDisplay').style.display='none';
+  toast('A-Bリセット');
+}
+
+var brightness=100,contrast=100;
+function updateFilter(type,v){
+  if(type==='brightness'){brightness=parseInt(v);document.getElementById('brightVal').textContent=v+'%';}
+  else{contrast=parseInt(v);document.getElementById('contrastVal').textContent=v+'%';}
+  vid.style.filter='brightness('+brightness+'%) contrast('+contrast+'%)';
+}
+
+// =============================================
+// モード切替 (Type-A / Type-B)
+// =============================================
+var currentMode='A';
+
+function switchMode(mode){
+  currentMode=mode;
+  var tabA=document.getElementById('tabA');
+  var tabB=document.getElementById('tabB');
+  var tabC=document.getElementById('tabC');
+  var panelA=document.getElementById('typeAPanel');
+  var panelB=document.getElementById('typeBPanel');
+  var panelC=document.getElementById('typeCPanel');
+  var subtitle=document.getElementById('modeSubtitle');
+
+  tabA.className='mode-tab'; tabB.className='mode-tab'; tabC.className='mode-tab';
+  panelA.style.display='none'; panelB.style.display='none'; panelC.style.display='none';
+
+  if(mode==='A'){
+    tabA.className='mode-tab active-a';
+    panelA.style.display='block';
+    subtitle.textContent='TYPE-A · IndexedDB永続保存';
+    if(bCurrentUrl){vid.pause();URL.revokeObjectURL(bCurrentUrl);bCurrentUrl=null;}
+    if(playlist.length>0){
+      vid.style.display='block';
+      document.getElementById('noVideo').style.display='none';
+      document.getElementById('vidOverlay').style.display='block';
+      if(currentBlobUrl&&vid.src!==currentBlobUrl){vid.src=currentBlobUrl;vid.load();}
+    }else{
+      vid.style.display='none';
+      document.getElementById('noVideo').style.display='flex';
+      document.getElementById('vidOverlay').style.display='none';
+    }
+  }else if(mode==='B'){
+    tabB.className='mode-tab active-b';
+    panelB.style.display='block';
+    subtitle.textContent='TYPE-B · Blob即再生（一時）';
+    if(!vid.paused)vid.pause();
+    if(bList.length>0){
+      vid.style.display='block';
+      document.getElementById('noVideo').style.display='none';
+      document.getElementById('vidOverlay').style.display='block';
+    }else{
+      vid.style.display='none';
+      document.getElementById('noVideo').style.display='flex';
+      document.getElementById('vidOverlay').style.display='none';
+    }
+  }else{
+    // TYPE-C
+    tabC.className='mode-tab active-c';
+    panelC.style.display='block';
+    subtitle.textContent='TYPE-C · HF Spaces経由再生';
+    if(!vid.paused)vid.pause();
+    // Type-C専用の動画が再生中でなければ非表示
+    if(!cCurrentFile){
+      vid.style.display='none';
+      document.getElementById('noVideo').style.display='flex';
+      document.getElementById('vidOverlay').style.display='none';
+    }
+  }
+}
+
+// =============================================
+// TYPE-B ロジック
+// =============================================
+// bList: [{ name, file, blobUrl }]  ← File参照を保持することでページ内は即再生可
+var bList=[];
+var bIdx=0;
+var bCurrentUrl=null;
+
+function bAddFiles(input){
+  var files=Array.from(input.files);
+  if(!files.length)return;
+  input.value='';
+  var wasEmpty=bList.length===0;
+  files.forEach(function(f){
+    // 同名ファイルの重複チェック（軽量）
+    var dup=bList.some(function(b){return b.name===f.name&&b.file.size===f.size;});
+    if(!dup) bList.push({name:f.name,file:f,blobUrl:null});
+  });
+  bUpdateUI();
+  // 追加前に空だった場合は即先頭再生
+  if(wasEmpty&&bList.length>0) bPlayAt(0);
+  else toast(files.length+'件を追加');
+}
+
+function bPlayAt(idx){
+  if(!bList.length)return;
+  bIdx=Math.max(0,Math.min(idx,bList.length-1));
+
+  // 前のBlobUrl解放
+  if(bCurrentUrl){URL.revokeObjectURL(bCurrentUrl);bCurrentUrl=null;}
+
+  var item=bList[bIdx];
+  bCurrentUrl=URL.createObjectURL(item.file);
+  item.blobUrl=bCurrentUrl; // 参照保持（UIのみ用）
+
+  document.getElementById('noVideo').style.display='none';
+  vid.style.display='block';
+  document.getElementById('vidOverlay').style.display='block';
+  vid.src=bCurrentUrl;
+  vid.playbackRate=curSpeed;
+  vid.play().catch(function(){toast('再生できませんでした');});
+  setStatus('[TYPE-B] '+item.name+' ('+(bIdx+1)+'/'+bList.length+')');
+  bUpdateUI();
+}
+
+function bClearAll(){
+  if(bCurrentUrl){URL.revokeObjectURL(bCurrentUrl);bCurrentUrl=null;}
+  bList=[];bIdx=0;
+  vid.pause();vid.src='';
+  vid.style.display='none';
+  document.getElementById('noVideo').style.display='flex';
+  document.getElementById('vidOverlay').style.display='none';
+  bUpdateUI();
+  toast('Type-Bリストをクリアしました');
+}
+
+function bRemove(i){
+  var wasCurrent=(i===bIdx);
+  if(wasCurrent&&bCurrentUrl){URL.revokeObjectURL(bCurrentUrl);bCurrentUrl=null;}
+  bList.splice(i,1);
+  if(!bList.length){bClearAll();return;}
+  if(bIdx>=bList.length)bIdx=bList.length-1;
+  if(wasCurrent)bPlayAt(bIdx);
+  else bUpdateUI();
+}
+
+function bUpdateUI(){
+  var pl=document.getElementById('bPlaylist');
+  var ctrl=document.getElementById('bCtrl');
+  if(!bList.length){pl.style.display='none';ctrl.style.display='none';return;}
+  pl.style.display='block';
+  ctrl.style.display='flex';
+  pl.innerHTML=bList.map(function(b,i){
+    var active=i===bIdx;
+    return '<div class="b-item'+(active?' playing':'')+'" onclick="bPlayAt('+i+')">'
+      +'<span style="font-family:var(--mono);font-size:10px;color:'+(active?'var(--neo)':'var(--tx2)')+';">'+('0'+(i+1)).slice(-2)+'</span>'
+      +'<span class="b-item-name">'+(active?'▶ ':'')+b.name+'</span>'
+      +'<button class="b-item-del" onclick="event.stopPropagation();bRemove('+i+')">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+// Type-B 終了時に前・次を上書き（onEndedも対応）
+function onEnded(){
+  if(currentMode==='B'){
+    // Type-B: repeatMode準拠
+    if(repeatMode===2){vid.currentTime=0;vid.play();return;}
+    var next=bIdx+1;
+    if(next<bList.length)bPlayAt(next);
+    else if(repeatMode===1)bPlayAt(0);
+    return;
+  }
+  // Type-A
+  if(!playlist.length)return;
+  if(repeatMode===2){vid.currentTime=0;vid.play();return;}
+  if(repeatMode===1){playAtIdx((plIdx+1)%playlist.length);return;}
+  if(plIdx+1<playlist.length)playAtIdx(plIdx+1);
+}
+
+// Type-Bドラッグ&ドロップ（Android Chromeでは動作しないが念のため）
+(function(){
+  var drop=document.getElementById('bDrop');
+  drop.addEventListener('dragover',function(e){e.preventDefault();drop.classList.add('dragover');});
+  drop.addEventListener('dragleave',function(){drop.classList.remove('dragover');});
+  drop.addEventListener('drop',function(e){
+    e.preventDefault();drop.classList.remove('dragover');
+    var files=Array.from(e.dataTransfer.files).filter(function(f){return f.type.startsWith('video/')||f.type.startsWith('audio/');});
+    if(!files.length)return;
+    files.forEach(function(f){
+      var dup=bList.some(function(b){return b.name===f.name&&b.file.size===f.size;});
+      if(!dup)bList.push({name:f.name,file:f,blobUrl:null});
+    });
+    bUpdateUI();
+    if(bList.length===files.length)bPlayAt(0);
+  });
+})();
+
+// ページ離脱時にType-BのBlobUrlを解放
+window.addEventListener('pagehide',function(){
+  if(bCurrentUrl)URL.revokeObjectURL(bCurrentUrl);
+  // Type-C: 離脱時にサーバー側の一時ファイルを削除
+  cCleanupOnLeave();
+});
+
+// =============================================
+// TYPE-C ロジック（HF Spaces 一時再生）
+// =============================================
+var HF_URL_KEY='hf_space_url_v3';
+var cCurrentFile=null; // アップロード中のファイル名（サーバー側）
+
+function cSaveUrl(){
+  var url=document.getElementById('cHfUrl').value.trim().replace(/\/$/,'');
+  if(!url){cSetUrlStatus('URLを入力してください','err');return;}
+  localStorage.setItem(HF_URL_KEY,url);
+  cSetUrlStatus('保存済: '+url,'ok');
+}
+
+function cGetUrl(){
+  return localStorage.getItem(HF_URL_KEY)||'';
+}
+
+function cSetUrlStatus(msg,cls){
+  var el=document.getElementById('cUrlStatus');
+  el.textContent=msg;
+  el.className='c-status'+(cls?' '+cls:'');
+}
+
+function cSetUploadStatus(msg,cls){
+  var el=document.getElementById('cUploadStatus');
+  el.textContent=msg;
+  el.className='c-status'+(cls?' '+cls:'');
+}
+
+function cSetProgress(pct,txt){
+  var wrap=document.getElementById('cProgress');
+  var bar=document.getElementById('cProgBar');
+  var label=document.getElementById('cProgTxt');
+  if(pct<0){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  bar.style.width=pct+'%';
+  label.textContent=txt||pct+'%';
+}
+
+function cUpload(input){
+  var file=input.files[0];
+  if(!file)return;
+  input.value='';
+  var hfUrl=cGetUrl();
+  if(!hfUrl){
+    toast('HF Space URLを先に設定してください');
+    cSetUploadStatus('URLが未設定です','err');
+    return;
+  }
+
+  cSetUploadStatus('サーバーを起動中...','');
+  cSetProgress(0,'サーバー確認中...');
+
+  // ① ping → 起動確認してからアップロード
+  fetch(hfUrl+'/ping',{method:'GET'})
+    .then(function(r){
+      if(!r.ok)throw new Error('ping失敗');
+      return r.json();
+    })
+    .then(function(){
+      cSetUploadStatus('アップロード中...','');
+      cSetProgress(10,'アップロード開始...');
+      return cDoUpload(hfUrl,file);
+    })
+    .catch(function(e){
+      // pingに失敗してもアップロードは試みる（コールドスタート中でもOKな場合あり）
+      cSetUploadStatus('サーバー起動待ち中...','');
+      cSetProgress(5,'しばらくお待ちください...');
+      return new Promise(function(resolve){setTimeout(resolve,3000);})
+        .then(function(){return cDoUpload(hfUrl,file);});
+    });
+}
+
+function cDoUpload(hfUrl,file){
+  var form=new FormData();
+  form.append('file',file);
+
+  return fetch(hfUrl+'/upload',{method:'POST',body:form})
+    .then(function(r){
+      if(!r.ok)throw new Error('アップロード失敗 ('+r.status+')');
+      return r.json();
+    })
+    .then(function(data){
+      cCurrentFile=data.filename;
+      cSetProgress(100,'完了！');
+      cSetUploadStatus('再生中: '+file.name,'ok');
+      setTimeout(function(){cSetProgress(-1);},1000);
+
+      // ② 動画再生
+      document.getElementById('noVideo').style.display='none';
+      vid.style.display='block';
+      document.getElementById('vidOverlay').style.display='block';
+      vid.src=hfUrl+data.url;
+      vid.playbackRate=curSpeed;
+      vid.play().catch(function(){toast('再生できませんでした');});
+      setStatus('[TYPE-C] '+file.name);
+      toast('HFサーバーから再生中');
+    })
+    .catch(function(e){
+      cSetProgress(-1);
+      cSetUploadStatus('エラー: '+e.message,'err');
+      toast('アップロード失敗: '+e.message);
+    });
+}
+
+function cCleanupOnLeave(){
+  if(!cCurrentFile)return;
+  var hfUrl=cGetUrl();
+  if(!hfUrl)return;
+  var form=new FormData();
+  form.append('filename',cCurrentFile);
+  navigator.sendBeacon(hfUrl+'/cleanup',form);
+  cCurrentFile=null;
+}
+
+// 初期化: 保存済URLを復元
+(function cInit(){
+  var saved=cGetUrl();
+  if(saved){
+    document.getElementById('cHfUrl').value=saved;
+    cSetUrlStatus('設定済: '+saved,'ok');
+  }
+})();
+</script>
+
+<!-- ============================================================
+     HELP MODAL HTML
+     ============================================================ -->
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle" onclick="if(event.target===this)closeHelpModal()">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる" onclick="closeHelpModal()">✕</button>
+    </div>
+    <!-- プロンプトコピーボタン（固定） -->
+    <button id="helpCopyPromptBtn" onclick="copyPrompt()">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   HELP MODAL JS
+   ============================================================ */
+var helpData = {
+  howto: [
+    {
+      title: "TYPE-C — HF Spaces経由再生モード",
+      body: `
+        <strong>事前設定</strong><br>
+        HF Space URLを入力して「保存」をタップ。URLはlocalStorageに保存される。<br><br>
+        <strong>動画のアップロードと再生</strong><br>
+        ☁️エリアをタップして動画を選択。HF Spacesサーバーに一時アップロードして再生。<br>
+        700MB超の重い動画もサーバー側で処理するため再生可能。<br><br>
+        <strong>一時ファイルの自動削除</strong><br>
+        ページを閉じる・タブを離れると<code>sendBeacon</code>でサーバー側の一時ファイルを自動削除。<br><br>
+        <strong>注意</strong><br>
+        HF Spacesの無料枠は48時間無操作でスリープする。起動確認（ping）を自動で行うが、コールドスタート時は数秒〜数分かかる場合がある。
+      `
+    }
+      body: `
+        <strong>動画の追加</strong><br>
+        「📁 動画を保存・追加」をタップしてファイルを選択。複数選択OK。<br>
+        IndexedDBに保存されるので<strong>ページを閉じても消えない</strong>。<br><br>
+        <strong>URL再生</strong><br>
+        URLを貼り付けて「GO」をタップ。YouTube・X/Twitterは現在非対応。<br>
+        Google Drive URLは自動変換して読み込み試行。<br><br>
+        <strong>個別削除</strong><br>
+        プレイリスト内の ✕ ボタンでDBから完全削除。「🗑 クリア」で全削除。
+      `
+    },
+    {
+      title: "TYPE-B — Blob即再生モード",
+      body: `
+        <strong>動画の追加</strong><br>
+        タップでファイルを選択。<strong>保存しない一時再生</strong>なのでページを閉じると消える。<br>
+        複数ファイルをまとめて選択してリスト再生が可能。<br><br>
+        <strong>モード切替時の挙動</strong><br>
+        A→B切替時はA再生を停止。B→A切替時はBのBlobURLを解放してAの状態を復元。
+      `
+    },
+    {
+      title: "再生コントロール",
+      body: `
+        <strong>速度変更</strong><br>
+        プリセットボタン（0.5x〜4.0x）またはスライダーで調整。動画上のオーバーレイ（タップで表示）の ＋/－ でも変更可。<br><br>
+        <strong>シーク</strong><br>
+        −10秒 / +10秒 ボタン、またはシークバーでジャンプ。<br><br>
+        <strong>全画面</strong><br>
+        ⛶ ボタンで全画面化。動画エリアをタップするとオーバーレイコントロールが表示される（4秒で自動非表示）。
+      `
+    },
+    {
+      title: "ループ / A-Bリピート / フィルター",
+      body: `
+        <strong>ループ</strong><br>
+        「🔁 ループOFF」でトグル切替。<br><br>
+        <strong>A-Bリピート</strong><br>
+        「A-B リピート」をタップ → A点をタップ → B点をタップ の順で設定。「リセット」で解除。<br><br>
+        <strong>明るさ・コントラスト</strong><br>
+        スライダーで 50〜150% の範囲で調整。
+      `
+    },
+    {
+      title: "プレイリスト（TYPE-A）",
+      body: `
+        複数ファイルを保存するとプレイリストが表示される。<br>
+        「⏮ 前へ」「次へ ⏭」でトラック移動。<br><br>
+        <strong>リピートモード</strong>（🔁ボタン）<br>
+        なし → 全曲ループ → 1曲リピート の順で切替。
+      `
+    }
+  ],
+  lessons: [
+    {
+      title: "IndexedDB — blobs ストアが見つからないエラー",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        DB_VER を変えずにストア構造を変更しようとすると <code>onupgradeneeded</code> が発火しない。
+        既存DBにストアが存在しないとトランザクションがエラーになる。
+
+        <div class="lesson-label">② どう解決したか</div>
+        ストア追加時は必ず <code>DB_VER</code> をインクリメントし、
+        <code>onupgradeneeded</code> 内で <code>objectStoreNames.contains()</code> を使って冪等に作成。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        スキーマ変更時は <code>DB_VER</code> を上げること。ストア作成は必ず <code>contains()</code> でガード。
+      `
+    },
+    {
+      title: "ObjectURL — revokeのタイミング",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        <code>URL.revokeObjectURL()</code> を <code>vid.src</code> 設定直後に呼ぶと、
+        一部ブラウザで再生が途切れる。
+
+        <div class="lesson-label">② どう解決したか</div>
+        次の動画を読み込む直前（<code>getBlobUrl()</code> 呼び出し前）に前のURLを解放する方式に変更。
+        <code>currentBlobUrl</code> 変数で現在のURLを管理。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        revokeは「次の再生直前」に行う。再生中は絶対revokeしない。
+      `
+    },
+    {
+      title: "Android Brave — ドラッグ&ドロップが動作しない",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        Android Chrome / Brave では <code>dragover</code> / <code>drop</code> イベントが発火しない。
+
+        <div class="lesson-label">② どう解決したか</div>
+        ドロップエリアをタップで <code>&lt;input type="file"&gt;</code> を開く方式を主とし、
+        D&Dはデスクトップのおまけ扱いにした。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        モバイル向けアプリではD&Dを主要UIにしない。必ずinput[type=file]のタップフローを用意。
+      `
+    },
+    {
+      title: "全画面コントロール — iOS Safariでwebkit系が必要",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        標準の <code>requestFullscreen()</code> がiOS Safariで動作しない。
+        <code>webkitEnterFullscreen()</code> は video要素自体に呼ぶ必要がある。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>wrap.requestFullscreen → wrap.webkitRequestFullscreen → el.webkitEnterFullscreen</code>
+        の優先順位でフォールバック。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        全画面APIは必ず webkit プレフィックスフォールバックを3段階で実装すること。
+      `
+    },
+    {
+      title: "Type-B onEnded — グローバル関数の上書き競合",
+      body: `
+        <div class="lesson-label">① 何が問題だったか</div>
+        Type-A の <code>onEnded()</code> をHTMLの <code>onended</code> 属性で参照していたが、
+        Type-B追加時に同名関数を再定義したため片方が死んだ。
+
+        <div class="lesson-label">② どう解決したか</div>
+        <code>currentMode</code> フラグで分岐する単一の <code>onEnded()</code> に統合。
+        モードに応じてType-A / Type-Bのロジックを切り替える。
+
+        <div class="lesson-label">③ 次回Claudeへの指示</div>
+        イベントハンドラをHTMLの <code>on*</code> 属性で参照しているものは関数名衝突に注意。
+        モード分岐は関数内のフラグで行い、関数名は1つに統一する。
+      `
+    }
+  ]
+};
+
+var COMMON_PROMPT =
+`【前提条件（必ず守れ）】
+- ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）
+- localStorage / IndexedDB 使用あり
+- モバイル前提（Android Brave、タップ操作）
+- 既存機能を削除するな
+- UIを破壊するな
+- 同期ロジックを勝手に変えるな
+- QR / LINE の外部API制約を考慮せよ
+`;
+
+function stripHtml(html){
+  var tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  return (tmp.textContent||tmp.innerText||'').replace(/\s+/g,' ').trim();
+}
+
+function buildPrompt(){
+  var lines=[COMMON_PROMPT,'【このアプリの教訓（過去のバグ・制約）】'];
+  for(var i=0;i<helpData.lessons.length;i++){
+    var l=helpData.lessons[i];
+    lines.push('・'+l.title+'\n  '+stripHtml(l.body));
+  }
+  return lines.join('\n');
+}
+
+function copyPrompt(){
+  var text=buildPrompt();
+  navigator.clipboard.writeText(text).then(function(){
+    alert('コピーしました！\nClaude にそのまま貼ってください。');
+  }).catch(function(){
+    alert('コピー失敗。手動でコピーしてください。');
+  });
+}
+
+function openHelpModal(){
+  var body=document.getElementById('helpBody');
+  body.innerHTML='';
+  body.appendChild(makeHelpSection('📖 使い方',helpData.howto,'howto'));
+  body.appendChild(makeHelpSection('🧠 Claude用教訓',helpData.lessons,'lesson'));
+  document.getElementById('helpOverlay').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function closeHelpModal(){
+  document.getElementById('helpOverlay').classList.remove('active');
+  document.body.style.overflow='';
+}
+function escHtml(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function makeHelpSection(label,items,prefix){
+  var wrap=document.createElement('div');
+  var title=document.createElement('div');
+  title.className='help-section-title';
+  title.textContent=label;
+  wrap.appendChild(title);
+  for(var i=0;i<items.length;i++){
+    (function(item,idx){
+      var id=prefix+'-'+idx;
+      var row=document.createElement('div');
+      row.className='help-item';
+      var trigger=document.createElement('button');
+      trigger.className='help-item-trigger';
+      trigger.setAttribute('aria-expanded','false');
+      trigger.setAttribute('aria-controls',id);
+      trigger.innerHTML='<span>'+escHtml(item.title)+'</span><span class="help-chevron">▼</span>';
+      var panel=document.createElement('div');
+      panel.className='help-item-body';
+      panel.id=id;
+      panel.innerHTML=item.body;
+      trigger.onclick=function(){
+        var isOpen=trigger.classList.contains('open');
+        var ts=wrap.querySelectorAll('.help-item-trigger.open');
+        for(var j=0;j<ts.length;j++){
+          ts[j].classList.remove('open');
+          ts[j].setAttribute('aria-expanded','false');
+          var c=ts[j].getAttribute('aria-controls');
+          if(c)document.getElementById(c).classList.remove('open');
+        }
+        if(!isOpen){
+          trigger.classList.add('open');
+          trigger.setAttribute('aria-expanded','true');
+          panel.classList.add('open');
+        }
+      };
+      row.appendChild(trigger);row.appendChild(panel);wrap.appendChild(row);
+    })(items[i],i);
+  }
+  return wrap;
+}
+/* ============================================================
+   HELP MODAL JS ここまで
+   ============================================================ */
+</script>
+
+</body>
+</html>
