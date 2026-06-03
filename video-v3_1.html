@@ -992,8 +992,11 @@ function switchMode(mode){
     panelC.style.display='block';
     subtitle.textContent='TYPE-C · HF Spaces経由再生';
     if(!vid.paused)vid.pause();
-    // Type-C専用の動画が再生中でなければ非表示
+    // BのBlobURLを解放
+    if(bCurrentUrl){URL.revokeObjectURL(bCurrentUrl);bCurrentUrl=null;}
+    // Type-C専用の動画が再生中でなければsrcもクリアして完全停止
     if(!cCurrentFile){
+      vid.src='';
       vid.style.display='none';
       document.getElementById('noVideo').style.display='flex';
       document.getElementById('vidOverlay').style.display='none';
