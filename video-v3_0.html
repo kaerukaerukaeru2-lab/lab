@@ -829,14 +829,18 @@ function toggleFullscreen(){
   var el=document.getElementById('vid');
   if(!el.src&&!el.currentSrc){toast('先に動画を選択してください');return;}
   if(!document.fullscreenElement&&!document.webkitFullscreenElement){
-    var wrap=document.querySelector('.video-wrap');
-    if(wrap.requestFullscreen)wrap.requestFullscreen();
-    else if(wrap.webkitRequestFullscreen)wrap.webkitRequestFullscreen();
-    else if(el.webkitEnterFullscreen)el.webkitEnterFullscreen();
+    // Android BraveはvideoのwebkitEnterFullscreenが最も確実
+    if(el.webkitEnterFullscreen){
+      el.webkitEnterFullscreen();
+    }else{
+      var wrap=document.querySelector('.video-wrap');
+      if(wrap.webkitRequestFullscreen)wrap.webkitRequestFullscreen();
+      else if(wrap.requestFullscreen)wrap.requestFullscreen();
+    }
     document.getElementById('fsBtn').textContent='✕';
   }else{
-    if(document.exitFullscreen)document.exitFullscreen();
-    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+    if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+    else if(document.exitFullscreen)document.exitFullscreen();
     document.getElementById('fsBtn').textContent='⛶';
   }
 }
@@ -1265,7 +1269,7 @@ function cCleanupOnLeave(){
 /* ============================================================
    HELP MODAL JS
    ============================================================ */
-const helpData = {
+var helpData = {
   howto: [
     {
       title: "TYPE-C — HF Spaces経由再生モード",
@@ -1413,7 +1417,7 @@ const helpData = {
   ]
 };
 
-const COMMON_PROMPT =
+var COMMON_PROMPT =
 `【前提条件（必ず守れ）】
 - ブラウザ単体アプリ（API・サーバーなし、vanilla HTML/CSS/JS）
 - localStorage / IndexedDB 使用あり
@@ -1454,10 +1458,11 @@ function copyPrompt(){
   var openBtn=document.getElementById('helpBtn');
   var closeBtn=document.getElementById('helpCloseBtn');
 
-  function renderHelp(){
-    body.innerHTML='';
-    body.appendChild(makeSection('📖 使い方',helpData.howto,'howto'));
-    body.appendChild(makeSection('🧠 Claude用教訓',helpData.lessons,'lesson'));
+  function openModal(){renderHelp();overlay.classList.add('active');document.body.style.overflow='hidden';}
+  function closeModal(){overlay.classList.remove('active');document.body.style.overflow='';}
+
+  function escHtml(str){
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function makeSection(label,items,prefix){
@@ -1466,47 +1471,51 @@ function copyPrompt(){
     title.className='help-section-title';
     title.textContent=label;
     wrap.appendChild(title);
-    items.forEach(function(item,i){
-      var id=prefix+'-'+i;
-      var row=document.createElement('div');
-      row.className='help-item';
-      var trigger=document.createElement('button');
-      trigger.className='help-item-trigger';
-      trigger.setAttribute('aria-expanded','false');
-      trigger.setAttribute('aria-controls',id);
-      trigger.innerHTML='<span>'+escHtml(item.title)+'</span><span class="help-chevron">▼</span>';
-      var panel=document.createElement('div');
-      panel.className='help-item-body';
-      panel.id=id;
-      panel.innerHTML=item.body;
-      trigger.addEventListener('click',function(){
-        var isOpen=trigger.classList.contains('open');
-        wrap.querySelectorAll('.help-item-trigger.open').forEach(function(t){
-          t.classList.remove('open');t.setAttribute('aria-expanded','false');
-          document.getElementById(t.getAttribute('aria-controls')).classList.remove('open');
-        });
-        if(!isOpen){
-          trigger.classList.add('open');trigger.setAttribute('aria-expanded','true');
-          panel.classList.add('open');
-        }
-      });
-      row.appendChild(trigger);row.appendChild(panel);wrap.appendChild(row);
-    });
+    for(var i=0;i<items.length;i++){
+      (function(item,idx){
+        var id=prefix+'-'+idx;
+        var row=document.createElement('div');
+        row.className='help-item';
+        var trigger=document.createElement('button');
+        trigger.className='help-item-trigger';
+        trigger.setAttribute('aria-expanded','false');
+        trigger.setAttribute('aria-controls',id);
+        trigger.innerHTML='<span>'+escHtml(item.title)+'</span><span class="help-chevron">▼</span>';
+        var panel=document.createElement('div');
+        panel.className='help-item-body';
+        panel.id=id;
+        panel.innerHTML=item.body;
+        trigger.onclick=function(){
+          var isOpen=trigger.classList.contains('open');
+          var triggers=wrap.querySelectorAll('.help-item-trigger.open');
+          for(var j=0;j<triggers.length;j++){
+            triggers[j].classList.remove('open');
+            triggers[j].setAttribute('aria-expanded','false');
+            var ctrl=triggers[j].getAttribute('aria-controls');
+            if(ctrl)document.getElementById(ctrl).classList.remove('open');
+          }
+          if(!isOpen){
+            trigger.classList.add('open');
+            trigger.setAttribute('aria-expanded','true');
+            panel.classList.add('open');
+          }
+        };
+        row.appendChild(trigger);row.appendChild(panel);wrap.appendChild(row);
+      })(items[i],i);
+    }
     return wrap;
   }
 
-  function escHtml(str){
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function renderHelp(){
+    body.innerHTML='';
+    body.appendChild(makeSection('📖 使い方',helpData.howto,'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓',helpData.lessons,'lesson'));
   }
-
-  function openModal(){renderHelp();overlay.classList.add('active');document.body.style.overflow='hidden';}
-  function closeModal(){overlay.classList.remove('active');document.body.style.overflow='';}
 
   openBtn.onclick=openModal;
   closeBtn.onclick=closeModal;
   document.getElementById('helpCopyPromptBtn').onclick=copyPrompt;
   overlay.onclick=function(e){if(e.target===overlay)closeModal();};
-  document.onkeydown=function(e){if(e.key==='Escape')closeModal();};
 })();
 /* ============================================================
    HELP MODAL JS ここまで
