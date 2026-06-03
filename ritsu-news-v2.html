@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>律ニュースチャンネル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --sub: #6b6b6b;
+    --border: #e2ddd6;
+    --accent: #c0392b;
+    --accent2: #2c3e50;
+    --tag-bg: #f0ece4;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --tab-active: #1a1a1a;
+    --tab-inactive: #9a9a9a;
+    --weather-bg: #2c3e50;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* ── ヘッダー ── */
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .brand-icon {
+    font-size: 18px;
+  }
+
+  .brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+  }
+
+  /* 時計 */
+  .clock-wrap {
+    text-align: right;
+  }
+
+  #clock-time {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  #clock-date {
+    font-size: 11px;
+    color: var(--sub);
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+
+  /* 天気バー */
+  .weather-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--weather-bg);
+    color: #fff;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    min-height: 44px;
+  }
+
+  .weather-bar.loading {
+    opacity: 0.6;
+  }
+
+  #weather-icon { font-size: 22px; }
+
+  .weather-info { flex: 1; }
+
+  #weather-temp {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+  }
+
+  #weather-desc {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-top: 1px;
+  }
+
+  .weather-extra {
+    text-align: right;
+    font-size: 11px;
+    opacity: 0.75;
+    line-height: 1.6;
+  }
+
+  /* タブ */
+  .tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-top: 1px solid var(--border);
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--tab-inactive);
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    font-family: var(--sans);
+  }
+
+  .tab.active {
+    color: var(--tab-active);
+    border-bottom-color: var(--accent);
+  }
+
+  /* メインコンテンツ */
+  main {
+    padding: 14px 12px;
+  }
+
+  /* ニュースカード */
+  .news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+
+  /* スワイプ削除 */
+  .news-card-wrap {
+    overflow: hidden;
+    position: relative;
+    border-radius: 12px;
+    margin-bottom: 0;
+  }
+  .news-card-wrap .swipe-hint {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 80px;
+    background: #e53935;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.4rem;
+    border-radius: 0 12px 12px 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .news-card-wrap.swiping .swipe-hint {
+    opacity: 1;
+  }
+  .news-card-wrap .news-card {
+    position: relative;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    margin-bottom: 0;
+    border-radius: 12px;
+  }
+  .news-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .news-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .card-top {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .card-thumb {
+    width: 72px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--tag-bg);
+  }
+
+  .card-thumb-placeholder {
+    width: 72px;
+    height: 56px;
+    border-radius: 8px;
+    background: var(--tag-bg);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .card-body { flex: 1; min-width: 0; }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--text);
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .card-source {
+    font-size: 11px;
+    color: var(--sub);
+    font-weight: 500;
+  }
+
+  .card-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+
+  .card-time {
+    font-size: 11px;
+    color: var(--sub);
+    font-family: var(--mono);
+  }
+
+  .card-desc {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--sub);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ローディング */
+  .loading-wrap {
+    padding: 40px 0;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-size: 13px;
+    color: var(--sub);
+  }
+
+  /* エラー */
+  .error-wrap {
+    padding: 32px 16px;
+    text-align: center;
+  }
+
+  .error-icon { font-size: 36px; margin-bottom: 10px; }
+
+  .error-msg {
+    font-size: 13px;
+    color: var(--sub);
+    line-height: 1.6;
+  }
+
+  .retry-btn {
+    margin-top: 14px;
+    padding: 8px 20px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-family: var(--sans);
+    cursor: pointer;
+  }
+
+  /* フッター */
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: #bbb;
+  }
+
+  /* カードフェードイン */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .news-card {
+    animation: fadeUp 0.3s ease both;
+  }
+
+  /* ========== HELP MODAL CSS ========== */
+  :root {
+    --help-accent:       #e53935;
+    --help-accent-dim:   rgba(229,57,53,0.2);
+    --help-bg:           rgba(10,10,10,0.97);
+    --help-border:       rgba(229,57,53,0.3);
+    --help-text:         #e0e0e0;
+    --help-text-dim:     #888;
+    --help-section-bg:   rgba(229,57,53,0.1);
+    --help-item-bg:      rgba(255,255,255,0.04);
+    --help-btn-size:     2.2rem;
+  }
+  #helpBtn {
+    position: static; z-index: 900;
+    width: var(--help-btn-size); height: var(--help-btn-size);
+    border-radius: 50%; border: 1.5px solid var(--help-border);
+    background: var(--help-bg); color: var(--help-accent);
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 8px rgba(229,57,53,0.2);
+  }
+  #helpOverlay {
+    display: none; position: fixed; inset: 0; z-index: 910;
+    background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  #helpOverlay.active { display: flex; }
+  #helpModal {
+    position: relative; width: 100%; max-width: 480px; max-height: 85vh;
+    background: var(--help-bg); border: 1px solid var(--help-border);
+    border-radius: 1rem; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,.6);
+  }
+  #helpModal .help-header {
+    padding: .9rem 1.2rem; border-bottom: 1px solid var(--help-border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  #helpModal .help-header-title { font-size: 1rem; font-weight: 700; color: var(--help-accent); }
+  #helpCloseBtn {
+    width: 2rem; height: 2rem; border-radius: 50%;
+    border: 1px solid var(--help-border); background: transparent;
+    color: var(--help-text-dim); font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #helpBody { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: .8rem .8rem 1.2rem; flex: 1; }
+  .help-section-title {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .75rem; font-weight: 700; letter-spacing: .12em;
+    color: var(--help-accent); text-transform: uppercase;
+    background: var(--help-section-bg); border-radius: .45rem;
+    padding: .45rem .7rem; margin-bottom: .4rem; margin-top: .6rem;
+  }
+  .help-section-title:first-child { margin-top: 0; }
+  .help-item { border-radius: .5rem; overflow: hidden; margin-bottom: .3rem; }
+  .help-item-trigger {
+    width: 100%; text-align: left; background: var(--help-item-bg);
+    border: 1px solid transparent; border-radius: .5rem;
+    color: var(--help-text); font-size: .88rem; font-weight: 600;
+    padding: .6rem .8rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-item-trigger.open { border-color: var(--help-accent-dim); border-bottom-left-radius:0; border-bottom-right-radius:0; }
+  .help-item-trigger .help-chevron { font-size: .7rem; color: var(--help-text-dim); transition: transform .2s; flex-shrink:0; }
+  .help-item-trigger.open .help-chevron { transform: rotate(180deg); }
+  .help-item-body {
+    display: none; background: rgba(255,255,255,.025);
+    border: 1px solid var(--help-accent-dim); border-top: none;
+    border-bottom-left-radius: .5rem; border-bottom-right-radius: .5rem;
+    padding: .65rem .85rem .75rem; font-size: .83rem; color: var(--help-text); line-height: 1.65;
+  }
+  .help-item-body.open { display: block; }
+  .help-item-body strong { color: #fff; font-weight: 700; }
+  .help-item-body code { font-family: monospace; font-size: .78rem; background: rgba(0,0,0,.35); border-radius: .25rem; padding: .05em .35em; color: #a0e0ff; }
+  #helpCopyPromptBtn {
+    display: block; width: calc(100% - 1.6rem); margin: .6rem .8rem .2rem;
+    padding: .65rem; background: var(--help-accent-dim);
+    border: 1px solid var(--help-border); border-radius: .5rem;
+    color: var(--help-accent); font-size: .85rem; font-weight: 700;
+    cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent;
+  }
+  /* ========== HELP MODAL CSS END ========== */
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <span class="brand-icon">📰</span>
+      <span class="brand-name">律ニュースチャンネル</span>
+      <button id="helpBtn" aria-label="ヘルプを開く">❓</button>
+    </div>
+    <div class="clock-wrap">
+      <div id="clock-time">--:--:--</div>
+      <div id="clock-date">----/--/--</div>
+    </div>
+  </div>
+
+  <div class="weather-bar loading" id="weather-bar">
+    <span id="weather-icon">🌤</span>
+    <div class="weather-info">
+      <div id="weather-temp">-- °C</div>
+      <div id="weather-desc">取得中...</div>
+    </div>
+    <div class="weather-extra">
+      <div id="weather-humid">湿度 --%</div>
+      <div id="weather-wind">風速 -- m/s</div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-genre="general">🗾 国内全般</button>
+    <button class="tab" data-genre="tech">💻 テック</button>
+    <button class="tab" data-genre="entertainment">🎭 エンタメ</button>
+    <button class="tab" data-genre="sports">⚽ スポーツ</button>
+    <button class="tab" data-genre="business">📈 経済</button>
+  </div>
+</header>
+
+<main>
+  <div id="news-container">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-text">ニュース取得中...</div>
+    </div>
+  </div>
+</main>
+
+<footer>律ニュースチャンネル · RSS配信</footer>
+
+
+
+<!-- HELP MODAL HTML -->
+<div id="helpOverlay" role="dialog" aria-modal="true">
+  <div id="helpModal">
+    <div class="help-header">
+      <span class="help-header-title" id="helpTitle">📋 律ニュースチャンネル ヘルプ</span>
+      <button id="helpCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <button id="helpCopyPromptBtn">📋 バグチェック用プロンプトをコピー</button>
+    <div id="helpBody"></div>
+  </div>
+</div>
+<script>
+// ── RSS フィード設定（Google News RSS / CORS不要）──
+const PROXY = 'https://ritsu-news-proxy.kaerukaerukaeru2.workers.dev/?url=';
+const FEEDS = {
+  general:       [PROXY + 'https://www3.nhk.or.jp/rss/news/cat0.xml'],
+  tech:          [PROXY + 'https://www3.nhk.or.jp/rss/news/cat3.xml'],
+  entertainment: [
+    PROXY + 'https://akb48taimuzu.livedoor.biz/index.rdf',
+    PROXY + 'http://nmb48-mtm.com/index.rdf',
+  ],
+  sports:        [PROXY + 'https://www3.nhk.or.jp/rss/news/cat7.xml'],
+  business:      [PROXY + 'https://www3.nhk.or.jp/rss/news/cat5.xml'],
+};
+const WMO_CODES = {
+  0:'☀️晴れ',1:'🌤うす曇',2:'⛅曇り',3:'☁️曇り',
+  45:'🌫霧',48:'🌫霧',
+  51:'🌦小雨',53:'🌧雨',55:'🌧強雨',
+  61:'🌦小雨',63:'🌧雨',65:'🌧強雨',
+  71:'❄️小雪',73:'❄️雪',75:'❄️大雪',
+  80:'🌦にわか雨',81:'🌧にわか雨',82:'⛈強いにわか雨',
+  95:'⛈雷雨',96:'⛈雷雨',99:'⛈激しい雷雨',
+};
+
+let currentGenre = 'general';
+
+// ── 時計 ──
+function updateClock() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('clock-time').textContent =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const days = ['日','月','火','水','木','金','土'];
+  document.getElementById('clock-date').textContent =
+    `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} (${days[now.getDay()]})`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── 天気 ──
+async function fetchWeather() {
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
+    );
+    const { latitude: lat, longitude: lon } = pos.coords;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Asia/Tokyo`;
+    const r = await fetch(url);
+    const d = await r.json();
+    const c = d.current;
+    const wmo = WMO_CODES[c.weather_code] || '🌡天気';
+    const icon = wmo.match(/^(\S+)/)[1];
+    const desc = wmo.replace(/^\S+/, '').trim();
+    document.getElementById('weather-icon').textContent = icon;
+    document.getElementById('weather-temp').textContent = `${Math.round(c.temperature_2m)} °C`;
+    document.getElementById('weather-desc').textContent = desc;
+    document.getElementById('weather-humid').textContent = `湿度 ${c.relative_humidity_2m}%`;
+    document.getElementById('weather-wind').textContent = `風速 ${c.wind_speed_10m} m/s`;
+    document.getElementById('weather-bar').classList.remove('loading');
+  } catch(e) {
+    document.getElementById('weather-desc').textContent = '位置情報を許可してください';
+    document.getElementById('weather-bar').classList.remove('loading');
+  }
+}
+fetchWeather();
+
+// ── ニュース取得（Google News RSS / DOMParser）──
+function getText(node, tag) {
+  var el = node.querySelector(tag);
+  return el ? el.textContent.trim() : '';
+}
+
+async function fetchFeed(url) {
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) {
+      window._debugLog = (window._debugLog || []);
+      window._debugLog.push('HTTP ' + r.status);
+      return [];
+    }
+    var items = await r.json();
+    if (!Array.isArray(items)) {
+      window._debugLog = (window._debugLog || []);
+      window._debugLog.push('JSONエラー: ' + JSON.stringify(items));
+      return [];
+    }
+    return items.map(function(item) {
+      return {
+        title:   item.title || '',
+        link:    item.link || '',
+        desc:    item.desc || '',
+        source:  item.source || 'NHK',
+        thumb:   null,
+        pubDate: item.pubDate || '',
+      };
+    });
+  } catch(e) {
+    console.error('fetchFeed error:', e.message);
+    window._debugLog = (window._debugLog || []);
+    window._debugLog.push('fetchエラー: ' + e.message);
+    return [];
+  }
+}
+
+async function loadNews(genre) {
+  const container = document.getElementById('news-container');
+  container.innerHTML = '<div class="loading-wrap"><div class="spinner"></div><div class="loading-text">ニュース取得中...</div></div>';
+
+  var urls = FEEDS[genre] || [];
+  var allItems = [];
+  for (var fi = 0; fi < urls.length; fi++) {
+    var got = await fetchFeed(urls[fi]);
+    for (var gi = 0; gi < got.length; gi++) { allItems.push(got[gi]); }
+  }
+  var items = allItems;
+
+  if (!items.length) {
+    const logs = (window._debugLog||[]).join('<br>');
+    container.innerHTML = `
+      <div class="error-wrap">
+        <div class="error-icon">📭</div>
+        <div class="error-msg">ニュースを取得できませんでした。<br>しばらくしてから再試行してください。</div>
+        <button class="retry-btn" onclick="window._debugLog=[];loadNews('${genre}')">再試行</button>
+        ${logs ? `<div style="margin-top:16px;text-align:left;font-size:11px;color:#888;background:#f0f0f0;padding:10px;border-radius:8px;word-break:break-all;line-height:1.8">${logs}</div>` : ''}
+      </div>`;
+    return;
+  }
+
+  // 日付でソート（新しい順）
+  items.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+  const GENRE_EMOJI = { general:'🗾', tech:'💻', entertainment:'🎭', sports:'⚽', business:'📈' };
+
+  const html = items.map((item, i) => {
+    const timeStr = formatTime(item.pubDate);
+    const thumbHtml = item.thumb
+      ? `<img class="card-thumb" src="${escHtml(item.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'card-thumb-placeholder\\'>${GENRE_EMOJI[genre]}</div>'">`
+      : `<div class="card-thumb-placeholder">${GENRE_EMOJI[genre]}</div>`;
+
+    return `
+      <div class="news-card-wrap" data-index="${i}">
+        <div class="swipe-hint">🗑️</div>
+        <a class="news-card" href="${escHtml(item.link)}" style="animation-delay:${i*0.04}s">
+          <div class="card-top">
+            ${thumbHtml}
+            <div class="card-body">
+              <div class="card-title">${escHtml(item.title)}</div>
+            </div>
+          </div>
+          <div class="card-meta">
+            <span class="card-source">${escHtml(item.source)}</span>
+            <span class="card-dot"></span>
+            <span class="card-time">${timeStr}</span>
+          </div>
+          ${item.desc ? `<div class="card-desc">${escHtml(item.desc.slice(0, 100))}</div>` : ''}
+        </a>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="news-list">${html}</div>`;
+  initSwipeDelete();
+}
+
+// ── カードスワイプ削除 ──
+function initSwipeDelete() {
+  var wraps = document.querySelectorAll('.news-card-wrap');
+  for (var i = 0; i < wraps.length; i++) {
+    attachSwipe(wraps[i]);
+  }
+}
+function attachSwipe(wrap) {
+  var card = wrap.querySelector('.news-card');
+  var startX = 0;
+  var currentX = 0;
+  var dragging = false;
+  var THRESHOLD = 80;
+
+  card.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    dragging = true;
+    card.style.transition = 'none';
+  }, { passive: true });
+
+  card.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    currentX = e.touches[0].clientX - startX;
+    if (currentX < 0) {
+      card.style.transform = 'translateX(' + currentX + 'px)';
+      wrap.classList.add('swiping');
+    }
+  }, { passive: true });
+
+  card.addEventListener('touchend', function() {
+    if (!dragging) return;
+    dragging = false;
+    if (currentX < -THRESHOLD) {
+      card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+      card.style.transform = 'translateX(-100%)';
+      card.style.opacity = '0';
+      setTimeout(function() {
+        wrap.style.display = 'none';
+      }, 200);
+    } else {
+      card.style.transition = 'transform 0.2s ease';
+      card.style.transform = 'translateX(0)';
+    }
+    currentX = 0;
+  });
+}
+
+
+function formatTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '';
+  const now = new Date();
+  const diff = Math.floor((now - d) / 60000);
+  if (diff < 1) return 'たった今';
+  if (diff < 60) return `${diff}分前`;
+  if (diff < 1440) return `${Math.floor(diff/60)}時間前`;
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── タブ ──
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentGenre = tab.dataset.genre;
+  loadNews(currentGenre);
+});
+
+// ── 初期ロード ──
+window.addEventListener('load', () => {
+  loadNews(currentGenre);
+});
+
+// ── HELP MODAL JS ──
+const helpData = {
+  howto: [
+    {
+      title: '基本操作',
+      body: '<strong>タブ切り替え</strong><br>上部タブで国内全般・テック・エンタメ・スポーツ・経済を切り替え。<br><br><strong>記事を開く</strong><br>カードをタップで記事を同タブで開く。戻るボタン（◀）でアプリに戻る。<br><br><strong>カード削除</strong><br>カードを左にスワイプでそっと削除（リロードで復活）。<br><br><strong>再取得</strong><br>「再試行」ボタンで最新ニュースを再取得。'
+    },
+    {
+      title: 'タブ別ソース',
+      body: '<strong>国内全般</strong> NHK主要ニュース<br><strong>テック</strong> NHK科学・医療<br><strong>エンタメ</strong> AKB48タイムズ（livedoor）<br><strong>スポーツ</strong> NHKスポーツ<br><strong>経済</strong> NHK経済<br><br>FEEDSの配列にURLを追加するだけで複数ソース混在可能。'
+    },
+    {
+      title: '天気表示',
+      body: '<strong>位置情報を許可</strong><br>起動時に位置情報を許可すると現在地の天気・気温・湿度・風速を表示（open-meteo API）。'
+    }
+  ],
+  lessons: [
+    {
+      title: 'CORSはCloudflare Workerで解決',
+      body: '<div class="lesson-label">① 何が問題だったか</div>ブラウザから直接外部RSSをfetchするとCORSエラー。alloriginsなどのプロキシも不安定。<div class="lesson-label">② どう解決したか</div>Cloudflare Workers（無料）でRSSプロキシを作成。Worker URL: https://ritsu-news-proxy.kaerukaerukaeru2.workers.dev/?url=<div class="lesson-label">③ 次回Claudeへの指示</div>CORSで詰まったら上記WorkerのURLを使い回す。?url=に対象URLを渡すだけで動く。'
+    },
+    {
+      title: 'Google News RSSはWorkerからもfetch不可',
+      body: '<div class="lesson-label">① 何が問題だったか</div>Google NewsのRSSをWorker経由でfetchしたところ503エラーでブロックされた。<div class="lesson-label">② どう解決したか</div>NHK RSSとlivedoorブログRSSに切り替え。<div class="lesson-label">③ 次回Claudeへの指示</div>Google News RSSはCloudflare WorkersのIPから不可。NHKやlivedoorを使うこと。'
+    },
+    {
+      title: 'livedoorブログはRDF形式（RSS1.0）',
+      body: '<div class="lesson-label">① 何が問題だったか</div>livedoorブログのRSSはRDF形式（&lt;rdf:RDF&gt;）でitemタグのマッチが通常と異なる。<div class="lesson-label">② どう解決したか</div>Workerでrdfについてもregexでitemブロックを抽出。dc:dateタグで日付取得。<div class="lesson-label">③ 次回Claudeへの指示</div>Worker側でRDF/RSS両対応済み。新しいlivedoorブログを追加する場合はFEEDSのURLに追加するだけでOK。'
+    },
+    {
+      title: 'JSの構文エラーでページ全体が止まる',
+      body: '<div class="lesson-label">① 何が問題だったか</div>helpDataのCOMMON_PROMPTにバックスラッシュ付きバッククォートを使ったら構文エラーで時計もニュースも全部止まった。<div class="lesson-label">② どう解決したか</div>テンプレートリテラルを通常文字列（シングルクォート+\n）に変更。<div class="lesson-label">③ 次回Claudeへの指示</div>helpDataのbodyはシングルクォート文字列で書く。テンプレートリテラル禁止。修正後は必ずnode --checkで構文チェックすること。'
+    }
+  ]
+};
+
+const COMMON_PROMPT = '【前提条件】\n- Cloudflare Workers（ritsu-news-proxy.kaerukaerukaeru2.workers.dev）でRSSプロキシ稼働中\n- NHK RSS（cat0〜7）をWorker経由で取得しJSON変換して返す\n- ブラウザ単体アプリ（vanilla HTML/CSS/JS）\n- Android Brave スマホ前提\n';
+
+function stripHtml(html) {
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+function buildPrompt() {
+  var lines = [COMMON_PROMPT, '【教訓】'];
+  for (var i = 0; i < helpData.lessons.length; i++) {
+    var l = helpData.lessons[i];
+    lines.push('・' + l.title + '\n  ' + stripHtml(l.body));
+  }
+  return lines.join('\n');
+}
+function copyPrompt() {
+  var text = buildPrompt();
+  navigator.clipboard.writeText(text).then(function() {
+    alert('コピーしました！');
+  }).catch(function() { alert('コピー失敗'); });
+}
+
+(function initHelpModal() {
+  var overlay  = document.getElementById('helpOverlay');
+  var body     = document.getElementById('helpBody');
+  var openBtn  = document.getElementById('helpBtn');
+  var closeBtn = document.getElementById('helpCloseBtn');
+
+  function escH(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function makeSection(label, items, prefix) {
+    var wrap = document.createElement('div');
+    var title = document.createElement('div');
+    title.className = 'help-section-title';
+    title.textContent = label;
+    wrap.appendChild(title);
+    items.forEach(function(item, i) {
+      var id = prefix + '-' + i;
+      var row = document.createElement('div');
+      row.className = 'help-item';
+      var trigger = document.createElement('button');
+      trigger.className = 'help-item-trigger';
+      trigger.innerHTML = '<span>' + escH(item.title) + '</span><span class="help-chevron">▼</span>';
+      var panel = document.createElement('div');
+      panel.className = 'help-item-body';
+      panel.id = id;
+      panel.innerHTML = item.body;
+      trigger.onclick = function() {
+        var isOpen = trigger.classList.contains('open');
+        wrap.querySelectorAll('.help-item-trigger.open').forEach(function(t) {
+          t.classList.remove('open');
+          document.getElementById(t.getAttribute('aria-controls') || '').classList.remove('open');
+        });
+        if (!isOpen) { trigger.classList.add('open'); panel.classList.add('open'); }
+      };
+      trigger.setAttribute('aria-controls', id);
+      row.appendChild(trigger);
+      row.appendChild(panel);
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+  function renderHelp() {
+    body.innerHTML = '';
+    body.appendChild(makeSection('📖 使い方', helpData.howto, 'howto'));
+    body.appendChild(makeSection('🧠 Claude用教訓', helpData.lessons, 'lesson'));
+  }
+  function openModal() { renderHelp(); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+  function closeModal() { overlay.classList.remove('active'); document.body.style.overflow=''; }
+
+  openBtn.onclick = openModal;
+  closeBtn.onclick = closeModal;
+  document.getElementById('helpCopyPromptBtn').onclick = copyPrompt;
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+})();
+// ── HELP MODAL JS END ──
+
+</script>
+</body>
+</html>
