@@ -136,28 +136,31 @@ function spawnParticles(x,y,color,n){
 }
 
 // ---- INPUT ----
-document.addEventListener('touchstart',e=>{
+function doPunch(){
+  if(punchActive)return;
+  punchActive=true; punchTimer=18;
+}
+
+function handleGameTouch(e){
   e.preventDefault();
   if(!gameStarted||gameOver||cleared)return;
   const t=e.changedTouches[0];
   if(t.clientX>W*0.7){ doPunch(); return; }
   if(player.onGround){ player.vy=JUMP_V; player.onGround=false; jumpCount=1; }
   else if(jumpCount===1){ player.vy=JUMP2_V; jumpCount=2; }
-},{passive:false});
-document.addEventListener('touchend',e=>e.preventDefault(),{passive:false});
-document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
-
-function doPunch(){
-  if(punchActive)return;
-  punchActive=true; punchTimer=18;
 }
 
-startBtn.addEventListener('click',()=>{ startOverlay.style.display='none'; gameStarted=true; startGame(); });
-actionBtn.addEventListener('click',()=>{ overlay.style.display='none'; startGame(); });
-['touchstart'].forEach(ev=>{
-  actionBtn.addEventListener(ev,e=>e.stopPropagation(),{passive:true});
-  startBtn.addEventListener(ev,e=>e.stopPropagation(),{passive:true});
-});
+canvas.addEventListener('touchstart',handleGameTouch,{passive:false});
+canvas.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+canvas.addEventListener('touchend',e=>e.preventDefault(),{passive:false});
+
+function btnTouch(el,fn){
+  el.addEventListener('touchstart',e=>{e.stopPropagation();e.preventDefault();fn();},{passive:false});
+  el.addEventListener('click',fn);
+}
+
+btnTouch(startBtn,()=>{ startOverlay.style.display='none'; gameStarted=true; startGame(); });
+btnTouch(actionBtn,()=>{ overlay.style.display='none'; startGame(); });
 
 function startGame(){
   score=0; lives=3; gameOver=false; cleared=false; frame=0;
