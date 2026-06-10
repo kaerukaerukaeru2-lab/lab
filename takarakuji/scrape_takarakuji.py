@@ -192,9 +192,9 @@ def main():
         print('  過去月リスト: %d件' % len(months))
         time.sleep(2)
 
-        # 過去月データ（直近3ヶ月だけ取得、残りはオンデマンド）
+        # 過去月データ（直近12ヶ月取得）
         if 'past_data' not in data[key]: data[key]['past_data'] = {}
-        for m in months[:3]:
+        for m in months[:12]:
             ym = m['ym']
             if ym not in data[key]['past_data']:
                 print('  %s取得中...' % m['label'])
@@ -215,7 +215,7 @@ def main():
         months = get_past_month_list(kind)
         data[key]['past_months'] = months
         if 'past_data' not in data[key]: data[key]['past_data'] = {}
-        for m in months[:2]:
+        for m in months[:12]:
             ym = m['ym']
             if ym not in data[key]['past_data']:
                 past = scrape_numbers_month(kind, ym, digits)
