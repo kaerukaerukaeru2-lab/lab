@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>宝くじ当選番号案内</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a3a6b;--navy2:#2a4f8f;--navy-light:#e8eef8;
+  --red:#cc0000;--bg:#f2f2f2;--white:#fff;
+  --border:#d0d0d0;--border2:#e8e8e8;
+  --text:#1a1a1a;--text2:#444;--text3:#888;
+  --gold:#d4a000;--gold-bg:#fff8e0;
+  --radius:4px;--shadow:0 1px 3px rgba(0,0,0,0.1);
+}
+body{background:var(--bg);color:var(--text);font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Noto Sans JP',sans-serif;font-size:15px;line-height:1.6;min-height:100vh}
+header{background:var(--white);border-bottom:3px solid var(--red);padding:0 1rem;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px rgba(0,0,0,0.1)}
+.header-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;height:52px;gap:8px}
+.back-btn{background:none;border:none;color:var(--navy);font-size:22px;cursor:pointer;padding:4px 8px;display:none;line-height:1;font-weight:700}
+.logo-wrap{display:flex;flex-direction:column;flex:1}
+.logo-rakuten{font-size:11px;font-weight:700;color:var(--red)}
+.logo-main{font-size:18px;font-weight:700;color:var(--navy)}
+.screen{display:none;max-width:680px;margin:0 auto;padding:1rem 0 4rem}
+.screen.active{display:block}
+
+/* 表紙 */
+.top-banner{background:var(--red);color:#fff;padding:12px 1rem;margin-bottom:1rem}
+.top-banner h1{font-size:17px;font-weight:700;line-height:1.4}
+.section-label{font-size:13px;font-weight:700;color:var(--text2);padding:8px 1rem 4px;letter-spacing:0.05em}
+.menu-card{background:var(--white);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);margin-bottom:2px;cursor:pointer;transition:background 0.1s}
+.menu-card:active{background:#f8f8f8}
+.menu-card-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 1rem}
+.menu-name{font-size:16px;font-weight:700;color:var(--navy)}
+.menu-sub{font-size:11px;color:var(--text3)}
+.menu-badge{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:2px;margin-right:4px}
+
+/* トップ4大メニュー */
+.big-menu-card{display:flex;align-items:center;gap:14px;padding:18px;border-radius:14px;color:#fff;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s;box-shadow:0 2px 6px rgba(0,0,0,0.12);border:3px solid transparent}
+.big-menu-card.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.5),0 2px 8px rgba(0,0,0,0.2)}
+.big-menu-card:active{transform:scale(0.98)}
+.big-menu-icon{font-size:32px;flex-shrink:0;width:44px;text-align:center}
+.big-menu-text{flex:1}
+.big-menu-title{font-size:17px;font-weight:700;margin-bottom:2px}
+.big-menu-sub{font-size:12px;opacity:0.9}
+.big-menu-card .menu-arrow{color:#fff;font-size:22px;opacity:0.8}
+.big-menu-1{background:linear-gradient(135deg,#e8342a,#c8201a)}
+.big-menu-2{background:linear-gradient(135deg,#3a8fd0,#1a5fa0)}
+.big-menu-3{background:linear-gradient(135deg,#a8c800,#7a9400)}
+.big-menu-4{background:linear-gradient(135deg,#e85aa0,#c83a80)}
+
+/* 種目ロゴタブ（画面下部固定風） */
+.kind-tabs{display:flex;gap:8px;overflow-x:auto;padding:10px 1rem;background:#fff;border-top:1px solid var(--border2);border-bottom:1px solid var(--border2)}
+.kind-tab{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;width:78px;height:58px;border-radius:8px;border:2px solid transparent;background:#f4f4f4;cursor:pointer;transition:all 0.1s;overflow:hidden;position:relative}
+.kind-tab.active{border-color:var(--navy);background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.15);transform:translateY(-2px)}
+
+/* 種目別ページ */
+#screen-top{padding-bottom:88px} /* 下部固定タブの高さぶん余白を上書き */
+#screen-content{padding-bottom:88px}
+.kind-tabs-fixed{position:fixed;left:0;right:0;bottom:0;justify-content:space-around;padding:6px 4px;z-index:50;box-shadow:0 -2px 6px rgba(0,0,0,0.08)}
+.kind-tabs-fixed .kind-tab{width:auto;flex:1;height:54px;margin:0 2px}
+
+/* ロゴ風バッジ：ロト7 */
+.kt-loto7{background:linear-gradient(135deg,#f7a800 60%,#f7a800 60%);position:relative}
+.kt-loto7 .kt-main{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:15px;color:#1a3a8a;letter-spacing:-0.5px;text-shadow:1px 1px 0 #fff}
+.kt-loto7 .kt-num{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:24px;color:#e8342a;text-shadow:1px 1px 0 #a81a10}
+.kt-loto7 .kt-stars{position:absolute;top:2px;left:0;right:0;display:flex;justify-content:center;gap:1px;font-size:6px}
+.kt-loto7 .kt-sub{font-size:7px;font-weight:700;color:#1a3a8a}
+
+/* ロト6 */
+.kt-loto6{background:linear-gradient(135deg,#f7a800 60%,#f7a800 60%)}
+.kt-loto6 .kt-main{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:15px;color:#1a3a8a;letter-spacing:-0.5px;text-shadow:1px 1px 0 #fff}
+.kt-loto6 .kt-num{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:24px;color:#c84a9a;text-shadow:1px 1px 0 #8a2a6a}
+.kt-loto6 .kt-sub{font-size:7px;font-weight:700;color:#1a3a8a}
+
+/* ミニロト */
+.kt-mini{background:linear-gradient(135deg,#f7a800 50%,#f7a800 50%)}
+.kt-mini .kt-main{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:11px;color:#1a3a8a;text-shadow:1px 1px 0 #fff}
+.kt-mini .kt-num{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:18px;color:#e8342a;text-shadow:1px 1px 0 #a81a10}
+.kt-mini .kt-sub{font-size:7px;font-weight:700;color:#1a3a8a}
+
+/* ナンバーズ共通 */
+.kt-num4,.kt-num3{background:#fff}
+.kt-num4 .kt-main,.kt-num3 .kt-main{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:15px;color:#1a3a8a;letter-spacing:-0.5px;text-shadow:1px 1px 0 #fff}
+.kt-num4 .kt-num{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:20px;color:#1a9a4a;text-shadow:1px 1px 0 #0a5a2a}
+.kt-num3 .kt-num{font-family:Arial,sans-serif;font-weight:900;font-style:italic;font-size:20px;color:#e85aa0;text-shadow:1px 1px 0 #a8205a}
+.kt-num4 .kt-sub,.kt-num3 .kt-sub{font-size:7px;font-weight:700;color:#1a3a8a}
+.kt-num-row{display:flex;align-items:baseline;gap:1px}
+
+/* AI統計予想：ロック画面 */
+.stats-locked{text-align:center;padding:2.5rem 1.5rem;color:var(--text2)}
+.stats-locked .lock-icon{font-size:52px;margin-bottom:1rem}
+.stats-locked .lock-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:0.5rem}
+.stats-locked .lock-desc{font-size:13px;color:var(--text3);margin-bottom:1.5rem;line-height:1.6}
+.stats-unlock-banner{background:#f3f8e0;color:#6a8400;border:1px solid #d8e8a8;border-radius:var(--radius);padding:10px;margin:1rem;font-size:13px;font-weight:700;text-align:center}
+.badge-l7{background:#1a5fa0;color:#fff}
+.badge-l6{background:#c87000;color:#fff}
+.badge-mini{background:#d44000;color:#fff}
+.badge-n4{background:#1a7a3a;color:#fff}
+.badge-n3{background:#6a1a8a;color:#fff}
+.menu-arrow{font-size:18px;color:var(--text3)}
+.wide-outline-btn{display:block;width:calc(100% - 2rem);margin:0.5rem 1rem;padding:13px;background:var(--white);color:var(--navy);border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;text-align:center}
+
+/* 詳細 */
+.detail-banner{background:var(--red);color:#fff;padding:10px 1rem;margin-bottom:0}
+.detail-banner h2{font-size:16px;font-weight:700}
+.round-block{background:var(--white);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);margin-bottom:8px}
+.round-header{background:#f8f8f8;border-bottom:2px solid var(--red);padding:8px 1rem;font-size:13px;font-weight:700;color:var(--text2)}
+.detail-table{width:100%;border-collapse:collapse}
+.detail-table tr{border-bottom:1px solid var(--border2)}
+.detail-table td{padding:9px 1rem;font-size:14px;vertical-align:top}
+.detail-table td:first-child{width:110px;color:var(--text3);font-size:13px}
+.detail-table td:last-child{font-weight:600}
+.bonus-num{color:var(--red);font-weight:700}
+.prize-table{width:100%;border-collapse:collapse;font-size:13px}
+.prize-table tr{border-bottom:1px solid var(--border2)}
+.prize-table th{background:#f0f4fb;padding:7px 1rem;text-align:left;font-size:12px;font-weight:700;color:var(--navy);border-bottom:1px solid var(--border)}
+.prize-table td{padding:8px 1rem;vertical-align:middle}
+.prize-table td:last-child{font-weight:700;text-align:right}
+.prize-table td:nth-child(2){color:var(--text3);font-size:12px}
+.info-row{background:var(--white);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);margin-bottom:8px}
+.note{font-size:11px;color:var(--text3);padding:6px 1rem;text-align:center}
+.btn-area{padding:0.5rem 1rem;display:flex;flex-direction:column;gap:8px;margin-top:0.5rem}
+.btn-past{display:block;width:100%;padding:13px;background:var(--white);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;text-align:center}
+.btn-back{display:block;width:100%;padding:13px;background:var(--white);color:var(--navy);border:1.5px solid var(--navy);border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;text-align:center}
+.no-data{color:var(--text3);font-size:13px;padding:1rem;text-align:center}
+
+/* 過去月 */
+.past-banner{background:#444;color:#fff;padding:10px 1rem}
+.past-section-label{font-size:13px;font-weight:700;color:var(--text2);padding:10px 1rem 4px}
+.month-row{background:var(--white);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);margin-bottom:2px;cursor:pointer}
+.month-row:active{background:#f8f8f8}
+.month-row-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 1rem}
+.month-label{font-size:14px;font-weight:600;color:var(--navy)}
+.month-range{font-size:12px;color:var(--text3)}
+
+/* データ分析 表紙 */
+.analysis-top-banner{background:var(--red);color:#fff;padding:12px 1rem;margin-bottom:1rem}
+.analysis-top-banner h2{font-size:17px;font-weight:700}
+.analysis-kind-block{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);margin:0 1rem 1rem;overflow:hidden}
+.analysis-kind-header{display:flex;align-items:center;gap:0}
+.analysis-kind-logo{width:90px;display:flex;align-items:center;justify-content:center;padding:0.75rem;flex-shrink:0;min-height:110px}
+.analysis-kind-btns{flex:1;display:flex;flex-direction:column}
+.analysis-btn{padding:13px 1rem;font-size:14px;font-weight:600;color:var(--navy);border:none;border-bottom:1px solid var(--border2);background:var(--white);cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center}
+.analysis-btn:last-child{border-bottom:none}
+.analysis-btn:active{background:#f8f8f8}
+
+/* データ分析 中身 */
+.analysis-banner{background:var(--red);color:#fff;padding:10px 1rem;margin-bottom:1rem}
+.analysis-banner h2{font-size:16px;font-weight:700}
+.range-sel{display:flex;justify-content:flex-end;padding:0 1rem;margin-bottom:1rem;gap:6px}
+.range-btn{font-size:13px;padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--white);color:var(--text2);cursor:pointer;font-weight:500}
+.range-btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* よく出る・出ていない バブル */
+.bubble-canvas{position:relative;width:100%;min-height:340px;margin:0 1rem 1rem;width:calc(100% - 2rem)}
+.bubble-item{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;transition:all 0.4s}
+.bubble-item.hollow{background:transparent;border-width:3px;border-style:solid}
+
+/* 出現回数 バーグラフ */
+.freq-list{padding:0 1rem}
+.freq-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.freq-ball{width:36px;height:36px;border-radius:50%;background:var(--gold-bg);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--gold);flex-shrink:0}
+.freq-bar-wrap{flex:1;position:relative;height:28px;background:#f0f0f0;border-radius:3px;overflow:hidden}
+.freq-bar{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:12px;font-weight:700;color:#fff;min-width:28px;transition:width 0.4s}
+.freq-bar-stack{display:flex;height:100%;transition:width 0.4s}
+.freq-bar-main{height:100%;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-size:12px;font-weight:700;color:#fff;box-sizing:border-box}
+.freq-bar-bonus{height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#fff;box-sizing:border-box}
+.freq-medal{font-size:18px;flex-shrink:0;width:22px;text-align:center}
+.freq-count{min-width:32px;font-size:12px;color:var(--text3);text-align:right}
+
+/* 使い方モーダル */
+.help-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end;justify-content:center}
+.help-overlay.show{display:flex}
+.help-box{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;padding:1.2rem;box-sizing:border-box;animation:helpUp 0.25s ease-out}
+@keyframes helpUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.help-box h3{margin:0 0 .8rem;font-size:17px;color:var(--navy)}
+.help-box .help-line{margin:.6rem 0;font-size:14px;line-height:1.7;color:var(--text2)}
+.help-box .help-color{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle;margin-right:6px}
+.help-close{display:block;width:100%;margin-top:1rem;padding:.8rem;border:none;border-radius:var(--radius);background:var(--navy);color:#fff;font-size:15px;font-weight:700}
+
+/* 予測ゲーム */
+#game-screen{text-align:center;padding:1rem}
+.game-mode-banner{font-size:13px;font-weight:700;border-radius:var(--radius);padding:10px;margin-bottom:1rem}
+.game-mode-banner.mode-random{background:#eaf3fb;color:#1a5fa0;border:1px solid #bcdcf5}
+.game-mode-banner.mode-stats{background:#f3f8e0;color:#6a8400;border:1px solid #d8e8a8}
+.ad-watch-btn{margin-top:0.8rem;font-size:14px;font-weight:700;padding:11px 24px;border-radius:var(--radius);border:none;background:#e85aa0;color:#fff;cursor:pointer}
+.type-tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:1.5rem}
+.tab-btn{font-size:13px;padding:7px 14px;border-radius:var(--radius);cursor:pointer;border:1.5px solid var(--border);background:var(--white);color:var(--text2);font-weight:500}
+.tab-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.balls-stage{display:flex;justify-content:center;align-items:center;gap:8px;min-height:80px;flex-wrap:wrap;margin:1.5rem 0}
+.g-ball{width:58px;height:58px;border-radius:50%;background:#f0f4fb;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--text3);opacity:0;transform:scale(0.4) translateY(20px);transition:opacity 0.3s cubic-bezier(.34,1.56,.64,1),transform 0.3s cubic-bezier(.34,1.56,.64,1)}
+.g-ball.show{opacity:1;transform:scale(1) translateY(0)}
+.g-ball.b-bonus{background:#fff0e8;border-color:#d46a1a;color:#7a3a00}
+.g-ball.b-0{background:#e8f0fb;border-color:#4a7fd4;color:#1a4a9a}
+.g-ball.b-1{background:#fdecea;border-color:#d45a4a;color:#9a1a1a}
+.g-ball.b-2{background:#e8f8ee;border-color:#4ab86a;color:#1a6a3a}
+.g-ball.b-3{background:#fdf6e8;border-color:#d4a84a;color:#7a5a0a}
+.g-ball.b-4{background:#f0e8fb;border-color:#8a4ad4;color:#4a1a7a}
+.g-ball.b-5{background:#e8f8fb;border-color:#4ab8d4;color:#1a5a7a}
+.g-ball.b-6{background:#fce8f4;border-color:#d44a8a;color:#7a1a4a}
+.slot-display{font-size:28px;min-height:40px;margin:0.5rem 0}
+.draw-btn{font-size:15px;font-weight:700;padding:13px 40px;border-radius:var(--radius);cursor:pointer;border:none;background:var(--navy);color:#fff}
+.draw-btn:disabled{opacity:0.5;cursor:not-allowed}
+.result-text{font-size:13px;color:var(--text2);min-height:24px;margin-top:0.75rem}
+footer{background:var(--navy);color:rgba(255,255,255,0.5);text-align:center;padding:1rem;font-size:11px;margin-top:1rem}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <button class="back-btn" id="back-btn" onclick="goBack()">&#8249;</button>
+    <div class="logo-wrap">
+      <div class="logo-rakuten" id="header-sub">宝くじ当選番号案内</div>
+      <div class="logo-main" id="header-title">ロト・ナンバーズ</div>
+    </div>
+  </div>
+</header>
+
+<!-- メイン画面（4大メニュー + 種目タブを1画面に統合） -->
+<div class="screen active" id="screen-top">
+  <div class="top-banner"><h1>宝くじ（ロト、ナンバーズ）<br>当せん番号案内</h1></div>
+  <div id="main-menu" style="padding:1rem;display:flex;flex-direction:column;gap:12px">
+    <div class="big-menu-card big-menu-1" data-tab="detail" onclick="openContent('detail')">
+      <div class="big-menu-icon">🔔</div>
+      <div class="big-menu-text">
+        <div class="big-menu-title">最新当せん番号</div>
+        <div class="big-menu-sub">ロト・ナンバーズの当選結果をチェック</div>
+      </div>
+      <div class="menu-arrow">›</div>
+    </div>
+    <div class="big-menu-card big-menu-2" data-tab="random" onclick="openContent('random')">
+      <div class="big-menu-icon">🎯</div>
+      <div class="big-menu-text">
+        <div class="big-menu-title">ランダム予想</div>
+        <div class="big-menu-sub">無料で番号を抽選（広告で回数回復）</div>
+      </div>
+      <div class="menu-arrow">›</div>
+    </div>
+    <div class="big-menu-card big-menu-3" data-tab="stats" onclick="openContent('stats')">
+      <div class="big-menu-icon">📊</div>
+      <div class="big-menu-text">
+        <div class="big-menu-title">AI統計予想</div>
+        <div class="big-menu-sub">広告を見て統計データから予想</div>
+      </div>
+      <div class="menu-arrow">›</div>
+    </div>
+    <div class="big-menu-card big-menu-4" data-tab="calendar" onclick="openContent('calendar')">
+      <div class="big-menu-icon">📅</div>
+      <div class="big-menu-text">
+        <div class="big-menu-title">吉日カレンダー</div>
+        <div class="big-menu-sub">今日の運勢・六曜をチェック</div>
+      </div>
+      <div class="menu-arrow">›</div>
+    </div>
+  </div>
+
+  <div class="kind-tabs kind-tabs-fixed" id="top-kind-tabs"></div>
+</div>
+
+<!-- 各機能の詳細画面（当選結果/ランダム予想/AI統計予想/吉日カレンダー共通） -->
+<div class="screen" id="screen-content">
+  <div id="content-body"></div>
+  <div class="btn-area"><button class="btn-back" onclick="backToMain()">＜ メインに戻る</button></div>
+  <div class="kind-tabs kind-tabs-fixed" id="content-kind-tabs"></div>
+</div>
+
+<!-- 詳細 -->
+<div class="screen" id="screen-detail"><div id="detail-content"></div></div>
+<!-- 過去月一覧 -->
+<div class="screen" id="screen-past"><div id="past-content"></div></div>
+<!-- 過去月詳細 -->
+<div class="screen" id="screen-past-detail"><div id="past-detail-content"></div></div>
+<!-- データ分析 表紙 -->
+<div class="screen" id="screen-analysis-top"><div id="analysis-top-content"></div></div>
+<!-- データ分析 中身 -->
+<div class="screen" id="screen-analysis"><div id="analysis-content"></div></div>
+<footer>当選番号は公式サイトでご確認ください。予測はエンターテインメントです。</footer>
+
+<script>
+var DATA_URL='takarakuji_data.json';
+var appData=null;
+var running=false;
+var audioCtx=null;
+var screenStack=[];
+var analysisKind='loto7';
+var analysisMode='most';
+var analysisRange=50;
+
+var NAMES={loto7:'ロト7',loto6:'ロト6',mini:'ミニロト',n3:'ナンバーズ3',n4:'ナンバーズ4'};
+var HAS_BONUS={loto7:true,loto6:true,mini:true,n3:false,n4:false};
+var KIND_MAX={loto7:37,loto6:43,mini:31,n3:9,n4:9};
+var KIND_COLORS={
+  loto7:{fill:'#1a5fa0',hollow:'#1a5fa0'},
+  loto6:{fill:'#c87000',hollow:'#c87000'},
+  mini:{fill:'#d44000',hollow:'#d44000'},
+  n3:{fill:'#6a1a8a',hollow:'#6a1a8a'},
+  n4:{fill:'#1a7a3a',hollow:'#1a7a3a'}
+};
+var KIND_BAR_COLORS={loto7:'#1a5fa0',loto6:'#c87000',mini:'#d44000',n3:'#6a1a8a',n4:'#1a7a3a'};
+
+var currentKind='loto7';
+var currentSubtab='detail'; // 'detail' | 'random' | 'stats' | 'calendar'
+
+function getAudioCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+
+function showScreen(id,title,sub){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+  document.getElementById('screen-'+id).classList.add('active');
+  document.getElementById('header-title').textContent=title||'ロト・ナンバーズ';
+  document.getElementById('header-sub').textContent=sub||'宝くじ当選番号案内';
+  document.getElementById('back-btn').style.display=(id==='top')?'none':'block';
+  window.scrollTo(0,0);
+}
+
+function pushScreen(id,title,sub){
+  var cur=document.querySelector('.screen.active');
+  if(cur){screenStack.push({id:cur.id.replace('screen-',''),title:document.getElementById('header-title').textContent,sub:document.getElementById('header-sub').textContent});}
+  showScreen(id,title,sub);
+}
+
+function goBack(){
+  if(screenStack.length>0){var p=screenStack.pop();showScreen(p.id,p.title,p.sub);}
+  else{showScreen('top','ロト・ナンバーズ','宝くじ当選番号案内');}
+}
+
+function loadData(){
+  fetch(DATA_URL+'?t='+Date.now())
+    .then(function(r){return r.json()})
+    .then(function(d){appData=d;renderTop();})
+    .catch(function(){appData={};renderTop();});
+}
+
+function renderTop(){
+  renderKindTabs('top-kind-tabs',currentKind,'switchKind');
+}
+
+function renderRoundBlock(r,hasBonus){
+  var html='<div class="round-block">';
+  html+='<div class="round-header">第'+r.round+'回 &nbsp;'+r.date+'抽せん</div>';
+  html+='<table class="detail-table">';
+  var numsStr=(r.numbers||[]).map(function(n){return ('0'+n).slice(-2)}).join(' - ');
+  html+='<tr><td>本数字</td><td>'+numsStr+'</td></tr>';
+  if(hasBonus&&r.bonus!==undefined&&r.bonus!==''){
+    var ba=Array.isArray(r.bonus)?r.bonus:[r.bonus];
+    html+='<tr><td>ボーナス数字</td><td class="bonus-num">'+ba.map(function(n){return '('+('0'+n).slice(-2)+')'}).join(' ')+'</td></tr>';
+  }
+  html+='</table>';
+  if(r.prizes&&r.prizes.length>0){
+    html+='<table class="prize-table"><tr><th>等級</th><th>口数</th><th>当せん金額</th></tr>';
+    r.prizes.forEach(function(p){html+='<tr><td>'+p.rank+'</td><td>'+p.count+'</td><td>'+p.amount+'</td></tr>';});
+    html+='</table>';
+  }
+  if(r.sales)html+='<table class="detail-table info-row"><tr><td>販売実績金額</td><td>'+r.sales+'</td></tr></table>';
+  if(r.carryover!==undefined&&r.carryover!=='')html+='<table class="detail-table info-row"><tr><td>キャリーオーバー</td><td>'+r.carryover+'</td></tr></table>';
+  html+='</div>';
+  return html;
+}
+
+function showDetail(key){
+  var name=NAMES[key];
+  var cur=(appData[key]&&appData[key].current)||[];
+  var html='<div class="detail-banner"><h2>'+name+'抽せん数字一覧表</h2></div>';
+  if(cur.length===0){html+='<div class="no-data">データなし</div>';}
+  else{cur.forEach(function(r){html+=renderRoundBlock(r,HAS_BONUS[key]);});html+='<div class="note">※お支払期間は、支払開始日(抽せん日の翌日)より1年間となります。</div>';}
+  html+='<div class="btn-area"><button class="btn-past" onclick="showPast(\''+key+'\')">過去の当せん番号案内</button><button class="btn-back" onclick="goBack()">＜ 当せん番号案内トップに戻る</button></div>';
+  document.getElementById('detail-content').innerHTML=html;
+  pushScreen('detail',name+'当せん番号案内','宝くじ当選番号案内');
+}
+
+function showPast(key){
+  var name=NAMES[key];
+  var list=(appData[key]&&appData[key].past_months)||[];
+  var html='<div class="past-banner"><h2>'+name+' 過去の当せん番号案内</h2></div>';
+  html+='<div class="past-section-label">過去1年間の当せん番号</div>';
+  if(!list.length){html+='<div class="no-data">データなし</div>';}
+  else{list.forEach(function(m){html+='<div class="month-row" onclick="showPastMonth(\''+key+'\',\''+m.ym+'\')"><div class="month-row-inner"><div><div class="month-label">'+m.label+'</div><div class="month-range">'+m.range+'</div></div><div class="menu-arrow">›</div></div></div>';});}
+  html+='<div class="btn-area"><button class="btn-back" onclick="goBack()">＜ '+name+'当せん番号案内に戻る</button></div>';
+  document.getElementById('past-content').innerHTML=html;
+  pushScreen('past',name+' 過去の当せん番号','宝くじ当選番号案内');
+}
+
+function showPastMonth(key,ym){
+  var name=NAMES[key];
+  var pd=(appData[key]&&appData[key].past_data&&appData[key].past_data[ym])||[];
+  var label=ym.slice(0,4)+'年'+parseInt(ym.slice(4))+'月分';
+  var html='<div class="detail-banner"><h2>'+name+' '+label+'</h2></div>';
+  if(!pd.length){html+='<div class="no-data">データなし</div>';}
+  else{pd.forEach(function(r){html+=renderRoundBlock(r,HAS_BONUS[key]);});html+='<div class="note">※お支払期間は、支払開始日(抽せん日の翌日)より1年間となります。</div>';}
+  html+='<div class="btn-area"><button class="btn-back" onclick="goBack()">＜ 過去の当せん番号案内に戻る</button></div>';
+  document.getElementById('past-detail-content').innerHTML=html;
+  pushScreen('past-detail',name+' '+label,'宝くじ当選番号案内');
+}
+
+/* ===== データ分析 ===== */
+function getAllRounds(key){
+  var all=[];
+  var cur=(appData[key]&&appData[key].current)||[];
+  all=all.concat(cur);
+  var pd=(appData[key]&&appData[key].past_data)||{};
+  Object.keys(pd).sort().reverse().forEach(function(ym){all=all.concat(pd[ym]||[]);});
+  // round番号の重複を除去（current と past_data で同じ回が二重に入ることがある）
+  var seen={};
+  var uniq=[];
+  all.forEach(function(r){
+    if(r&&r.round!==undefined&&!seen[r.round]){
+      seen[r.round]=true;
+      uniq.push(r);
+    }
+  });
+  // 新しい順に整列しておく
+  uniq.sort(function(a,b){return b.round-a.round});
+  return uniq;
+}
+
+function calcFreq(key,range){
+  var rounds=getAllRounds(key).slice(0,range);
+  var max=KIND_MAX[key];
+  var freq={};
+  var bonusFreq={};
+  for(var i=1;i<=max;i++){freq[i]=0;bonusFreq[i]=0;}
+  rounds.forEach(function(r){
+    (r.numbers||[]).forEach(function(n){if(freq[n]!==undefined)freq[n]++;});
+    if(r.bonus!==undefined&&r.bonus!==''){
+      var ba=Array.isArray(r.bonus)?r.bonus:[r.bonus];
+      ba.forEach(function(b){if(bonusFreq[b]!==undefined)bonusFreq[b]++;});
+    }
+  });
+  return {main:freq,bonus:bonusFreq};
+}
+
+function showAnalysisTop(){
+  var kinds=[
+    {key:'loto7',label:'ロト7',badge:'badge-l7',badgeText:'LOTO',num:'7',numColor:'#1a5fa0',borderColor:'#1a5fa0'},
+    {key:'loto6',label:'ロト6',badge:'badge-l6',badgeText:'LOTO',num:'6',numColor:'#c87000',borderColor:'#c87000'},
+    {key:'mini',label:'ミニロト',badge:'badge-mini',badgeText:'MINI',num:'LOTO',numColor:'#d44000',borderColor:'#d44000'},
+  ];
+  var numbersKinds=[
+    {key:'n4',label:'ナンバーズ4',badge:'badge-n4',badgeText:'NUMBERS',num:'4',numColor:'#1a7a3a',borderColor:'#1a7a3a'},
+    {key:'n3',label:'ナンバーズ3',badge:'badge-n3',badgeText:'NUMBERS',num:'3',numColor:'#6a1a8a',borderColor:'#6a1a8a'},
+  ];
+  var html='<div class="analysis-top-banner"><h2>データ分析</h2></div>';
+  html+='<div style="padding:0 0 1rem">';
+  html+='<div class="section-label">ロト</div>';
+  kinds.forEach(function(k){
+    html+='<div class="analysis-kind-block" style="border-color:'+k.borderColor+'">';
+    html+='<div class="analysis-kind-header">';
+    html+='<div class="analysis-kind-logo" style="background:'+k.borderColor+'"><div style="text-align:center;color:#fff;font-weight:700;font-size:14px;line-height:1.2"><div style="font-size:10px;opacity:0.8">'+k.badgeText+'</div><div style="font-size:28px">'+k.num+'</div><div style="font-size:10px">'+k.label+'</div></div></div>';
+    html+='<div class="analysis-kind-btns">';
+    html+='<button class="analysis-btn" style="color:'+k.borderColor+'" onclick="showAnalysis(\''+k.key+'\',\'most\')">よく出ている数字 <span>›</span></button>';
+    html+='<button class="analysis-btn" style="color:'+k.borderColor+'" onclick="showAnalysis(\''+k.key+'\',\'least\')">出ていない数字 <span>›</span></button>';
+    html+='<button class="analysis-btn" style="color:'+k.borderColor+'" onclick="showAnalysis(\''+k.key+'\',\'freq\')">出現回数 <span>›</span></button>';
+    html+='</div></div></div>';
+  });
+  html+='<div class="section-label" style="margin-top:0.5rem">ナンバーズ</div>';
+  numbersKinds.forEach(function(k){
+    html+='<div class="analysis-kind-block" style="border-color:'+k.borderColor+'">';
+    html+='<div class="analysis-kind-header">';
+    html+='<div class="analysis-kind-logo" style="background:'+k.borderColor+'"><div style="text-align:center;color:#fff;font-weight:700;font-size:14px;line-height:1.2"><div style="font-size:10px;opacity:0.8">'+k.badgeText+'</div><div style="font-size:28px">'+k.num+'</div><div style="font-size:10px">'+k.label+'</div></div></div>';
+    html+='<div class="analysis-kind-btns">';
+    html+='<button class="analysis-btn" style="color:'+k.borderColor+'" onclick="showAnalysis(\''+k.key+'\',\'most\')">よく出ている数字 <span>›</span></button>';
+    html+='<button class="analysis-btn" style="color:'+k.borderColor+'" onclick="showAnalysis(\''+k.key+'\',\'least\')">出ていない数字 <span>›</span></button>';
+    html+='<button class="analysis-btn" style="color:'+k.borderColor+'" onclick="showAnalysis(\''+k.key+'\',\'freq\')">出現回数 <span>›</span></button>';
+    html+='</div></div></div>';
+  });
+  html+='<div class="btn-area"><button class="btn-back" onclick="goBack()">＜ 当せん番号案内トップに戻る</button></div>';
+  html+='</div>';
+  document.getElementById('analysis-top-content').innerHTML=html;
+  pushScreen('analysis-top','データ分析','宝くじ当選番号案内');
+}
+
+function showAnalysis(key,mode){
+  analysisKind=key;analysisMode=mode;analysisRange=50;
+  renderAnalysis();
+  pushScreen('analysis',NAMES[key]+' '+modeLabel(mode),'データ分析');
+}
+
+function modeLabel(m){return m==='most'?'よく出ている数字':m==='least'?'出ていない数字':'出現回数';}
+
+function showModeHelp(mode){
+  var title='', body='';
+  if(mode==='most'){
+    title='よく出ている数字の見方';
+    body='<div class="help-line">丸が大きいほど、出現回数が多い数字です。</div>'
+      +'<div class="help-line"><b>色の意味（出現回数の順位）</b></div>'
+      +'<div class="help-line"><span class="help-color" style="background:#e8342a"></span>赤＝1〜3位（最も多い）</div>'
+      +'<div class="help-line"><span class="help-color" style="background:#e85aa0"></span>ピンク＝4〜5位</div>'
+      +'<div class="help-line"><span class="help-color" style="background:#a8c800"></span>黄緑＝6〜8位</div>'
+      +'<div class="help-line"><span class="help-color" style="background:#3a8fd0"></span>青＝9〜10位</div>'
+      +'<div class="help-line">直近50回／100回を切り替えて集計できます。</div>';
+  }else if(mode==='least'){
+    title='出ていない数字の見方';
+    body='<div class="help-line">出現回数が少ない数字を表示しています。</div>'
+      +'<div class="help-line"><b>色の意味（出現回数の少なさ順位）</b></div>'
+      +'<div class="help-line"><span class="help-color" style="background:#e8342a"></span>赤＝最も出ていない</div>'
+      +'<div class="help-line"><span class="help-color" style="background:#e85aa0"></span>ピンク＝次に出ていない</div>'
+      +'<div class="help-line"><span class="help-color" style="background:#a8c800"></span>黄緑＝やや出ていない</div>'
+      +'<div class="help-line"><span class="help-color" style="background:#3a8fd0"></span>青＝比較的出ている</div>'
+      +'<div class="help-line">直近50回／100回を切り替えて集計できます。</div>';
+  }else{
+    var key=analysisKind;
+    var hasBonus=(key==='loto7'||key==='loto6'||key==='mini');
+    title='出現回数グラフの見方';
+    if(hasBonus){
+      body='<div class="help-line"><span class="help-color" style="background:'+KIND_BAR_COLORS[key]+';border-radius:3px"></span>本数字としての出現回数</div>'
+        +'<div class="help-line"><span class="help-color" style="background:#fff;border:1.5px solid '+KIND_BAR_COLORS[key]+';border-radius:3px"></span>ボーナス数字としての出現回数</div>'
+        +'<div class="help-line">🥇🥈🥉＝合計出現回数の1〜3位</div>';
+    }else{
+      body='<div class="help-line">バーの長さ＝各数字の出現回数</div>'
+        +'<div class="help-line">🥇🥈🥉＝出現回数の1〜3位</div>';
+    }
+    body+='<div class="help-line">直近50回／100回を切り替えて集計できます。</div>';
+  }
+  document.getElementById('help-title').textContent=title;
+  document.getElementById('help-body').innerHTML=body;
+  document.getElementById('help-overlay').classList.add('show');
+}
+function closeModeHelp(){
+  document.getElementById('help-overlay').classList.remove('show');
+}
+
+function renderAnalysis(){
+  var key=analysisKind;var mode=analysisMode;var range=analysisRange;
+  var name=NAMES[key];
+  var fillColor=KIND_COLORS[key].fill;
+  var hollowColor=KIND_COLORS[key].hollow;
+  var barColor=KIND_BAR_COLORS[key];
+  var freqData=calcFreq(key,range);
+  var freq=freqData.main;
+  var bonusFreq=freqData.bonus;
+  var hasBonus=(key==='loto7'||key==='loto6'||key==='mini');
+  var entries=Object.keys(freq).map(function(k){return{num:parseInt(k),cnt:freq[k],bonusCnt:bonusFreq[k]||0}});
+  var maxCnt=Math.max.apply(null,entries.map(function(e){return e.cnt+e.bonusCnt}))||1;
+
+  var html='<div class="analysis-banner"><h2>'+name+' '+modeLabel(mode)+'</h2></div>';
+  html+='<div class="range-sel" style="justify-content:space-between">';
+  html+='<button class="range-btn" onclick="showModeHelp(\''+mode+'\')" style="font-weight:700">？ この画面の使い方</button>';
+  html+='<div style="display:flex;gap:6px">';
+  html+='<button class="range-btn'+(range===50?' on':'')+'" onclick="setAnalysisRange(50)">直近50回</button>';
+  html+='<button class="range-btn'+(range===100?' on':'')+'" onclick="setAnalysisRange(100)">直近100回</button>';
+  html+='</div>';
+  html+='</div>';
+
+  if(mode==='freq'){
+    var sorted=entries.slice().sort(function(a,b){return a.num-b.num});
+    // 1〜3位（本数字+ボーナス合計）にメダル
+    var ranked=entries.slice().sort(function(a,b){return (b.cnt+b.bonusCnt)-(a.cnt+a.bonusCnt)});
+    var medalMap={};
+    if(ranked[0])medalMap[ranked[0].num]='🥇';
+    if(ranked[1])medalMap[ranked[1].num]='🥈';
+    if(ranked[2])medalMap[ranked[2].num]='🥉';
+    html+='<div class="freq-list">';
+    sorted.forEach(function(e){
+      var total=e.cnt+e.bonusCnt;
+      var pct=maxCnt>0?(total/maxCnt*100):0;
+      var mainPct=total>0?(e.cnt/total*100):0;
+      var bonusPct=total>0?(e.bonusCnt/total*100):0;
+      var widthPct=Math.max(pct,8);
+      html+='<div class="freq-row">';
+      html+='<div class="freq-ball">'+e.num+'</div>';
+      html+='<div class="freq-bar-wrap"><div class="freq-bar-stack" style="width:'+widthPct+'%">';
+      html+='<div class="freq-bar-main" style="width:'+mainPct+'%;background:'+barColor+'">'+(e.cnt>0?e.cnt:'')+'</div>';
+      if(hasBonus)html+='<div class="freq-bar-bonus" style="width:'+bonusPct+'%;border:1.5px solid '+barColor+';color:'+barColor+'">'+(e.bonusCnt>0?e.bonusCnt:'')+'</div>';
+      html+='</div></div>';
+      if(medalMap[e.num])html+='<div class="freq-medal">'+medalMap[e.num]+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    if(hasBonus)html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px 1rem"><span style="display:inline-block;width:12px;height:12px;background:'+barColor+';vertical-align:middle;border-radius:2px;margin-right:4px"></span>本数字 <span style="display:inline-block;width:12px;height:12px;border:1.5px solid '+barColor+';vertical-align:middle;border-radius:2px;margin:0 4px 0 12px"></span>ボーナス数字</div>';
+  }else{
+    // ベスト10・ワースト10に絞る
+    var sorted2=entries.slice().sort(function(a,b){return mode==='most'?b.cnt-a.cnt:a.cnt-b.cnt});
+    var top10=sorted2.slice(0,10);
+    var topMax=top10[0]?top10[0].cnt:1;
+    var topMin=top10[top10.length-1]?top10[top10.length-1].cnt:0;
+    var hollow=mode==='least';
+    var allSame=(topMax===topMin);
+
+    html+='<div id="bubble-area" style="position:relative;width:calc(100% - 2rem);margin:0 1rem;min-height:340px">';
+    // 出現頻度ランクに応じた4段階配色（楽天本家インスパイア）
+    var rankColors=['#e8342a','#e85aa0','#a8c800','#3a8fd0'];
+    top10.forEach(function(e,idx){
+      var ratio;
+      if(allSame){
+        // 出現回数が全員同値（0回など）の場合は、上位ほど大きく見えるよう順位で疑似的に差をつける
+        ratio=1-(idx/(top10.length-1||1));
+      }else{
+        ratio=(e.cnt-topMin)/(topMax-topMin);
+        // よく出る：多いほど大きい / 出ていない：少ないほど大きい
+        if(mode==='least')ratio=1-ratio;
+      }
+      var size=Math.round(36+ratio*114);
+      var fontSize=size>120?28:size>100?24:size>80?20:size>60?16:size>45?13:11;
+      var bw=Math.max(3,Math.round(size/14));
+      // 順位（idx）に応じて4段階に分類（0-2:赤,3-4:ピンク,5-7:黄緑,8-9:青）
+      var rankColor;
+      if(idx<3)rankColor=rankColors[0];
+      else if(idx<5)rankColor=rankColors[1];
+      else if(idx<8)rankColor=rankColors[2];
+      else rankColor=rankColors[3];
+      var style='position:absolute;width:'+size+'px;height:'+size+'px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:'+fontSize+'px;font-weight:700;';
+      if(hollow){
+        style+='border:'+bw+'px solid '+rankColor+';color:'+rankColor+';background:#fff;';
+      }else{
+        style+='background:'+rankColor+';color:#fff;';
+      }
+      html+='<div class="bbl" data-size="'+size+'" style="'+style+'">'+e.num+'</div>';
+    });
+    html+='</div>';
+    html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px 1rem">'+(mode==='most'?'上位10位（大きい丸＝出現回数多）':'下位10位（大きい丸＝出現回数少）')+'</div>';
+  }
+
+  html+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px 1rem 8px">直近'+range+'回のデータを集計</div>';
+  html+='<div class="btn-area"><button class="btn-back" onclick="goBack()">＜ データ分析に戻る</button></div>';
+  document.getElementById('analysis-content').innerHTML=html;
+
+  if(mode!=='freq'){
+    setTimeout(function(){layoutBubbles();},50);
+  }
+}
+
+function layoutBubbles(){
+  var area=document.getElementById('bubble-area');
+  if(!area)return;
+  var items=area.querySelectorAll('.bbl');
+  var W=area.offsetWidth;
+  var placed=[];
+  var maxH=0;
+  items.forEach(function(el){
+    var size=parseInt(el.getAttribute('data-size'));
+    var r=size/2;
+    var best=null;var bestScore=Infinity;
+    for(var attempt=0;attempt<200;attempt++){
+      var x=r+Math.random()*(W-size);
+      var y=r+Math.random()*340;
+      var ok=true;
+      for(var j=0;j<placed.length;j++){
+        var p=placed[j];
+        var dx=x-p.x;var dy=y-p.y;
+        var minDist=r+p.r+4;
+        if(dx*dx+dy*dy<minDist*minDist){ok=false;break;}
+      }
+      if(ok){
+        var score=y;
+        if(score<bestScore){bestScore=score;best={x:x,y:y,r:r};}
+      }
+    }
+    if(!best)best={x:r+Math.random()*(W-size),y:maxH+r,r:r};
+    placed.push(best);
+    el.style.left=(best.x-r)+'px';
+    el.style.top=(best.y-r)+'px';
+    if(best.y+r>maxH)maxH=best.y+r;
+  });
+  area.style.minHeight=(maxH+16)+'px';
+}
+
+function setAnalysisRange(r){
+  analysisRange=r;
+  renderAnalysis();
+}
+
+var gameMode='random'; // ランダム予想は常にrandom
+
+/* 4大メニューから機能詳細画面を開く */
+function openContent(tab){
+  currentSubtab=tab;
+  pushScreen('content',NAMES[currentKind],'宝くじ当選番号案内');
+  renderContent();
+}
+
+/* メイン画面に戻る */
+function backToMain(){
+  goBack();
+}
+
+/* 下部タブから種目を切り替え（現在の画面のまま） */
+function switchKind(kind){
+  if(running)return;
+  currentKind=kind;
+  var top=document.getElementById('screen-top');
+  if(top.classList.contains('active')){
+    renderKindTabs('top-kind-tabs',currentKind,'switchKind');
+  }else{
+    renderContent();
+  }
+}
+
+function renderContent(){
+  // 下部固定 種目タブ
+  renderKindTabs('content-kind-tabs',currentKind,'switchKind');
+
+  // 本文
+  var body=document.getElementById('content-body');
+  if(currentSubtab==='detail'){
+    body.innerHTML='<div class="section-label">'+NAMES[currentKind]+' 最新の当せん番号</div>'+renderKindDetailHtml(currentKind);
+  }else if(currentSubtab==='random'){
+    body.innerHTML='<div class="section-label">'+NAMES[currentKind]+' ランダム予想</div>'+randomBodyTemplate();
+    updateGameModeUI();
+  }else if(currentSubtab==='stats'){
+    body.innerHTML='<div class="section-label">'+NAMES[currentKind]+' AI統計予想</div>'+statsBodyTemplate();
+    renderStatsBody();
+  }else if(currentSubtab==='calendar'){
+    body.innerHTML='<div class="section-label">吉日カレンダー</div>'+calendarBodyTemplate();
+  }
+
+  document.getElementById('header-title').textContent=NAMES[currentKind];
+}
+
+/* 当選番号タブの中身（最新3回 + 過去ボタン） */
+function renderKindDetailHtml(key){
+  var name=NAMES[key];
+  var cur=(appData[key]&&appData[key].current)||[];
+  var html='<div style="padding:0.5rem 0">';
+  if(cur.length===0){html+='<div class="no-data">データなし</div>';}
+  else{cur.forEach(function(r){html+=renderRoundBlock(r,HAS_BONUS[key]);});html+='<div class="note">※お支払期間は、支払開始日(抽せん日の翌日)より1年間となります。</div>';}
+  html+='<div class="btn-area"><button class="btn-past" onclick="showPast(\''+key+'\')">過去の当せん番号案内</button></div>';
+  html+='</div>';
+  return html;
+}
+
+/* ランダム予想タブの中身テンプレート */
+function randomBodyTemplate(){
+  return ''
+    +'<div id="game-mode-banner" class="game-mode-banner"></div>'
+    +'<div id="game-screen" style="text-align:center;padding:1rem">'
+    +'<div class="balls-stage" id="balls-stage"></div>'
+    +'<div class="slot-display" id="slot-display"></div>'
+    +'<button class="draw-btn" id="draw-btn" onclick="startDraw()">予想番号を引く</button>'
+    +'<div class="result-text" id="result-text"></div>'
+    +'<div id="ad-area"></div>'
+    +'</div>';
+}
+
+/* AI統計予想タブの中身テンプレート（バナー＋本体エリア） */
+function statsBodyTemplate(){
+  return ''
+    +'<div id="stats-mode-banner" class="game-mode-banner mode-stats"></div>'
+    +'<div id="stats-body"></div>';
+}
+
+/* 吉日カレンダータブの中身（簡易プレースホルダー） */
+function calendarBodyTemplate(){
+  return ''
+    +'<div class="stats-locked">'
+    +'<div class="lock-icon">📅</div>'
+    +'<div class="lock-title">吉日カレンダー</div>'
+    +'<div class="lock-desc">準備中です。今後、六曜（大安・友引など）の表示を追加予定です。</div>'
+    +'</div>';
+}
+
+/* 種目ロゴタブ生成 */
+var KIND_TAB_LIST=['loto7','loto6','mini','n3','n4'];
+function kindTabInner(k){
+  switch(k){
+    case 'loto7':
+      return '<div class="kt-stars">★★★★★</div>'
+        +'<div class="kt-num-row"><span class="kt-main">ロト</span><span class="kt-num">7</span></div>'
+        +'<div class="kt-sub">ロトセブン</div>';
+    case 'loto6':
+      return '<div class="kt-num-row"><span class="kt-main">ロト</span><span class="kt-num">6</span></div>'
+        +'<div class="kt-sub">ロトシックス</div>';
+    case 'mini':
+      return '<div class="kt-num-row"><span class="kt-main">ミニ</span><span class="kt-num">ロト</span></div>'
+        +'<div class="kt-sub">ミニロト</div>';
+    case 'n4':
+      return '<div class="kt-num-row"><span class="kt-main">N</span><span class="kt-num">4</span></div>'
+        +'<div class="kt-sub">ナンバーズ4</div>';
+    case 'n3':
+      return '<div class="kt-num-row"><span class="kt-main">N</span><span class="kt-num">3</span></div>'
+        +'<div class="kt-sub">ナンバーズ3</div>';
+  }
+}
+function renderKindTabs(containerId,activeKind,onClickFn){
+  var html='';
+  KIND_TAB_LIST.forEach(function(k){
+    var active=(k===activeKind)?' active':'';
+    var skin='kt-'+k.replace('mini','mini').replace('n4','num4').replace('n3','num3');
+    html+='<div class="kind-tab '+skin+active+'" onclick="'+onClickFn+'(\''+k+'\')">';
+    html+=kindTabInner(k);
+    html+='</div>';
+  });
+  document.getElementById(containerId).innerHTML=html;
+}
+
+/* ゲーム機 */
+var GTYPES={
+  loto6:{count:6,max:43,bonus:true,bonusMax:43},
+  loto7:{count:7,max:37,bonus:true,bonusMax:37},
+  mini:{count:5,max:31,bonus:true,bonusMax:31},
+  n3:{count:3,max:9,bonus:false,digits:true},
+  n4:{count:4,max:9,bonus:false,digits:true}
+};
+
+function playTick(){
+  var c=getAudioCtx();var o=c.createOscillator(),g=c.createGain();
+  o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=660+Math.random()*440;
+  g.gain.setValueAtTime(0.1,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.08);
+  o.start();o.stop(c.currentTime+0.09);
+}
+
+function playFanfare(){
+  var c=getAudioCtx();
+  [523,659,784,1047].forEach(function(f,i){
+    var o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(0,c.currentTime+i*0.09);g.gain.linearRampToValueAtTime(0.08,c.currentTime+i*0.09+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+i*0.09+0.2);
+    o.start(c.currentTime+i*0.09);o.stop(c.currentTime+i*0.09+0.22);
+  });
+}
+
+function getRandNums(count,max,sorted,digits){
+  if(digits){var a=[];for(var i=0;i<count;i++)a.push(Math.floor(Math.random()*(max+1)));return a;}
+  var pool=[],i;for(i=1;i<=max;i++)pool.push(i);
+  var result=[];
+  for(i=0;i<count;i++){var idx=Math.floor(Math.random()*pool.length);result.push(pool.splice(idx,1)[0]);}
+  if(sorted)result.sort(function(a,b){return a-b});
+  return result;
+}
+
+/* 統計データに基づく重み付き抽選（出現回数が多い数字ほど選ばれやすい）*/
+function getWeightedNums(count,max,sorted,key,bonusKey){
+  var freqData=appData?calcFreq(key,50):null;
+  var freq=freqData?freqData.main:null;
+  var pool=[];
+  for(var i=1;i<=max;i++){
+    var f=(freq&&freq[i]!==undefined)?freq[i]:0;
+    var weight=f+1; // 出現0回でも最低1の重みを持たせる
+    for(var w=0;w<weight;w++)pool.push(i);
+  }
+  var result=[];
+  var guard=0;
+  while(result.length<count&&guard<2000){
+    guard++;
+    var idx=Math.floor(Math.random()*pool.length);
+    var n=pool[idx];
+    if(result.indexOf(n)<0)result.push(n);
+  }
+  if(sorted)result.sort(function(a,b){return a-b});
+  return result;
+}
+
+function getWeightedBonus(nums,max,key){
+  var freqData=appData?calcFreq(key,50):null;
+  var bonusFreq=freqData?freqData.bonus:null;
+  var pool=[];
+  for(var i=1;i<=max;i++){
+    if(nums.indexOf(i)>=0)continue;
+    var f=(bonusFreq&&bonusFreq[i]!==undefined)?bonusFreq[i]:0;
+    var weight=f+1;
+    for(var w=0;w<weight;w++)pool.push(i);
+  }
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+/* ===== 残り回数管理（ランダム予想：全種目共通カウンター） ===== */
+var RANDOM_QUOTA_KEY='lottery_random_quota';
+var RANDOM_QUOTA_DEFAULT=3;
+function getRandomQuota(){
+  var v=localStorage.getItem(RANDOM_QUOTA_KEY);
+  if(v===null)return RANDOM_QUOTA_DEFAULT;
+  return parseInt(v,10);
+}
+function setRandomQuota(v){localStorage.setItem(RANDOM_QUOTA_KEY,String(Math.max(0,v)))}
+
+/* 広告視聴のダミー処理（実際の広告SDKに差し替え予定） */
+function watchAd(onComplete,areaId){
+  var area=document.getElementById(areaId||'ad-area');
+  if(area)area.innerHTML='<div style="font-size:13px;color:var(--text3);padding:1rem">広告を再生中...</div>';
+  setTimeout(function(){
+    if(area)area.innerHTML='';
+    onComplete();
+  },1500);
+}
+
+function updateGameModeUI(){
+  var banner=document.getElementById('game-mode-banner');
+  var area=document.getElementById('ad-area');
+  area.innerHTML='';
+  var btn=document.getElementById('draw-btn');
+  banner.className='game-mode-banner mode-random';
+  var quota=getRandomQuota();
+  if(quota>0){
+    banner.textContent='🎯 ランダム予想モード（残り '+quota+' 回）';
+    btn.disabled=false;
+  }else{
+    banner.textContent='🎯 ランダム予想モード（残り 0 回・広告を見ると+3回）';
+    btn.disabled=true;
+    area.innerHTML='<button class="ad-watch-btn" onclick="onWatchAdForRandom()">🎬 広告を見て+3回もらう</button>';
+  }
+  btn.textContent='予想番号を引く';
+}
+
+function onWatchAdForRandom(){
+  watchAd(function(){
+    setRandomQuota(getRandomQuota()+3);
+    updateGameModeUI();
+  },'ad-area');
+}
+
+/* ===== AI統計予想画面 ===== */
+
+function statsTicketKey(key){return 'lottery_stats_ticket_'+key;}
+function getStatsTicket(key){return parseInt(localStorage.getItem(statsTicketKey(key))||'0',10)}
+function setStatsTicket(key,v){localStorage.setItem(statsTicketKey(key),String(Math.max(0,v)))}
+
+function onWatchAdForStats(){
+  watchAd(function(){
+    setStatsTicket(currentKind,1); // 1セット解放（統計データ閲覧＋予想1回）
+    renderStatsBody();
+  },'stats-ad-area');
+}
+
+function renderStatsBody(){
+  var banner=document.getElementById('stats-mode-banner');
+  var body=document.getElementById('stats-body');
+  var key=currentKind;
+  var tickets=getStatsTicket(key);
+
+  if(tickets<=0){
+    banner.textContent='📊 '+NAMES[key]+' AI統計予想（広告視聴でロック解除）';
+    body.innerHTML=''
+      +'<div class="stats-locked">'
+      +'<div class="lock-icon">🔒</div>'
+      +'<div class="lock-title">広告を見ると解放されます</div>'
+      +'<div class="lock-desc">広告を1回視聴すると、'+NAMES[key]+'の出現回数などの統計データを見ながら、AI統計予想を1回行えます。</div>'
+      +'<button class="ad-watch-btn" onclick="onWatchAdForStats()">🎬 広告を見て解放する</button>'
+      +'<div id="stats-ad-area"></div>'
+      +'</div>';
+    return;
+  }
+
+  banner.textContent='📊 '+NAMES[key]+' AI統計予想（解放中：あと1回予想できます）';
+  var html='';
+  html+='<div class="stats-unlock-banner">✅ 統計データ閲覧＋AI予想が1回利用できます</div>';
+
+  // --- 統計データ（出現回数）簡易表示 ---
+  var freqData=appData?calcFreq(key,50):{main:{},bonus:{}};
+  var max=KIND_MAX[key];
+  var hasBonus=HAS_BONUS[key];
+  var entries=[];
+  for(var i=1;i<=max;i++){
+    entries.push({num:i,cnt:freqData.main[i]||0,bonusCnt:freqData.bonus[i]||0});
+  }
+  var maxCnt=Math.max.apply(null,entries.map(function(e){return e.cnt+e.bonusCnt}))||1;
+  var ranked=entries.slice().sort(function(a,b){return (b.cnt+b.bonusCnt)-(a.cnt+a.bonusCnt)});
+  var medalMap={};
+  if(ranked[0])medalMap[ranked[0].num]='🥇';
+  if(ranked[1])medalMap[ranked[1].num]='🥈';
+  if(ranked[2])medalMap[ranked[2].num]='🥉';
+
+  html+='<div class="section-label">直近50回の出現回数（'+NAMES[key]+'）</div>';
+  html+='<div class="freq-list">';
+  entries.forEach(function(e){
+    var total=e.cnt+e.bonusCnt;
+    var pct=maxCnt>0?(total/maxCnt*100):0;
+    var mainPct=total>0?(e.cnt/total*100):0;
+    var bonusPct=total>0?(e.bonusCnt/total*100):0;
+    var widthPct=Math.max(pct,8);
+    html+='<div class="freq-row">';
+    html+='<div class="freq-ball">'+e.num+'</div>';
+    html+='<div class="freq-bar-wrap"><div class="freq-bar-stack" style="width:'+widthPct+'%">';
+    html+='<div class="freq-bar-main" style="width:'+mainPct+'%;background:'+KIND_BAR_COLORS[key]+'">'+(e.cnt>0?e.cnt:'')+'</div>';
+    if(hasBonus)html+='<div class="freq-bar-bonus" style="width:'+bonusPct+'%;border:1.5px solid '+KIND_BAR_COLORS[key]+';color:'+KIND_BAR_COLORS[key]+'">'+(e.bonusCnt>0?e.bonusCnt:'')+'</div>';
+    html+='</div></div>';
+    if(medalMap[e.num])html+='<div class="freq-medal">'+medalMap[e.num]+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+
+  // --- AI統計予想 抽選エリア ---
+  html+='<div class="section-label">AI統計予想</div>';
+  html+='<div id="stats-game-area" style="text-align:center;padding:1rem">';
+  html+='<div class="balls-stage" id="stats-balls-stage"></div>';
+  html+='<div class="slot-display" id="stats-slot-display"></div>';
+  html+='<button class="draw-btn" id="stats-draw-btn" onclick="startStatsDraw()">統計予想を引く</button>';
+  html+='<div class="result-text" id="stats-result-text"></div>';
+  html+='</div>';
+
+  body.innerHTML=html;
+}
+
+
+function startDraw(){
+  if(running)return;
+  if(getRandomQuota()<=0){updateGameModeUI();return;}
+  getAudioCtx().resume();running=true;
+  var btn=document.getElementById('draw-btn');btn.disabled=true;
+  var t=GTYPES[currentKind];
+  var stage=document.getElementById('balls-stage');
+  var slotDiv=document.getElementById('slot-display');
+  var resDiv=document.getElementById('result-text');
+  stage.innerHTML='';slotDiv.textContent='';resDiv.textContent='';
+  var nums=getRandNums(t.count,t.max,!t.digits,t.digits);
+  var bonus=null;
+  if(t.bonus){var pool2=[];for(var i=1;i<=t.bonusMax;i++){if(nums.indexOf(i)<0)pool2.push(i);}bonus=pool2[Math.floor(Math.random()*pool2.length)];}
+  var balls=[];
+  for(var j=0;j<t.count;j++){var d=document.createElement('div');d.className='g-ball b-'+j;d.textContent='?';stage.appendChild(d);balls.push(d);}
+  var bonusBall=null;
+  if(t.bonus){var sep=document.createElement('span');sep.style.cssText='font-size:16px;color:#888;margin:0 2px;align-self:center';sep.textContent='+';stage.appendChild(sep);bonusBall=document.createElement('div');bonusBall.className='g-ball b-bonus';bonusBall.textContent='?';stage.appendChild(bonusBall);}
+  var frames=['🎯','⭐','🍀','💡','🔢','✨'];var fi=0;
+  var slotTimer=setInterval(function(){slotDiv.textContent=frames[fi%frames.length];fi++;},120);
+  var delay=0;
+  balls.forEach(function(b,i){setTimeout(function(){playTick();b.classList.add('show');b.textContent=nums[i];},delay);delay+=500;});
+  if(bonusBall){setTimeout(function(){playTick();bonusBall.classList.add('show');bonusBall.textContent=bonus;},delay);delay+=500;}
+  setTimeout(function(){
+    clearInterval(slotTimer);slotDiv.textContent='✓';playFanfare();
+    resDiv.innerHTML=t.bonus?'本数字：<strong>'+nums.join('&nbsp;-&nbsp;')+'</strong>&nbsp;&nbsp;ボーナス：<strong style="color:#d46a1a">('+bonus+')</strong>':'予想番号：<strong>'+nums.join('&nbsp;-&nbsp;')+'</strong>';
+    setRandomQuota(getRandomQuota()-1);
+    running=false;btn.disabled=false;
+    updateGameModeUI();
+  },delay+200);
+}
+
+/* AI統計予想：抽選実行 */
+function startStatsDraw(){
+  if(running)return;
+  if(getStatsTicket(currentKind)<=0)return;
+  getAudioCtx().resume();running=true;
+  var btn=document.getElementById('stats-draw-btn');btn.disabled=true;
+  var t=GTYPES[currentKind];
+  var stage=document.getElementById('stats-balls-stage');
+  var slotDiv=document.getElementById('stats-slot-display');
+  var resDiv=document.getElementById('stats-result-text');
+  stage.innerHTML='';slotDiv.textContent='';resDiv.textContent='';
+  var nums;
+  if(!t.digits){
+    nums=getWeightedNums(t.count,t.max,!t.digits,currentKind);
+  }else{
+    nums=getRandNums(t.count,t.max,!t.digits,t.digits);
+  }
+  var bonus=null;
+  if(t.bonus)bonus=getWeightedBonus(nums,t.bonusMax,currentKind);
+  var balls=[];
+  for(var j=0;j<t.count;j++){var d=document.createElement('div');d.className='g-ball b-'+j;d.textContent='?';stage.appendChild(d);balls.push(d);}
+  var bonusBall=null;
+  if(t.bonus){var sep=document.createElement('span');sep.style.cssText='font-size:16px;color:#888;margin:0 2px;align-self:center';sep.textContent='+';stage.appendChild(sep);bonusBall=document.createElement('div');bonusBall.className='g-ball b-bonus';bonusBall.textContent='?';stage.appendChild(bonusBall);}
+  var frames=['🎯','⭐','🍀','💡','🔢','✨'];var fi=0;
+  var slotTimer=setInterval(function(){slotDiv.textContent=frames[fi%frames.length];fi++;},120);
+  var delay=0;
+  balls.forEach(function(b,i){setTimeout(function(){playTick();b.classList.add('show');b.textContent=nums[i];},delay);delay+=500;});
+  if(bonusBall){setTimeout(function(){playTick();bonusBall.classList.add('show');bonusBall.textContent=bonus;},delay);delay+=500;}
+  setTimeout(function(){
+    clearInterval(slotTimer);slotDiv.textContent='✓';playFanfare();
+    var modeTag='<div style="font-size:11px;color:#7a9400;margin-top:4px">📊 統計データに基づく予想</div>';
+    resDiv.innerHTML=(t.bonus?'本数字：<strong>'+nums.join('&nbsp;-&nbsp;')+'</strong>&nbsp;&nbsp;ボーナス：<strong style="color:#d46a1a">('+bonus+')</strong>':'予想番号：<strong>'+nums.join('&nbsp;-&nbsp;')+'</strong>')+modeTag;
+    setStatsTicket(currentKind,0); // 1回使ったらロック
+    running=false;
+    setTimeout(function(){renderStatsBody();},800);
+  },delay+200);
+}
+
+document.addEventListener('DOMContentLoaded',function(){loadData()});
+</script>
+
+<div class="help-overlay" id="help-overlay" onclick="if(event.target===this)closeModeHelp()">
+  <div class="help-box">
+    <h3 id="help-title"></h3>
+    <div id="help-body"></div>
+    <button class="help-close" onclick="closeModeHelp()">閉じる</button>
+  </div>
+</div>
+</body>
+</html>
