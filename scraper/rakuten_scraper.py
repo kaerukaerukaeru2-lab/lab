@@ -49,7 +49,7 @@ def fetch_items(keyword, page=1):
         "page": page,
         "formatVersion": 2,
     }
-    url = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260401?" + urllib.parse.urlencode(params)
+    url = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706?" + urllib.parse.urlencode(params)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=15) as res:
