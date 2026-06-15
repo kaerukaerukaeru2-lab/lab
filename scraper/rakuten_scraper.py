@@ -7,7 +7,9 @@ import urllib.parse
 import json
 
 APP_ID = os.environ.get("RAKUTEN_APP_ID", "")
+ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "")
 print("APP_ID length: " + str(len(APP_ID)))
+print("ACCESS_KEY length: " + str(len(ACCESS_KEY)))
 
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "rakuten_gadgets.csv")
@@ -41,6 +43,7 @@ MAX_PAGES = 3
 def fetch_items(keyword, page=1):
     params = {
         "applicationId": APP_ID,
+        "accessKey": ACCESS_KEY,
         "keyword": keyword,
         "hits": HITS_PER_PAGE,
         "page": page,
