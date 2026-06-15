@@ -8,7 +8,6 @@ import json
 
 APP_ID = os.environ.get("RAKUTEN_APP_ID", "")
 ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "")
-AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
 print("APP_ID length: " + str(len(APP_ID)))
 print("ACCESS_KEY length: " + str(len(ACCESS_KEY)))
 
@@ -45,17 +44,18 @@ def fetch_items(keyword, page=1):
     params = {
         "applicationId": APP_ID,
         "accessKey": ACCESS_KEY,
-        "affiliateId": AFFILIATE_ID,
         "keyword": keyword,
         "hits": HITS_PER_PAGE,
         "page": page,
         "format": "json",
+        "formatVersion": 2,
     }
     url = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601?" + urllib.parse.urlencode(params)
     try:
         req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
             "Referer": "https://x.com/fukugyoo_biz",
+            "Origin": "https://x.com",
         })
         with urllib.request.urlopen(req, timeout=15) as res:
             data = json.loads(res.read().decode("utf-8"))
