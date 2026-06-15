@@ -37,7 +37,7 @@ SEARCHES = [
 ]
 
 HITS_PER_PAGE = 30
-MAX_PAGES = 10  # 3→10に増加（最大300件/キーワード）
+MAX_PAGES = 10
 
 
 def fetch_items(keyword, page=1):
@@ -49,7 +49,7 @@ def fetch_items(keyword, page=1):
         "page": page,
         "format": "json",
         "formatVersion": 2,
-        "sort": "+itemPrice",  # 価格安い順
+        "sort": "+itemPrice",
     }
     url = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601?" + urllib.parse.urlencode(params)
     try:
@@ -61,6 +61,19 @@ def fetch_items(keyword, page=1):
         with urllib.request.urlopen(req, timeout=15) as res:
             data = json.loads(res.read().decode("utf-8"))
         return data.get("Items", [])
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            print("  [429] レート制限 リトライ待機中...")
+            time.sleep(5)
+            try:
+                with urllib.request.urlopen(req, timeout=15) as res:
+                    data = json.loads(res.read().decode("utf-8"))
+                return data.get("Items", [])
+            except Exception as e2:
+                print("  [ERROR] リトライ失敗: {}".format(e2))
+                return []
+        print("  [ERROR] {}: {}".format(keyword, e))
+        return []
     except Exception as e:
         print("  [ERROR] {}: {}".format(keyword, e))
         return []
@@ -92,7 +105,7 @@ def scrape():
                     "ショップ名": item.get("shopName", ""),
                     "商品URL": item.get("itemUrl", ""),
                 })
-            time.sleep(1)
+            time.sleep(2)
         print("  -> {}件取得".format(len(seen)))
 
     file_exists = os.path.isfile(OUTPUT_FILE)
