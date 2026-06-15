@@ -17,16 +17,18 @@ OUTPUT_FILE = os.path.join(OUTPUT_DIR, "rakuten_gadgets.csv")
 FIELDNAMES = ["取得日時", "カテゴリ", "コンディション", "商品名", "価格", "ショップ名", "商品URL"]
 
 SEARCHES = [
-    ("スマホ", "スマートフォン", "新品"),
-    ("スマホ", "スマートフォン 中古", "中古"),
-    ("スマホ", "スマートフォン ジャンク", "ジャンク"),
-    ("スマホアクセサリー", "スマホケース", "新品"),
+    ("スマホ", "iPhone 本体 SIMフリー", "新品"),
+    ("スマホ", "iPhone 本体 中古", "中古"),
+    ("スマホ", "iPhone 本体 ジャンク", "ジャンク"),
+    ("スマホ", "Android スマートフォン 本体 SIMフリー", "新品"),
+    ("スマホ", "Android スマートフォン 本体 中古", "中古"),
+    ("スマホアクセサリー", "スマホケース iPhone", "新品"),
     ("スマホアクセサリー", "スマホ 保護フィルム", "新品"),
     ("スマホアクセサリー", "スマホ 充電器", "新品"),
     ("GPU", "グラフィックボード", "新品"),
     ("GPU", "グラフィックボード 中古", "中古"),
     ("GPU", "グラフィックボード ジャンク", "ジャンク"),
-    ("SSD", "SSD", "新品"),
+    ("SSD", "SSD 内蔵", "新品"),
     ("SSD", "SSD 中古", "中古"),
     ("メモリ", "PCメモリ DDR", "新品"),
     ("メモリ", "PCメモリ 中古", "中古"),
@@ -49,7 +51,7 @@ def fetch_items(keyword, page=1):
         "page": page,
         "format": "json",
         "formatVersion": 2,
-        "sort": "+itemPrice",
+        "sort": "-itemPrice",
     }
     url = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601?" + urllib.parse.urlencode(params)
     try:
