@@ -37,7 +37,7 @@ SEARCHES = [
 ]
 
 HITS_PER_PAGE = 30
-MAX_PAGES = 3
+MAX_PAGES = 10  # 3→10に増加（最大300件/キーワード）
 
 
 def fetch_items(keyword, page=1):
@@ -49,6 +49,7 @@ def fetch_items(keyword, page=1):
         "page": page,
         "format": "json",
         "formatVersion": 2,
+        "sort": "+itemPrice",  # 価格安い順
     }
     url = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601?" + urllib.parse.urlencode(params)
     try:
