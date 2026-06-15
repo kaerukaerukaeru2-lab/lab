@@ -6,8 +6,7 @@ import urllib.request
 import urllib.parse
 import json
 
-APP_ID = os.environ.get("RAKUTEN_APP_ID", "")
-ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "")
+APP_ID = os.environ.get("RAKUTEN_APP_ID", "
 print("APP_ID length: " + str(len(APP_ID)))
 print("ACCESS_KEY length: " + str(len(ACCESS_KEY)))
 
