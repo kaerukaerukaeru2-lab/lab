@@ -6,7 +6,8 @@ import urllib.request
 import urllib.parse
 import json
 
-APP_ID = os.environ.get("RAKUTEN_APP_ID", "
+APP_ID = os.environ.get("RAKUTEN_APP_ID", "")
+ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "")
 print("APP_ID length: " + str(len(APP_ID)))
 print("ACCESS_KEY length: " + str(len(ACCESS_KEY)))
 
@@ -46,11 +47,14 @@ def fetch_items(keyword, page=1):
         "keyword": keyword,
         "hits": HITS_PER_PAGE,
         "page": page,
-        "formatVersion": 2,
+        "format": "json",
     }
-    url = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706?" + urllib.parse.urlencode(params)
+    url = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601?" + urllib.parse.urlencode(params)
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0",
+            "Referer": "https://x.com/fukugyoo_biz",
+        })
         with urllib.request.urlopen(req, timeout=15) as res:
             data = json.loads(res.read().decode("utf-8"))
         return data.get("Items", [])
