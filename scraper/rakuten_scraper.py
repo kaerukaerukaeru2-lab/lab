@@ -8,6 +8,7 @@ import json
 
 APP_ID = os.environ.get("RAKUTEN_APP_ID", "")
 ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "")
+AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
 print("APP_ID length: " + str(len(APP_ID)))
 print("ACCESS_KEY length: " + str(len(ACCESS_KEY)))
 
@@ -44,6 +45,7 @@ def fetch_items(keyword, page=1):
     params = {
         "applicationId": APP_ID,
         "accessKey": ACCESS_KEY,
+        "affiliateId": AFFILIATE_ID,
         "keyword": keyword,
         "hits": HITS_PER_PAGE,
         "page": page,
