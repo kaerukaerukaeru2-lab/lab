@@ -8,8 +8,10 @@ import json
 
 APP_ID = os.environ.get("RAKUTEN_APP_ID", "")
 ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "")
+AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
 print("APP_ID length: " + str(len(APP_ID)))
 print("ACCESS_KEY length: " + str(len(ACCESS_KEY)))
+print("AFFILIATE_ID length: " + str(len(AFFILIATE_ID)))
 
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "rakuten_gadgets.csv")
@@ -17,12 +19,12 @@ OUTPUT_FILE = os.path.join(OUTPUT_DIR, "rakuten_gadgets.csv")
 FIELDNAMES = ["取得日時", "カテゴリ", "コンディション", "商品名", "価格", "ショップ名", "商品URL"]
 
 SEARCHES = [
-    ("スマホ", "iPhone 本体 SIMフリー", "新品"),
-    ("スマホ", "iPhone 本体 中古", "中古"),
-    ("スマホ", "iPhone 本体 ジャンク", "ジャンク"),
-    ("スマホ", "Android スマートフォン 本体 SIMフリー", "新品"),
-    ("スマホ", "Android スマートフォン 本体 中古", "中古"),
-    ("スマホアクセサリー", "スマホケース iPhone", "新品"),
+    ("スマホ", "iPhone", "新品"),
+    ("スマホ", "iPhone 中古", "中古"),
+    ("スマホ", "iPhone ジャンク", "ジャンク"),
+    ("スマホ", "Android スマートフォン", "新品"),
+    ("スマホ", "Android スマートフォン 中古", "中古"),
+    ("スマホアクセサリー", "スマホケース", "新品"),
     ("スマホアクセサリー", "スマホ 保護フィルム", "新品"),
     ("スマホアクセサリー", "スマホ 充電器", "新品"),
     ("GPU", "グラフィックボード", "新品"),
@@ -46,6 +48,7 @@ def fetch_items(keyword, page=1):
     params = {
         "applicationId": APP_ID,
         "accessKey": ACCESS_KEY,
+        "affiliateId": AFFILIATE_ID,
         "keyword": keyword,
         "hits": HITS_PER_PAGE,
         "page": page,
@@ -94,7 +97,7 @@ def scrape():
             if not items:
                 break
             for item in items:
-                item_url = item.get("itemUrl", "")
+                item_url = item.get("affiliateUrl") or item.get("itemUrl", "")
                 if item_url in seen:
                     continue
                 seen.add(item_url)
@@ -105,16 +108,14 @@ def scrape():
                     "商品名": item.get("itemName", "")[:100],
                     "価格": item.get("itemPrice", 0),
                     "ショップ名": item.get("shopName", ""),
-                    "商品URL": item.get("itemUrl", ""),
+                    "商品URL": item_url,
                 })
             time.sleep(2)
         print("  -> {}件取得".format(len(seen)))
 
-    file_exists = os.path.isfile(OUTPUT_FILE)
-    with open(OUTPUT_FILE, "a", newline="", encoding="utf-8-sig") as f:
+    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        if not file_exists:
-            writer.writeheader()
+        writer.writeheader()
         writer.writerows(rows)
 
     print("完了: {}件".format(len(rows)))
