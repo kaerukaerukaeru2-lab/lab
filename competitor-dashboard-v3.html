@@ -230,12 +230,11 @@ td a:hover { text-decoration: underline; }
 <script>
 var CSV_URL = 'https://raw.githubusercontent.com/kaerukaerukaeru2-lab/lab/main/data/rakuten_gadgets.csv';
 var PICKUP_URL = 'https://raw.githubusercontent.com/kaerukaerukaeru2-lab/lab/main/data/pickup.json';
-var BLOCKLIST_URL = 'https://raw.githubusercontent.com/kaerukaerukaeru2-lab/lab/main/data/blocklist.json';
 var BAR_COLORS = ["#378ADD","#1D9E75","#D85A30","#9F77DD","#D4537E","#639922","#BA7517","#E24B4A","#2BB5A0","#E07B39"];
 var allData = [];
 var filtered = [];
 var pickupList = [];
-var blockList = [];
+var blockList = (function(){ try { return JSON.parse(localStorage.getItem('gadget_blocklist') || '[]'); } catch(e){ return []; } })();
 var currentCat = 'all';
 var currentPage = 1;
 var PAGE_SIZE = 30;
@@ -265,14 +264,11 @@ function loadData() {
       document.getElementById('file-badge').textContent = allData.length + '件';
       fetchJSON(PICKUP_URL, function(p) {
         pickupList = p || [];
-        fetchJSON(BLOCKLIST_URL, function(b) {
-          blockList = b || [];
-          document.getElementById('status').style.display = 'none';
-          document.getElementById('main').style.display = 'block';
-          buildCatBtns();
-          renderPickup();
-          applyFilters();
-        });
+        document.getElementById('status').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        buildCatBtns();
+        renderPickup();
+        applyFilters();
       });
     } else {
       document.getElementById('status').innerHTML = '<div style="color:#F09975">データの取得に失敗しました (HTTP ' + xhr.status + ')</div>';
@@ -452,10 +448,9 @@ function toggleStar(idx) {
 function blockItem(idx) {
   var r = filtered[idx];
   if (!r) return;
-  if (!window.confirm('「' + r.name.substring(0,20) + '...」を非表示にしますか？')) return;
   blockList.push(r.url);
   allData = allData.filter(function(d){ return d.url !== r.url; });
-  saveBlocklist();
+  localStorage.setItem('gadget_blocklist', JSON.stringify(blockList));
   applyFilters();
 }
 
@@ -467,16 +462,6 @@ function savePickup() {
   a.download = 'pickup.json';
   a.click();
   alert('pickup.jsonをダウンロードしました。\nGitHubのdata/フォルダにアップロードしてください。');
-}
-
-function saveBlocklist() {
-  var json = JSON.stringify(blockList, null, 2);
-  var blob = new Blob([json], {type: 'application/json'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'blocklist.json';
-  a.click();
-  alert('blocklist.jsonをダウンロードしました。\nGitHubのdata/フォルダにアップロードしてください。');
 }
 
 function renderPagination(totalPages) {
