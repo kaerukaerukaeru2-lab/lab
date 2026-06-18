@@ -2,8 +2,8 @@ name: 楽天ガジェット価格収集
 
 on:
   schedule:
-    - cron: "0 1 * * *"   # 毎日 日本時間 10:00 (UTC 01:00) に実行
-  workflow_dispatch:        # 手動実行ボタンも有効化
+    - cron: "0 1 * * *"
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -33,7 +33,13 @@ jobs:
           git diff --cached --quiet || git commit -m "データ更新: $(date '+%Y-%m-%d')"
           git push
 
-      - name: Netlifyへ直接デプロイ
+      - name: デプロイ用ZIPを作成
         run: |
-          npm install -g netlify-cli
-          netlify deploy --prod --dir=. --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} --site=${{ secrets.NETLIFY_SITE_ID }}
+          zip -r deploy.zip index.html competitor-dashboard-v3.html data/
+
+      - name: NetlifyへDeploy APIで直送
+        run: |
+          curl -X POST "https://api.netlify.com/api/v1/sites/${{ secrets.NETLIFY_SITE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.NETLIFY_AUTH_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            --data-binary @deploy.zip
