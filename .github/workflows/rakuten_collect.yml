@@ -32,3 +32,8 @@ jobs:
           git add data/rakuten_gadgets.csv
           git diff --cached --quiet || git commit -m "データ更新: $(date '+%Y-%m-%d')"
           git push
+
+      - name: Netlifyへ直接デプロイ
+        run: |
+          npm install -g netlify-cli
+          netlify deploy --prod --dir=. --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} --site=${{ secrets.NETLIFY_SITE_ID }}
