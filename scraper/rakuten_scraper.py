@@ -18,30 +18,67 @@ OUTPUT_FILE = os.path.join(OUTPUT_DIR, "rakuten_gadgets.csv")
 
 FIELDNAMES = ["取得日時", "カテゴリ", "コンディション", "商品名", "価格", "ショップ名", "商品URL"]
 
+# ノイズ除外キーワード（商品名に含まれたらスキップ）
+EXCLUDE_KEYWORDS = [
+    "ふるさと納税", "返礼品", "タブレット", "iPad", "Fire HD",
+    "キーボード", "マウス", "モニター", "ディスプレイ",
+    "ルーター", "Wi-Fi", "プリンター", "スキャナー",
+    "ゲーム機", "Nintendo", "PlayStation", "Xbox",
+    "イヤホン", "ヘッドホン", "スピーカー",
+]
+
 SEARCHES = [
-    ("スマホ", "iPhone", "新品"),
-    ("スマホ", "iPhone 中古", "中古"),
-    ("スマホ", "iPhone ジャンク", "ジャンク"),
-    ("スマホ", "Android スマートフォン", "新品"),
-    ("スマホ", "Android スマートフォン 中古", "中古"),
-    ("スマホアクセサリー", "スマホケース", "新品"),
-    ("スマホアクセサリー", "スマホ 保護フィルム", "新品"),
-    ("スマホアクセサリー", "スマホ 充電器", "新品"),
-    ("GPU", "グラフィックボード", "新品"),
-    ("GPU", "グラフィックボード 中古", "中古"),
-    ("GPU", "グラフィックボード ジャンク", "ジャンク"),
-    ("SSD", "SSD 内蔵", "新品"),
-    ("SSD", "SSD 中古", "中古"),
-    ("メモリ", "PCメモリ DDR", "新品"),
-    ("メモリ", "PCメモリ 中古", "中古"),
-    ("電源", "PC電源ユニット", "新品"),
-    ("電源", "電源ユニット 中古", "中古"),
-    ("PCケース", "PCケース ATX", "新品"),
-    ("PCケース", "PCケース 中古", "中古"),
+    # ── iPhone ──────────────────────────────
+    ("iPhone", "iPhone 16 Pro",        "新品"),
+    ("iPhone", "iPhone 16 Pro 中古",   "中古"),
+    ("iPhone", "iPhone 16",            "新品"),
+    ("iPhone", "iPhone 16 中古",       "中古"),
+    ("iPhone", "iPhone 15 Pro",        "新品"),
+    ("iPhone", "iPhone 15 Pro 中古",   "中古"),
+    ("iPhone", "iPhone 15",            "新品"),
+    ("iPhone", "iPhone 15 中古",       "中古"),
+    ("iPhone", "iPhone 14",            "新品"),
+    ("iPhone", "iPhone 14 中古",       "中古"),
+    ("iPhone", "iPhone ジャンク",      "ジャンク"),
+
+    # ── Android 有名機種 ─────────────────────
+    ("Android_Xperia",  "Xperia 1 VI",              "新品"),
+    ("Android_Xperia",  "Xperia 1 VI 中古",         "中古"),
+    ("Android_Xperia",  "Xperia 5 VI",              "新品"),
+    ("Android_Xperia",  "Xperia 10 VI",             "新品"),
+    ("Android_Galaxy",  "Galaxy S24 Ultra",          "新品"),
+    ("Android_Galaxy",  "Galaxy S24",                "新品"),
+    ("Android_Galaxy",  "Galaxy S24 中古",           "中古"),
+    ("Android_Galaxy",  "Galaxy S23 中古",           "中古"),
+    ("Android_Pixel",   "Google Pixel 9 Pro",        "新品"),
+    ("Android_Pixel",   "Google Pixel 9",            "新品"),
+    ("Android_Pixel",   "Google Pixel 8 中古",       "中古"),
+    ("Android_AQUOS",   "AQUOS sense8",              "新品"),
+    ("Android_AQUOS",   "AQUOS R8",                  "新品"),
+    ("Android_AQUOS",   "AQUOS 中古",                "中古"),
+    ("Android_Arrow",   "arrows We2",                "新品"),
+    ("Android_その他",  "Android スマートフォン 新品", "新品"),
+    ("Android_その他",  "Android スマートフォン 中古", "中古"),
+    ("Android_その他",  "スマートフォン ジャンク",    "ジャンク"),
+
+    # ── アクセサリー ─────────────────────────
+    ("アクセサリー_ケース",    "スマホケース iPhone",   "新品"),
+    ("アクセサリー_ケース",    "スマホケース Android",  "新品"),
+    ("アクセサリー_フィルム",  "スマホ 保護フィルム",   "新品"),
+    ("アクセサリー_充電器",    "スマホ 充電器 急速",    "新品"),
+    ("アクセサリー_充電器",    "MagSafe 充電器",        "新品"),
 ]
 
 HITS_PER_PAGE = 30
 MAX_PAGES = 10
+
+
+def is_noise(item_name):
+    name = item_name.lower()
+    for kw in EXCLUDE_KEYWORDS:
+        if kw.lower() in name:
+            return True
+    return False
 
 
 def fetch_items(keyword, page=1):
@@ -88,30 +125,46 @@ def scrape():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     rows = []
+    seen_global = set()  # URL重複を全体でも排除
 
     for category, keyword, condition in SEARCHES:
         print("[{}] {} ({})".format(category, keyword, condition))
-        seen = set()
+        seen_local = set()
+        fetched = 0
+        noise_count = 0
+
         for page in range(1, MAX_PAGES + 1):
             items = fetch_items(keyword, page)
             if not items:
                 break
             for item in items:
                 item_url = item.get("affiliateUrl") or item.get("itemUrl", "")
-                if item_url in seen:
+                item_name = item.get("itemName", "")
+
+                # URL重複チェック（ローカル＋グローバル）
+                if item_url in seen_local or item_url in seen_global:
                     continue
-                seen.add(item_url)
+
+                # ノイズフィルタ
+                if is_noise(item_name):
+                    noise_count += 1
+                    continue
+
+                seen_local.add(item_url)
+                seen_global.add(item_url)
+                fetched += 1
                 rows.append({
                     "取得日時": now,
                     "カテゴリ": category,
                     "コンディション": condition,
-                    "商品名": item.get("itemName", "")[:100],
+                    "商品名": item_name[:100],
                     "価格": item.get("itemPrice", 0),
                     "ショップ名": item.get("shopName", ""),
                     "商品URL": item_url,
                 })
             time.sleep(2)
-        print("  -> {}件取得".format(len(seen)))
+
+        print("  -> {}件取得 (ノイズ除外: {}件)".format(fetched, noise_count))
 
     with open(OUTPUT_FILE, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
