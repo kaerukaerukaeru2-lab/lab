@@ -32,11 +32,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino San
 .search-wrap input:focus { border-color: var(--accent); }
 .search-wrap input::placeholder { color: var(--text3); }
 select { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 13px; padding: 8px 10px; outline: none; cursor: pointer; }
-.cat-scroll { display: flex; gap: 6px; margin-bottom: 1.25rem; overflow-x: auto; padding-bottom: 4px; }
+.cat-scroll { display: flex; gap: 6px; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 4px; }
 .cat-scroll::-webkit-scrollbar { height: 3px; }
 .cat-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 .cat-btn { flex-shrink: 0; font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text2); cursor: pointer; white-space: nowrap; transition: all 0.12s; }
 .cat-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.filter-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.filter-label { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.cond-btn, .price-btn { font-size: 12px; padding: 4px 11px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text2); cursor: pointer; white-space: nowrap; transition: all 0.12s; -webkit-tap-highlight-color: transparent; }
+.cond-btn.active { background: #9F77DD; color: #fff; border-color: #9F77DD; }
+.price-btn.active { background: #1D9E75; color: #fff; border-color: #1D9E75; }
 .section-title { font-size: 11px; font-weight: 600; color: var(--text2); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 10px; }
 .chart-wrap { margin-bottom: 1.75rem; }
 .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
@@ -196,19 +201,27 @@ td a:hover { text-decoration: underline; }
     <div class="controls">
       <div class="search-wrap">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="search" placeholder="商品名で検索...">
+        <input type="text" id="search" placeholder="スペース区切りでAND検索..." oninput="applyFilters()">
       </div>
-      <select id="sort">
-        <option value="none">並び替え: デフォルト</option>
-        <option value="asc">価格: 低い順</option>
+      <select id="sort" onchange="applyFilters()">
+        <option value="none">並び替え</option>
+        <option value="asc">価格: 安い順</option>
         <option value="desc">価格: 高い順</option>
       </select>
-      <select id="cond">
-        <option value="all">コンディション: 全て</option>
-        <option value="新品">新品</option>
-        <option value="中古">中古</option>
-        <option value="ジャンク">ジャンク</option>
-      </select>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">コンディション：</span>
+      <button class="cond-btn active" data-v="all" onclick="setCond('all')">全て</button>
+      <button class="cond-btn" data-v="新品" onclick="setCond('新品')">新品</button>
+      <button class="cond-btn" data-v="中古" onclick="setCond('中古')">中古</button>
+      <button class="cond-btn" data-v="ジャンク" onclick="setCond('ジャンク')">ジャンク</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">価格帯：</span>
+      <button class="price-btn active" data-v="all" onclick="setPriceRange('all')">全て</button>
+      <button class="price-btn" data-v="low" onclick="setPriceRange('low')">〜3万</button>
+      <button class="price-btn" data-v="mid" onclick="setPriceRange('mid')">3〜10万</button>
+      <button class="price-btn" data-v="high" onclick="setPriceRange('high')">10万〜</button>
     </div>
 
     <div class="chart-wrap">
@@ -281,6 +294,7 @@ td a:hover { text-decoration: underline; }
 
 <script>
 var CSV_URL = 'https://raw.githubusercontent.com/kaerukaerukaeru2-lab/lab/main/data/rakuten_gadgets.csv';
+var CSV_ENABLED = false; // trueにするとCSV自動取得ON
 var BAR_COLORS = ["#378ADD","#1D9E75","#D85A30","#9F77DD","#D4537E","#639922","#BA7517","#E24B4A","#2BB5A0","#E07B39"];
 var allData = [];
 var manualData = (function(){ try { return JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e){ return []; } })();
@@ -288,43 +302,67 @@ var filtered = [];
 var pickupList = (function(){ try { return JSON.parse(localStorage.getItem('gadget_pickup') || '[]'); } catch(e){ return []; } })();
 var blockList = (function(){ try { return JSON.parse(localStorage.getItem('gadget_blocklist') || '[]'); } catch(e){ return []; } })();
 var currentCat = 'all';
+var currentCond = 'all';
+var currentPrice = 'all';
 var currentPage = 1;
 var PAGE_SIZE = 100;
 
 
+
+function buildAllData(csvData) {
+  try { manualData = JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e) { manualData = []; }
+  var manualRows = [];
+  for (var mi = 0; mi < manualData.length; mi++) {
+    var m = manualData[mi];
+    manualRows.push({ date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true });
+  }
+  allData = (csvData || []).concat(manualRows);
+  document.getElementById('file-badge').textContent = allData.length + '件';
+}
 
 function loadData() {
   document.getElementById('status').style.display = 'block';
   document.getElementById('main').style.display = 'none';
   document.getElementById('file-badge').textContent = '読み込み中...';
 
+  if (!CSV_ENABLED) {
+    // CSV OFFモード：手動データのみ
+    buildAllData([]);
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    buildCatBtns();
+    renderPickup();
+    applyFilters();
+    return;
+  }
+
   var xhr = new XMLHttpRequest();
   xhr.open('GET', CSV_URL + '?t=' + Date.now(), true);
   xhr.onload = function() {
     if (xhr.status === 200) {
-      var csvData = parseCSV(xhr.responseText);
-      // localStorageから毎回新鮮に読み直す
-      var freshManual = [];
-      try { freshManual = JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e) { freshManual = []; }
-      manualData = freshManual;
-      var manualRows = [];
-      for (var mi = 0; mi < manualData.length; mi++) {
-        var m = manualData[mi];
-        manualRows.push({ date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true });
-      }
-      allData = csvData.concat(manualRows);
-      document.getElementById('file-badge').textContent = allData.length + '件';
+      buildAllData(parseCSV(xhr.responseText));
       document.getElementById('status').style.display = 'none';
       document.getElementById('main').style.display = 'block';
       buildCatBtns();
       renderPickup();
       applyFilters();
     } else {
-      document.getElementById('status').innerHTML = '<div style="color:#F09975">データの取得に失敗しました (HTTP ' + xhr.status + ')</div>';
+      // CSVエラーでも手動データは表示
+      buildAllData([]);
+      document.getElementById('status').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      buildCatBtns();
+      renderPickup();
+      applyFilters();
     }
   };
   xhr.onerror = function() {
-    document.getElementById('status').innerHTML = '<div style="color:#F09975">ネットワークエラーが発生しました</div>';
+    buildAllData([]);
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    buildCatBtns();
+    renderPickup();
+    applyFilters();
   };
   xhr.send();
 }
@@ -539,7 +577,6 @@ function esc(s) {
 function applyFilters() {
   var q = document.getElementById('search').value.toLowerCase().trim();
   var sort = document.getElementById('sort').value;
-  var cond = document.getElementById('cond').value;
   var keywords = [];
   if (q) {
     var parts = q.split(/\s+/);
@@ -550,7 +587,10 @@ function applyFilters() {
   filtered = allData.filter(function(r){
     if (!r.isManual && blockList.indexOf(r.url) >= 0) return false;
     if (currentCat !== 'all' && r.category !== currentCat) return false;
-    if (cond !== 'all' && r.condition !== cond) return false;
+    if (currentCond !== 'all' && r.condition !== currentCond) return false;
+    if (currentPrice === 'low'  && r.price >= 30000) return false;
+    if (currentPrice === 'mid'  && (r.price < 30000 || r.price >= 100000)) return false;
+    if (currentPrice === 'high' && r.price < 100000) return false;
     if (keywords.length > 0) {
       var name = r.name.toLowerCase();
       for (var k = 0; k < keywords.length; k++) {
@@ -565,9 +605,26 @@ function applyFilters() {
   renderMetrics(); renderChart(); renderTable();
 }
 
-document.getElementById('search').addEventListener('input', applyFilters);
-document.getElementById('sort').addEventListener('change', applyFilters);
-document.getElementById('cond').addEventListener('change', applyFilters);
+function setCond(c) {
+  currentCond = c;
+  var btns = document.querySelectorAll('.cond-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('active', btns[i].dataset.v === c);
+  }
+  applyFilters();
+}
+
+function setPriceRange(p) {
+  currentPrice = p;
+  var btns = document.querySelectorAll('.price-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('active', btns[i].dataset.v === p);
+  }
+  applyFilters();
+}
+
+// search/sort handled by inline oninput/onchange
+// cond filter handled by setCond()
 
 loadData();
 
@@ -638,12 +695,14 @@ loadData();
 
   function mergeManualToAllData() {
     var csvOnly = allData.filter(function(d){ return !d.isManual; });
+    try { manualData = JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e) { manualData = []; }
     var manualRows = [];
     for (var mi = 0; mi < manualData.length; mi++) {
       var m = manualData[mi];
       manualRows.push({ date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true });
     }
     allData = csvOnly.concat(manualRows);
+    document.getElementById('file-badge').textContent = allData.length + '件';
   }
 
   window.adminAdd = function() {
