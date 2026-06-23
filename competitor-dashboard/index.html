@@ -89,6 +89,31 @@ td a:hover { text-decoration: underline; }
 .page-btn:disabled { opacity: 0.35; cursor: default; }
 .page-info { font-size: 12px; color: var(--text2); }
 
+/* ===== ADMIN PANEL ===== */
+#adminOverlay { display: none; position: fixed; inset: 0; z-index: 920; background: rgba(0,0,0,.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem; }
+#adminOverlay.active { display: flex; }
+#adminModal { position: relative; width: 100%; max-width: 480px; max-height: 88vh; background: rgba(10,12,22,0.98); border: 1px solid rgba(255,180,0,0.35); border-radius: 1rem; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 40px rgba(0,0,0,.7); }
+#adminModal .adm-header { padding: .9rem 1.2rem; border-bottom: 1px solid rgba(255,180,0,0.25); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: rgba(255,180,0,0.06); }
+#adminModal .adm-title { font-size: 1rem; font-weight: 700; color: #FFB800; letter-spacing: .05em; }
+#adminCloseBtn { width: 2rem; height: 2rem; border-radius: 50%; border: 1px solid rgba(255,180,0,0.3); background: transparent; color: #8b8fa8; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+#adminBody { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: .9rem; flex: 1; }
+.adm-section { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #FFB800; text-transform: uppercase; margin-bottom: .6rem; margin-top: .8rem; }
+.adm-section:first-child { margin-top: 0; }
+.adm-form { display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,.03); border: 0.5px solid rgba(255,180,0,0.2); border-radius: .6rem; padding: .8rem; margin-bottom: .8rem; }
+.adm-input { background: rgba(255,255,255,.06); border: 0.5px solid rgba(255,255,255,.12); border-radius: .4rem; color: #f0f0f5; font-size: 13px; padding: 8px 10px; outline: none; width: 100%; }
+.adm-input:focus { border-color: #FFB800; }
+.adm-input::placeholder { color: #5a5e72; }
+.adm-select { background: rgba(255,255,255,.06); border: 0.5px solid rgba(255,255,255,.12); border-radius: .4rem; color: #f0f0f5; font-size: 13px; padding: 8px 10px; outline: none; width: 100%; cursor: pointer; }
+.adm-btn { background: #FFB800; color: #000; font-size: 13px; font-weight: 700; border: none; border-radius: .4rem; padding: 9px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.adm-btn:active { opacity: .8; }
+.adm-list { display: flex; flex-direction: column; gap: 6px; }
+.adm-item { background: rgba(255,255,255,.04); border: 0.5px solid rgba(255,255,255,.08); border-radius: .5rem; padding: 8px 10px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.adm-item-info { flex: 1; min-width: 0; }
+.adm-item-name { font-size: 12px; color: #f0f0f5; line-height: 1.4; margin-bottom: 3px; }
+.adm-item-meta { font-size: 11px; color: #8b8fa8; }
+.adm-del { background: none; border: none; color: #F09975; font-size: 16px; cursor: pointer; padding: 0 4px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.adm-empty { font-size: 13px; color: #5a5e72; text-align: center; padding: .8rem; }
+
 /* ===== HELP MODAL ===== */
 :root {
   --help-accent: #378ADD;
@@ -215,6 +240,33 @@ td a:hover { text-decoration: underline; }
 
 </div>
 
+<!-- ADMIN PANEL -->
+<div id="adminOverlay" role="dialog" aria-modal="true">
+  <div id="adminModal">
+    <div class="adm-header">
+      <span class="adm-title">🔧 管理パネル</span>
+      <button id="adminCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div id="adminBody">
+      <div class="adm-section">➕ 商品を手動追加</div>
+      <div class="adm-form">
+        <input class="adm-input" id="adm-name" placeholder="商品名（コピペ）" type="text">
+        <select class="adm-select" id="adm-cat"></select>
+        <select class="adm-select" id="adm-cond">
+          <option value="新品">新品</option>
+          <option value="中古">中古</option>
+          <option value="ジャンク">ジャンク</option>
+        </select>
+        <input class="adm-input" id="adm-price" placeholder="価格（数字のみ）" type="number" min="0">
+        <input class="adm-input" id="adm-url" placeholder="アフィリエイトURL（貼り付け）" type="url">
+        <button class="adm-btn" onclick="adminAdd()">追加する</button>
+      </div>
+      <div class="adm-section">📋 手動追加済みリスト</div>
+      <div class="adm-list" id="adm-list"></div>
+    </div>
+  </div>
+</div>
+
 <!-- HELP MODAL -->
 <button id="helpBtn" aria-label="ヘルプを開く">❓</button>
 <div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -229,27 +281,17 @@ td a:hover { text-decoration: underline; }
 
 <script>
 var CSV_URL = 'https://raw.githubusercontent.com/kaerukaerukaeru2-lab/lab/main/data/rakuten_gadgets.csv';
-var PICKUP_URL = 'https://raw.githubusercontent.com/kaerukaerukaeru2-lab/lab/main/data/pickup.json';
 var BAR_COLORS = ["#378ADD","#1D9E75","#D85A30","#9F77DD","#D4537E","#639922","#BA7517","#E24B4A","#2BB5A0","#E07B39"];
 var allData = [];
+var manualData = (function(){ try { return JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e){ return []; } })();
 var filtered = [];
-var pickupList = [];
+var pickupList = (function(){ try { return JSON.parse(localStorage.getItem('gadget_pickup') || '[]'); } catch(e){ return []; } })();
 var blockList = (function(){ try { return JSON.parse(localStorage.getItem('gadget_blocklist') || '[]'); } catch(e){ return []; } })();
 var currentCat = 'all';
 var currentPage = 1;
-var PAGE_SIZE = 30;
+var PAGE_SIZE = 100;
 
-function fetchJSON(url, cb) {
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', url + '?t=' + Date.now(), true);
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-      try { cb(JSON.parse(xhr.responseText)); } catch(e) { cb([]); }
-    } else { cb([]); }
-  };
-  xhr.onerror = function() { cb([]); };
-  xhr.send();
-}
+
 
 function loadData() {
   document.getElementById('status').style.display = 'block';
@@ -261,15 +303,17 @@ function loadData() {
   xhr.onload = function() {
     if (xhr.status === 200) {
       allData = parseCSV(xhr.responseText);
+      // 手動データを統合（isManual フラグ付き）
+      var combined = allData.concat(manualData.map(function(m){
+        return { date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true };
+      }));
+      allData = combined;
       document.getElementById('file-badge').textContent = allData.length + '件';
-      fetchJSON(PICKUP_URL, function(p) {
-        pickupList = p || [];
-        document.getElementById('status').style.display = 'none';
-        document.getElementById('main').style.display = 'block';
-        buildCatBtns();
-        renderPickup();
-        applyFilters();
-      });
+      document.getElementById('status').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      buildCatBtns();
+      renderPickup();
+      applyFilters();
     } else {
       document.getElementById('status').innerHTML = '<div style="color:#F09975">データの取得に失敗しました (HTTP ' + xhr.status + ')</div>';
     }
@@ -317,7 +361,7 @@ function buildCatBtns() {
   var cats = ['all'];
   allData.forEach(function(r){ if (cats.indexOf(r.category) === -1) cats.push(r.category); });
   document.getElementById('cat-btns').innerHTML = cats.map(function(c){
-    return '<button class="cat-btn' + (c === 'all' ? ' active' : '') + '" onclick="setCat(\'' + c + '\')">' + (c === 'all' ? '全て' : c) + '</button>';
+    return '<button class="cat-btn' + (c === currentCat ? ' active' : '') + '" onclick="setCat(\'' + c + '\')">' + (c === 'all' ? '全て' : c) + '</button>';
   }).join('');
 }
 
@@ -392,13 +436,14 @@ function renderTable() {
     var badgeCls = r.price < 5000 ? 'badge-low' : r.price < 30000 ? 'badge-mid' : 'badge-high';
     var link = r.url ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">楽天で見る ↗</a>' : '—';
     var isStarred = pickupList.some(function(p){ return p.url === r.url; });
+    var manualBadge = r.isManual ? '<span style="font-size:10px;background:rgba(255,180,0,0.2);color:#FFB800;border:0.5px solid rgba(255,180,0,0.4);border-radius:4px;padding:1px 5px;margin-left:4px">手動</span>' : '';
     var idx = start + i;
     return '<tr>' +
-      '<td style="font-size:12px;line-height:1.4">' + esc(r.name.substring(0,50)) + (r.name.length>50?'…':'') + '</td>' +
+      '<td style="font-size:12px;line-height:1.4">' + esc(r.name.substring(0,50)) + (r.name.length>50?'…':'') + manualBadge + '</td>' +
       '<td><span class="badge ' + badgeCls + '">¥' + fmt(r.price) + '</span></td>' +
       '<td style="font-size:12px;color:var(--text2)">' + esc(r.category) + '</td>' +
       '<td><span class="' + condCls + '">' + esc(r.condition) + '</span></td>' +
-      '<td style="font-size:12px;color:var(--text2)">' + esc(r.shop.substring(0,20)) + '</td>' +
+      '<td style="font-size:12px;color:var(--text2)">' + esc((r.shop||'').substring(0,20)) + '</td>' +
       '<td>' + link + '</td>' +
       '<td style="white-space:nowrap">' +
         '<button class="action-btn' + (isStarred?' starred':'') + '" onclick="toggleStar(' + idx + ')" title="おすすめに追加">' + (isStarred?'⭐':'☆') + '</button>' +
@@ -434,15 +479,16 @@ function renderPickup() {
 function toggleStar(idx) {
   var r = filtered[idx];
   if (!r) return;
-  var exists = pickupList.findIndex(function(p){ return p.url === r.url; });
+  var exists = -1;
+  for (var i = 0; i < pickupList.length; i++) { if (pickupList[i].url === r.url) { exists = i; break; } }
   if (exists >= 0) {
     pickupList.splice(exists, 1);
   } else {
     pickupList.push({ name: r.name, price: r.price, url: r.url, category: r.category });
   }
+  localStorage.setItem('gadget_pickup', JSON.stringify(pickupList));
   renderPickup();
   renderTable();
-  savePickup();
 }
 
 function blockItem(idx) {
@@ -454,14 +500,8 @@ function blockItem(idx) {
   applyFilters();
 }
 
-function savePickup() {
-  var json = JSON.stringify(pickupList, null, 2);
-  var blob = new Blob([json], {type: 'application/json'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'pickup.json';
-  a.click();
-  alert('pickup.jsonをダウンロードしました。\nGitHubのdata/フォルダにアップロードしてください。');
+function saveManual() {
+  localStorage.setItem('gadget_manual', JSON.stringify(manualData));
 }
 
 function renderPagination(totalPages) {
@@ -514,6 +554,103 @@ document.getElementById('cond').addEventListener('change', applyFilters);
 
 loadData();
 
+/* ===== ADMIN PANEL JS ===== */
+(function initAdmin() {
+  var overlay = document.getElementById('adminOverlay');
+  var closeBtn = document.getElementById('adminCloseBtn');
+  var helpBtn = document.getElementById('helpBtn');
+  var tapCount = 0;
+  var tapTimer = null;
+
+  // ❓を3回連続タップで管理パネル、1回タップでヘルプ
+  helpBtn.addEventListener('click', function() {
+    tapCount++;
+    if (tapTimer) clearTimeout(tapTimer);
+    if (tapCount >= 3) {
+      tapCount = 0;
+      openAdmin();
+      return;
+    }
+    tapTimer = setTimeout(function() {
+      if (tapCount === 1 && window._openHelpModal) window._openHelpModal();
+      tapCount = 0;
+    }, 400);
+  });
+
+  function openAdmin() {
+    buildAdmCatSelect();
+    renderAdmList();
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAdmin() {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  closeBtn.onclick = closeAdmin;
+  overlay.onclick = function(e) { if (e.target === overlay) closeAdmin(); };
+
+  function buildAdmCatSelect() {
+    var sel = document.getElementById('adm-cat');
+    var cats = [];
+    allData.forEach(function(r){ if (!r.isManual && cats.indexOf(r.category) === -1) cats.push(r.category); });
+    // よく使う固定カテゴリも追加
+    var defaults = ['iPhone','Android_Galaxy','Android_Xperia','Android_Pixel','Android_AQUOS','Android_その他','アクセサリー_ケース','アクセサリー_フィルム','アクセサリー_充電器'];
+    defaults.forEach(function(d){ if (cats.indexOf(d) === -1) cats.push(d); });
+    sel.innerHTML = cats.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join('');
+  }
+
+  function renderAdmList() {
+    var list = document.getElementById('adm-list');
+    if (!manualData.length) {
+      list.innerHTML = '<div class="adm-empty">まだ手動追加した商品はありません</div>';
+      return;
+    }
+    list.innerHTML = manualData.map(function(m, i) {
+      return '<div class="adm-item">' +
+        '<div class="adm-item-info">' +
+          '<div class="adm-item-name">' + esc(m.name.substring(0, 40)) + (m.name.length > 40 ? '…' : '') + '</div>' +
+          '<div class="adm-item-meta">¥' + fmt(m.price) + ' · ' + esc(m.category) + ' · ' + esc(m.condition) + '</div>' +
+        '</div>' +
+        '<button class="adm-del" onclick="adminDel(' + i + ')">🗑</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.adminAdd = function() {
+    var name = document.getElementById('adm-name').value.trim();
+    var cat = document.getElementById('adm-cat').value;
+    var cond = document.getElementById('adm-cond').value;
+    var price = parseInt(document.getElementById('adm-price').value, 10) || 0;
+    var url = document.getElementById('adm-url').value.trim();
+    if (!name || !url) return;
+    var item = { name: name, category: cat, condition: cond, price: price, url: url, date: new Date().toISOString().slice(0,10) };
+    manualData.push(item);
+    saveManual();
+    // allDataにも即反映
+    allData.push({ date: item.date, category: item.category, condition: item.condition, name: item.name, price: item.price, shop: '手動追加', url: item.url, isManual: true });
+    buildCatBtns();
+    applyFilters();
+    // フォームリセット
+    document.getElementById('adm-name').value = '';
+    document.getElementById('adm-price').value = '';
+    document.getElementById('adm-url').value = '';
+    renderAdmList();
+  };
+
+  window.adminDel = function(i) {
+    var url = manualData[i].url;
+    manualData.splice(i, 1);
+    saveManual();
+    allData = allData.filter(function(d){ return d.url !== url; });
+    buildCatBtns();
+    applyFilters();
+    renderAdmList();
+  };
+})();
+
 /* ===== HELP MODAL JS ===== */
 var helpData = {
   howto: [
@@ -539,7 +676,6 @@ var helpData = {
 (function initHelpModal() {
   var overlay = document.getElementById('helpOverlay');
   var body = document.getElementById('helpBody');
-  var openBtn = document.getElementById('helpBtn');
   var closeBtn = document.getElementById('helpCloseBtn');
 
   function renderHelp() {
@@ -587,7 +723,8 @@ var helpData = {
   function openModal() { renderHelp(); overlay.classList.add('active'); document.body.style.overflow = 'hidden'; }
   function closeModal() { overlay.classList.remove('active'); document.body.style.overflow = ''; }
 
-  openBtn.onclick = openModal;
+  // helpBtnは3タップでadmin、1タップでhelpを開く（adminパネルJSのtapCountが3未満の間はhelpを開く）
+  window._openHelpModal = openModal;
   closeBtn.onclick = closeModal;
   overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
