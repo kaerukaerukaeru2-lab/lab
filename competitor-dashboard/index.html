@@ -537,14 +537,26 @@ function esc(s) {
 }
 
 function applyFilters() {
-  var q = document.getElementById('search').value.toLowerCase();
+  var q = document.getElementById('search').value.toLowerCase().trim();
   var sort = document.getElementById('sort').value;
   var cond = document.getElementById('cond').value;
+  var keywords = [];
+  if (q) {
+    var parts = q.split(/\s+/);
+    for (var ki = 0; ki < parts.length; ki++) {
+      if (parts[ki].length > 0) keywords.push(parts[ki]);
+    }
+  }
   filtered = allData.filter(function(r){
-    if (blockList.indexOf(r.url) >= 0) return false;
+    if (!r.isManual && blockList.indexOf(r.url) >= 0) return false;
     if (currentCat !== 'all' && r.category !== currentCat) return false;
     if (cond !== 'all' && r.condition !== cond) return false;
-    if (q && r.name.toLowerCase().indexOf(q) === -1) return false;
+    if (keywords.length > 0) {
+      var name = r.name.toLowerCase();
+      for (var k = 0; k < keywords.length; k++) {
+        if (name.indexOf(keywords[k]) === -1) return false;
+      }
+    }
     return true;
   });
   if (sort === 'asc')  filtered.sort(function(a,b){ return a.price - b.price; });
@@ -624,6 +636,16 @@ loadData();
     }).join('');
   }
 
+  function mergeManualToAllData() {
+    var csvOnly = allData.filter(function(d){ return !d.isManual; });
+    var manualRows = [];
+    for (var mi = 0; mi < manualData.length; mi++) {
+      var m = manualData[mi];
+      manualRows.push({ date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true });
+    }
+    allData = csvOnly.concat(manualRows);
+  }
+
   window.adminAdd = function() {
     var name = document.getElementById('adm-name').value.trim();
     var cat = document.getElementById('adm-cat').value;
@@ -634,11 +656,9 @@ loadData();
     var item = { name: name, category: cat, condition: cond, price: price, url: url, date: new Date().toISOString().slice(0,10) };
     manualData.push(item);
     saveManual();
-    // allDataにも即反映
-    allData.push({ date: item.date, category: item.category, condition: item.condition, name: item.name, price: item.price, shop: '手動追加', url: item.url, isManual: true });
+    mergeManualToAllData();
     buildCatBtns();
     applyFilters();
-    // フォームリセット
     document.getElementById('adm-name').value = '';
     document.getElementById('adm-price').value = '';
     document.getElementById('adm-url').value = '';
@@ -646,10 +666,9 @@ loadData();
   };
 
   window.adminDel = function(i) {
-    var url = manualData[i].url;
     manualData.splice(i, 1);
     saveManual();
-    allData = allData.filter(function(d){ return d.url !== url; });
+    mergeManualToAllData();
     buildCatBtns();
     applyFilters();
     renderAdmList();
