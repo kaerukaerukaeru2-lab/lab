@@ -302,12 +302,17 @@ function loadData() {
   xhr.open('GET', CSV_URL + '?t=' + Date.now(), true);
   xhr.onload = function() {
     if (xhr.status === 200) {
-      allData = parseCSV(xhr.responseText);
-      // 手動データを統合（isManual フラグ付き）
-      var combined = allData.concat(manualData.map(function(m){
-        return { date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true };
-      }));
-      allData = combined;
+      var csvData = parseCSV(xhr.responseText);
+      // localStorageから毎回新鮮に読み直す
+      var freshManual = [];
+      try { freshManual = JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e) { freshManual = []; }
+      manualData = freshManual;
+      var manualRows = [];
+      for (var mi = 0; mi < manualData.length; mi++) {
+        var m = manualData[mi];
+        manualRows.push({ date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true });
+      }
+      allData = csvData.concat(manualRows);
       document.getElementById('file-badge').textContent = allData.length + '件';
       document.getElementById('status').style.display = 'none';
       document.getElementById('main').style.display = 'block';
