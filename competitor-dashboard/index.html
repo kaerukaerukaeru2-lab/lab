@@ -258,7 +258,7 @@ td a:hover { text-decoration: underline; }
       <button id="adminCloseBtn" aria-label="閉じる">✕</button>
     </div>
     <div id="adminBody">
-      <div class="adm-section">➕ 商品を手動追加</div>
+      <div class="adm-section">➕ 商品を追加</div>
       <div class="adm-form">
         <input class="adm-input" id="adm-name" placeholder="商品名（コピペ）" type="text">
         <select class="adm-select" id="adm-cat"></select>
@@ -271,8 +271,12 @@ td a:hover { text-decoration: underline; }
         <input class="adm-input" id="adm-url" placeholder="アフィリエイトURL（貼り付け）" type="url">
         <button class="adm-btn" onclick="adminAdd()">追加する</button>
       </div>
-      <div class="adm-section">📋 手動追加済みリスト</div>
+      <div class="adm-section">📋 登録済みリスト</div>
       <div class="adm-list" id="adm-list"></div>
+      <div style="margin-top:1rem">
+        <button class="adm-btn" onclick="exportProducts()" style="background:#1D9E75">📥 products.jsonをダウンロード</button>
+        <div style="font-size:11px;color:#8b8fa8;margin-top:6px;line-height:1.6">ダウンロード後、GitHubの<br>competitor-dashboard/products.json<br>にアップロードすると全員に反映されます</div>
+      </div>
     </div>
   </div>
 </div>
@@ -292,9 +296,10 @@ td a:hover { text-decoration: underline; }
 <script>
 var CSV_URL = 'https://raw.githubusercontent.com/kaerukaerukaeru2-lab/lab/main/data/rakuten_gadgets.csv';
 var CSV_ENABLED = false; // trueにするとCSV自動取得ON
+var PRODUCTS_URL = './products.json';
 var BAR_COLORS = ["#378ADD","#1D9E75","#D85A30","#9F77DD","#D4537E","#639922","#BA7517","#E24B4A","#2BB5A0","#E07B39"];
 var allData = [];
-var manualData = (function(){ try { return JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e){ return []; } })();
+// manualData → products に統合済み
 var filtered = [];
 var pickupList = (function(){ try { return JSON.parse(localStorage.getItem('gadget_pickup') || '[]'); } catch(e){ return []; } })();
 var blockList = (function(){ try { return JSON.parse(localStorage.getItem('gadget_blocklist') || '[]'); } catch(e){ return []; } })();
@@ -306,15 +311,28 @@ var PAGE_SIZE = 100;
 
 
 
-function buildAllData(csvData) {
-  try { manualData = JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e) { manualData = []; }
-  var manualRows = [];
-  for (var mi = 0; mi < manualData.length; mi++) {
-    var m = manualData[mi];
-    manualRows.push({ date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true });
+function showMain(jsonData) {
+  // GitHubのproducts.jsonとlocalStorageのproductsをマージ（URL重複除去）
+  var merged = jsonData ? jsonData.slice() : [];
+  for (var pi = 0; pi < products.length; pi++) {
+    var exists = false;
+    for (var mi = 0; mi < merged.length; mi++) {
+      if (merged[mi].url === products[pi].url) { exists = true; break; }
+    }
+    if (!exists) merged.push(products[pi]);
   }
-  allData = (csvData || []).concat(manualRows);
+  // localStorageを最新に更新
+  products = merged;
+  saveProducts();
+  allData = merged.map(function(m){
+    return { date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true };
+  });
   document.getElementById('file-badge').textContent = allData.length + '件';
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  buildCatBtns();
+  renderPickup();
+  applyFilters();
 }
 
 function loadData() {
@@ -322,45 +340,22 @@ function loadData() {
   document.getElementById('main').style.display = 'none';
   document.getElementById('file-badge').textContent = '読み込み中...';
 
-  if (!CSV_ENABLED) {
-    // CSV OFFモード：手動データのみ
-    buildAllData([]);
-    document.getElementById('status').style.display = 'none';
-    document.getElementById('main').style.display = 'block';
-    buildCatBtns();
-    renderPickup();
-    applyFilters();
-    return;
-  }
-
+  // products.json を読み込む
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', CSV_URL + '?t=' + Date.now(), true);
+  xhr.open('GET', PRODUCTS_URL + '?t=' + Date.now(), true);
   xhr.onload = function() {
     if (xhr.status === 200) {
-      buildAllData(parseCSV(xhr.responseText));
-      document.getElementById('status').style.display = 'none';
-      document.getElementById('main').style.display = 'block';
-      buildCatBtns();
-      renderPickup();
-      applyFilters();
+      try {
+        var data = JSON.parse(xhr.responseText);
+        showMain(data);
+      } catch(e) {
+        showMain([]);
+      }
     } else {
-      // CSVエラーでも手動データは表示
-      buildAllData([]);
-      document.getElementById('status').style.display = 'none';
-      document.getElementById('main').style.display = 'block';
-      buildCatBtns();
-      renderPickup();
-      applyFilters();
+      showMain([]);
     }
   };
-  xhr.onerror = function() {
-    buildAllData([]);
-    document.getElementById('status').style.display = 'none';
-    document.getElementById('main').style.display = 'block';
-    buildCatBtns();
-    renderPickup();
-    applyFilters();
-  };
+  xhr.onerror = function() { showMain([]); };
   xhr.send();
 }
 
@@ -545,9 +540,7 @@ function blockItem(idx) {
   applyFilters();
 }
 
-function saveManual() {
-  localStorage.setItem('gadget_manual', JSON.stringify(manualData));
-}
+// saveManual → saveProducts に統合済み
 
 function renderPagination(totalPages) {
   var pg = document.getElementById('pagination');
@@ -682,11 +675,11 @@ loadData();
 
   function renderAdmList() {
     var list = document.getElementById('adm-list');
-    if (!manualData.length) {
-      list.innerHTML = '<div class="adm-empty">まだ手動追加した商品はありません</div>';
+    if (!products.length) {
+      list.innerHTML = '<div class="adm-empty">まだ登録した商品はありません</div>';
       return;
     }
-    list.innerHTML = manualData.map(function(m, i) {
+    list.innerHTML = products.map(function(m, i) {
       return '<div class="adm-item">' +
         '<div class="adm-item-info">' +
           '<div class="adm-item-name">' + esc(m.name.substring(0, 40)) + (m.name.length > 40 ? '…' : '') + '</div>' +
@@ -697,17 +690,33 @@ loadData();
     }).join('');
   }
 
-  function mergeManualToAllData() {
-    var csvOnly = allData.filter(function(d){ return !d.isManual; });
-    try { manualData = JSON.parse(localStorage.getItem('gadget_manual') || '[]'); } catch(e) { manualData = []; }
-    var manualRows = [];
-    for (var mi = 0; mi < manualData.length; mi++) {
-      var m = manualData[mi];
-      manualRows.push({ date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true });
-    }
-    allData = csvOnly.concat(manualRows);
-    document.getElementById('file-badge').textContent = allData.length + '件';
+  // products = 管理中の商品リスト（localStorageに保存、exportでGitHubに反映）
+  var products = [];
+  try { products = JSON.parse(localStorage.getItem('gadget_products') || '[]'); } catch(e) { products = []; }
+
+  function saveProducts() {
+    localStorage.setItem('gadget_products', JSON.stringify(products));
   }
+
+  function syncProductsToAllData() {
+    allData = products.map(function(m){
+      return { date: m.date||'', category: m.category, condition: m.condition, name: m.name, price: m.price, shop: '手動追加', url: m.url, isManual: true };
+    });
+    document.getElementById('file-badge').textContent = allData.length + '件';
+    buildCatBtns();
+    applyFilters();
+  }
+
+  window.exportProducts = function() {
+    var json = JSON.stringify(products, null, 2);
+    var blob = new Blob([json], {type: 'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'products.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   window.adminAdd = function() {
     var name = document.getElementById('adm-name').value.trim();
@@ -716,12 +725,9 @@ loadData();
     var price = parseInt(document.getElementById('adm-price').value, 10) || 0;
     var url = document.getElementById('adm-url').value.trim();
     if (!name || !url) return;
-    var item = { name: name, category: cat, condition: cond, price: price, url: url, date: new Date().toISOString().slice(0,10) };
-    manualData.push(item);
-    saveManual();
-    mergeManualToAllData();
-    buildCatBtns();
-    applyFilters();
+    products.push({ name: name, category: cat, condition: cond, price: price, url: url, date: new Date().toISOString().slice(0,10) });
+    saveProducts();
+    syncProductsToAllData();
     document.getElementById('adm-name').value = '';
     document.getElementById('adm-price').value = '';
     document.getElementById('adm-url').value = '';
@@ -729,11 +735,9 @@ loadData();
   };
 
   window.adminDel = function(i) {
-    manualData.splice(i, 1);
-    saveManual();
-    mergeManualToAllData();
-    buildCatBtns();
-    applyFilters();
+    products.splice(i, 1);
+    saveProducts();
+    syncProductsToAllData();
     renderAdmList();
   };
 })();
