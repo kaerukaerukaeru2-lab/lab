@@ -340,22 +340,26 @@ function loadData() {
   document.getElementById('main').style.display = 'none';
   document.getElementById('file-badge').textContent = '読み込み中...';
 
-  // products.json を読み込む
+  var done = false;
+  function finish(data) {
+    if (done) return;
+    done = true;
+    showMain(data || []);
+  }
+
+  // 5秒でタイムアウト
+  var timer = setTimeout(function() { finish([]); }, 5000);
+
   var xhr = new XMLHttpRequest();
   xhr.open('GET', PRODUCTS_URL + '?t=' + Date.now(), true);
   xhr.onload = function() {
+    clearTimeout(timer);
     if (xhr.status === 200) {
-      try {
-        var data = JSON.parse(xhr.responseText);
-        showMain(data);
-      } catch(e) {
-        showMain([]);
-      }
-    } else {
-      showMain([]);
-    }
+      try { finish(JSON.parse(xhr.responseText)); }
+      catch(e) { finish([]); }
+    } else { finish([]); }
   };
-  xhr.onerror = function() { showMain([]); };
+  xhr.onerror = function() { clearTimeout(timer); finish([]); };
   xhr.send();
 }
 
